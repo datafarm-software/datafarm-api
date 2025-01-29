@@ -104,3 +104,17 @@ func TestStartMultipleGoRoutines(t *testing.T) {
 	}
 	app.wg.Wait()
 }
+
+func TestApp_StartHttpServer(t *testing.T) {
+	opts := DefaultTestApiOpts()
+	app, err := NewApi(opts)
+	if err != nil {
+		t.Errorf("StartHttpServer() error initializing app: %v", err)
+		return
+	}
+	app.StartHttpServer()
+	if app.server == nil {
+		t.Errorf("app server is nil, expected to be initialized")
+	}
+	app.Shutdown()
+}
