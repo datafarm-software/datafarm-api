@@ -2,6 +2,7 @@ package metadatafetcher
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/redis/go-redis/v9"
@@ -37,7 +38,14 @@ func (r *RedisMetadata) Close() {
 	}
 }
 
-func (r *RedisMetadata) GetCompany(deviceId string) (string, error)                {}
+func (r *RedisMetadata) GetCompany(deviceId string) (string, error) {
+	key := fmt.Sprintf("fieldUnit:%s", deviceId)
+	company, err := r.db.HGet(g_ctx, key, "Company").Result()
+	if err != nil {
+		return "", fmt.Errorf("redis: %v", err)
+	}
+	return company, nil
+}
 func (r *RedisMetadata) GetNetwork(deviceId string) (string, error)                {}
 func (r *RedisMetadata) GetAttachedSensors(deviceId string) ([]string, error)      {}
 func (r *RedisMetadata) GetQueryFields(attachedSensors []string) ([]string, error) {}
