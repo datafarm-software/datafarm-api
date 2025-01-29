@@ -163,6 +163,34 @@ func TestApi_formatQueryRange(t *testing.T) {
 			want:      "start: -6d",
 			wantErr:   false,
 		},
+		{
+			name:      "no start time provided",
+			startTime: "",
+			stopTime:  "can be anything",
+			want:      "",
+			wantErr:   true,
+		},
+		{
+			name:      "rfc3339 start time provided, no stop time",
+			startTime: "2025-01-29T08:00:00Z",
+			stopTime:  "",
+			want:      "",
+			wantErr:   true,
+		},
+		{
+			name:      "rfc3339 start and stop time provided",
+			startTime: "2025-01-28T08:00:00Z",
+			stopTime:  "2025-01-29T08:00:00Z",
+			want:      "start: 2025-01-28T08:00:00Z, stop: 2025-01-29T08:00:00Z",
+			wantErr:   false,
+		},
+		{
+			name:      "relative start time with rfc3339 stop time",
+			startTime: "-6d",
+			stopTime:  "2025-01-29T08:00:00Z",
+			want:      "start: -6d",
+			wantErr:   false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
