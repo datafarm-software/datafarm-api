@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -46,6 +47,7 @@ func (r *RedisMetadata) GetMapValue(deviceId, mapKey string) (string, error) {
 	}
 	return company, nil
 }
+
 func (r *RedisMetadata) GetAttachedSensors(deviceId string) ([]string, error) {
 	key := fmt.Sprintf("fieldUnit:%s:attached_sensors", deviceId)
 	attachedSensors, err := r.db.LRange(g_ctx, key, 0, -1).Result()
@@ -54,10 +56,13 @@ func (r *RedisMetadata) GetAttachedSensors(deviceId string) ([]string, error) {
 	}
 	return attachedSensors, nil
 }
+
 func (r *RedisMetadata) GetQueryFields(attachedSensors []string) ([]string, error) {
 	queryfields := make([]string, 0)
 	for _, a := range attachedSensors {
-		key := fmt.Sprintf("sensorType:%s:query_fields", a)
+		fields := strings.Fields(a)
+		squashed := strings.Join(fields, "")
+		key := fmt.Sprintf("sensorType:%s:query_fields", squashed)
 		qf, err := r.db.SMembers(g_ctx, key).Result()
 		if err != nil {
 			return nil, fmt.Errorf("redis smembers: %v", err)
