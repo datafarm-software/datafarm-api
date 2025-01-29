@@ -46,6 +46,12 @@ func (r *RedisMetadata) GetMapValue(deviceId, mapKey string) (string, error) {
 	}
 	return company, nil
 }
-func (r *RedisMetadata) GetNetwork(deviceId string) (string, error)                {}
-func (r *RedisMetadata) GetAttachedSensors(deviceId string) ([]string, error)      {}
+func (r *RedisMetadata) GetAttachedSensors(deviceId string) ([]string, error) {
+	key := fmt.Sprintf("fieldUnit:%s:attached_sensors")
+	attachedSensors, err := r.db.LRange(g_ctx, key, 0, -1).Result()
+	if err != nil {
+		return nil, fmt.Errorf("redis: %v", err)
+	}
+	return attachedSensors, nil
+}
 func (r *RedisMetadata) GetQueryFields(attachedSensors []string) ([]string, error) {}
