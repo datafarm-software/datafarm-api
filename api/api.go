@@ -13,9 +13,17 @@ import (
 
 var g_ctx context.Context
 
-type metadataFetcher interface{}
+type metadataFetcher interface {
+	Close() error
+	GetCompany(deviceId string) (string, error)
+	GetNetwork(deviceId string) (string, error)
+	GetAttachedSensors(deviceId string) ([]string, error)
+	GetQueryFields(attachedSensors []string) ([]string, error)
+}
 
-type dataFetcher interface{}
+type dataFetcher interface {
+	GetData(metadata Metadata) ([]byte, error)
+}
 
 type Metadata struct {
 	Network, Company string
@@ -33,7 +41,9 @@ func NewApiOpts(port string, mf metadataFetcher, df dataFetcher) (ApiOpts, error
 		return ApiOpts{}, fmt.Errorf("not all options present")
 	}
 	return ApiOpts{
-		port: port,
+		port:            port,
+		metadataFetcher: mf,
+		dataFetcher:     df,
 	}, nil
 }
 
@@ -96,7 +106,7 @@ func (a *Api) registerRoutes() {
 }
 
 func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
-	//TODO valida deviceId against authorised user's company
+	//TODO validate deviceId against authorised user's company
 	vars := mux.Vars(r)
 	deviceId := vars["deviceId"]
 	var wg sync.WaitGroup
