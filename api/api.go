@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"sync"
+
+	"github.com/gorilla/mux"
 )
 
 var g_ctx context.Context
@@ -28,7 +30,8 @@ type Api struct {
 	port            string
 	wg              sync.WaitGroup
 	server          *http.Server
-	router          *http.ServeMux
+	router          *mux.Router
+	v1Routes        *mux.Router
 	shutdownCtxFunc context.CancelFunc
 }
 
@@ -37,13 +40,14 @@ func NewApi(opts ApiOpts) (*Api, error) {
 	g_ctx = ctx
 	api := &Api{
 		shutdownCtxFunc: cancel,
-		router:          http.NewServeMux(),
+		router:          mux.NewRouter().PathPrefix("/api/v1").Subrouter(),
 		port:            opts.port,
 	}
 	api.server = &http.Server{
 		Addr:    opts.port,
 		Handler: api.router,
 	}
+	api.registerRoutes()
 	return api, nil
 }
 
@@ -71,4 +75,12 @@ func (a *Api) StartHttpServer() {
 		}
 		log.Println("Stopped serving new connections.")
 	})
+}
+
+func (a *Api) registerRoutes() {
+	a.router.Handle("/device", http.HandlerFunc(a.GetDataForDevice))
+}
+
+func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Gorilla!\n"))
 }
