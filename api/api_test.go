@@ -18,7 +18,7 @@ func (m *MockMetadataFetcher) GetQueryFields(attachedSensors []string) ([]string
 
 type MockDataFetcher struct{}
 
-func (m *MockDataFetcher) GetData(metadata Metadata, startTime, stopTime string) ([]byte, error) {
+func (m *MockDataFetcher) GetData(metadata Metadata, queryRange string) ([]byte, error) {
 	return nil, nil
 }
 

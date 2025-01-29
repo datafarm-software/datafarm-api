@@ -22,7 +22,7 @@ type metadataFetcher interface {
 }
 
 type dataFetcher interface {
-	GetData(metadata Metadata, startTime, stopTime string) ([]byte, error)
+	GetData(metadata Metadata, queryRange string) ([]byte, error)
 }
 
 type Metadata struct {
@@ -113,7 +113,13 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 	metadata.DeviceId = deviceId
 	startTime := r.URL.Query().Get("start")
 	stopTime := r.URL.Query().Get("stop")
-	a.formatQueryRange(startTime, stopTime)
+	queryRange, err := a.formatQueryRange(startTime, stopTime)
+	if err != nil {
+		log.Printf("error formatting query range: %v", err)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	metadata.QueryRange = queryRange
 	var wg sync.WaitGroup
 	var nwErr, cErr, qErr error
 	wg.Add(1)

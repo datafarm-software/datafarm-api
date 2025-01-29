@@ -1,6 +1,7 @@
 package datafetcher
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -23,18 +24,22 @@ func NewInfluxDatafetcher(org, url, token string) (*InfluxDatafetcher, error) {
 }
 
 func (i *InfluxDatafetcher) GetData(metadata apiModule.Metadata) ([]byte, error) {
-	queryRange := i.formatRange(metadata.StartTime, metadata.StopTime)
+	query := i.generateFluxQuery(metadata)
+	result, err := i.queryApi.Query(context.Background(), query)
+	if err != nil {
+		return nil, fmt.Errorf("error querying influxdb: %v", err)
+	}
 	return nil, nil
 }
 
-func GenerateFluxQueries(startTime, stopTime string) string {
+func (i *InfluxDatafetcher) generateFluxQuery(metadata apiModule.Metadata) string {
 	var queryBuilder strings.Builder
-	queryBuilder.WriteString(fmt.Sprintf(`from(bucket: "%s")`, f.Network))
-	queryBuilder.WriteString(fmt.Sprintf(` |> range(%s)`, *queryRange))
-	queryBuilder.WriteString(fmt.Sprintf(` |> filter(fn: (r) => r["_measurement"] == "%s")`, f.Company))
-	queryBuilder.WriteString(fmt.Sprintf(` |> filter(fn: (r) => r["deviceID"] == "%s")`, f.DeviceID))
+	queryBuilder.WriteString(fmt.Sprintf(`from(bucket: "%s")`, metadata.Network))
+	queryBuilder.WriteString(fmt.Sprintf(` |> range(%s)`, metadata.QueryRange))
+	queryBuilder.WriteString(fmt.Sprintf(` |> filter(fn: (r) => r["_measurement"] == "%s")`, metadata.Company))
+	queryBuilder.WriteString(fmt.Sprintf(` |> filter(fn: (r) => r["deviceID"] == "%s")`, metadata.DeviceId))
 	queryBuilder.WriteString(` |> filter(fn: (r) => `)
-	for _, filter := range f.QueryFields {
+	for _, filter := range metadata.QueryFields {
 		queryBuilder.WriteString(fmt.Sprintf(` r["_field"] == "%s" or`, filter))
 	}
 	queryBuilder.WriteString(` r["_field"] == "batv" or`)
