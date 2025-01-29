@@ -13,13 +13,19 @@ import (
 
 var g_ctx context.Context
 
+type metadataFetcher interface{}
+
+type dataFetcher interface{}
+
 type ApiOpts struct {
-	port string
+	port            string
+	dataFetcher     dataFetcher
+	metadataFetcher metadataFetcher
 }
 
-func NewApiOpts(port string) (ApiOpts, error) {
-	if port == "" {
-		return ApiOpts{}, fmt.Errorf("port is nil")
+func NewApiOpts(port string, mf metadataFetcher, df dataFetcher) (ApiOpts, error) {
+	if port == "" || mf == nil || df == nil {
+		return ApiOpts{}, fmt.Errorf("not all options present")
 	}
 	return ApiOpts{
 		port: port,
@@ -31,7 +37,8 @@ type Api struct {
 	wg              sync.WaitGroup
 	server          *http.Server
 	router          *mux.Router
-	v1Routes        *mux.Router
+	metadataFetcher metadataFetcher
+	dataFetcher     dataFetcher
 	shutdownCtxFunc context.CancelFunc
 }
 
@@ -42,6 +49,8 @@ func NewApi(opts ApiOpts) (*Api, error) {
 		shutdownCtxFunc: cancel,
 		router:          mux.NewRouter().PathPrefix("/api/v1").Subrouter(),
 		port:            opts.port,
+		metadataFetcher: opts.metadataFetcher,
+		dataFetcher:     opts.dataFetcher,
 	}
 	api.server = &http.Server{
 		Addr:    opts.port,
@@ -78,7 +87,7 @@ func (a *Api) StartHttpServer() {
 }
 
 func (a *Api) registerRoutes() {
-	a.router.Handle("/device", http.HandlerFunc(a.GetDataForDevice))
+	a.router.Handle("/device/{deviceId}", http.HandlerFunc(a.GetDataForDevice))
 }
 
 func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {

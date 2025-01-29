@@ -7,34 +7,42 @@ import (
 	"time"
 )
 
+type MockMetadataFetcher struct{}
+type MockDataFetcher struct{}
+
 func DefaultTestApiOpts() ApiOpts {
 	return ApiOpts{
-		port: ":8080",
+		port:            ":8080",
+		metadataFetcher: &MockMetadataFetcher{},
+		dataFetcher:     &MockDataFetcher{},
 	}
 }
 
 func Test_NewApiOpts(t *testing.T) {
 	tests := []struct {
 		name, port string
+		mf         metadataFetcher
+		df         metadataFetcher
 		want       ApiOpts
 		wantErr    bool
 	}{
 		{
 			name: "when all opts are given",
 			port: ":8080",
+			mf:   &MockMetadataFetcher{},
+			df:   &MockDataFetcher{},
 			want: ApiOpts{
 				port: ":8080",
 			},
 			wantErr: false,
 		},
 		{
-			name:    "when port is nil",
-			port:    "",
+			name:    "when no options are given",
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
-		got, gotErr := NewApiOpts(tt.port)
+		got, gotErr := NewApiOpts(tt.port, tt.mf, tt.df)
 		if (gotErr != nil) != tt.wantErr {
 			t.Errorf("NewApiOpts() got error does not match want error. gotErr: %v, wantErr: %t", gotErr, tt.wantErr)
 		}
@@ -61,6 +69,12 @@ func Test_NewApi(t *testing.T) {
 				}
 				if got.server == nil || got.server.Addr != ":8080" {
 					t.Errorf("Server Addr = %v, want %v", got.server.Addr, ":8080")
+				}
+				if got.metadataFetcher == nil {
+					t.Errorf("Api metadatafetcher is not initialized")
+				}
+				if got.dataFetcher == nil {
+					t.Errorf("Api datafetcher is not initialized")
 				}
 			},
 		},
