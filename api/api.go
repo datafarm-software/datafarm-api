@@ -22,7 +22,7 @@ type metadataFetcher interface {
 }
 
 type dataFetcher interface {
-	GetData(metadata Metadata, queryRange string) ([]byte, error)
+	GetData(metadata Metadata) ([]byte, error)
 }
 
 type Metadata struct {
@@ -169,7 +169,7 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	jsonData, err := a.dataFetcher.GetData(metadata, startTime, stopTime)
+	jsonData, err := a.dataFetcher.GetData(metadata)
 	if err != nil {
 		log.Printf("error getting data: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
