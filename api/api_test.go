@@ -8,7 +8,19 @@ import (
 )
 
 type MockMetadataFetcher struct{}
+
+func (m *MockMetadataFetcher) Close() error                                         { return nil }
+func (m *MockMetadataFetcher) GetMapValue(deviceId, mapKey string) (string, error)  { return "", nil }
+func (m *MockMetadataFetcher) GetAttachedSensors(deviceId string) ([]string, error) { return nil, nil }
+func (m *MockMetadataFetcher) GetQueryFields(attachedSensors []string) ([]string, error) {
+	return nil, nil
+}
+
 type MockDataFetcher struct{}
+
+func (m *MockDataFetcher) GetData(metadata Metadata, startTime, stopTime string) ([]byte, error) {
+	return nil, nil
+}
 
 func DefaultTestApiOpts() ApiOpts {
 	return ApiOpts{
@@ -22,7 +34,7 @@ func Test_NewApiOpts(t *testing.T) {
 	tests := []struct {
 		name, port string
 		mf         metadataFetcher
-		df         metadataFetcher
+		df         dataFetcher
 		want       ApiOpts
 		wantErr    bool
 	}{
@@ -32,7 +44,9 @@ func Test_NewApiOpts(t *testing.T) {
 			mf:   &MockMetadataFetcher{},
 			df:   &MockDataFetcher{},
 			want: ApiOpts{
-				port: ":8080",
+				port:            ":8080",
+				metadataFetcher: &MockMetadataFetcher{},
+				dataFetcher:     &MockDataFetcher{},
 			},
 			wantErr: false,
 		},
@@ -131,4 +145,44 @@ func TestApp_StartHttpServer(t *testing.T) {
 		t.Errorf("app server is nil, expected to be initialized")
 	}
 	app.Shutdown()
+}
+
+func TestApi_formatQueryRange(t *testing.T) {
+	opts := DefaultTestApiOpts()
+	tests := []struct {
+		name      string
+		startTime string
+		stopTime  string
+		want      string
+		wantErr   bool
+	}{
+		{
+			name:      "relative time",
+			startTime: "-6d",
+			stopTime:  "can be anything",
+			want:      "start: -6d",
+			wantErr:   false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a, err := NewApi(opts)
+			if err != nil {
+				t.Fatalf("could not construct receiver type: %v", err)
+			}
+			got, gotErr := a.formatQueryRange(tt.startTime, tt.stopTime)
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("formatQueryRange() failed: %v", gotErr)
+				}
+				return
+			}
+			if tt.wantErr {
+				t.Fatal("formatQueryRange() succeeded unexpectedly")
+			}
+			if got != tt.want {
+				t.Errorf("formatQueryRange() = %s, want %s", got, tt.want)
+			}
+		})
+	}
 }

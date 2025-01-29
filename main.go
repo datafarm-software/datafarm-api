@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	apiModule "github.com/geraud22/aquahaus-api/api"
+	"github.com/geraud22/aquahaus-api/datafetcher"
 	"github.com/geraud22/aquahaus-api/metadatafetcher"
 	cfy "github.com/geraud22/config-from-yaml"
 )
@@ -14,7 +15,11 @@ import (
 func main() {
 	c := cfy.Get("config")
 	mf := metadatafetcher.NewRedisMetadata(c.GetString("Redis.Address"), c.GetString("Redis.Password"), c.GetInt("Redis.DB"))
-	opts, err := apiModule.NewApiOpts(c.GetString("Port"), mf)
+	df, err := datafetcher.NewInfluxDatafetcher(c.GetString("Influx.Org"), c.GetString("Influx.URL"), c.GetString("Influx.Token"))
+	if err != nil {
+		log.Fatalf("error initializing influxdata fetcher: %v", err)
+	}
+	opts, err := apiModule.NewApiOpts(c.GetString("Port"), mf, df)
 	if err != nil {
 		log.Fatalf("error getting api opts: %v", err)
 	}

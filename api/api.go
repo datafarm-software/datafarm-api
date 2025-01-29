@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -21,12 +22,12 @@ type metadataFetcher interface {
 }
 
 type dataFetcher interface {
-	GetData(metadata Metadata) ([]byte, error)
+	GetData(metadata Metadata, startTime, stopTime string) ([]byte, error)
 }
 
 type Metadata struct {
-	Network, Company string
-	QueryFields      []string
+	DeviceId, Network, Company, QueryRange string
+	QueryFields                            []string
 }
 
 type ApiOpts struct {
@@ -101,15 +102,19 @@ func (a *Api) StartHttpServer() {
 }
 
 func (a *Api) registerRoutes() {
-	a.router.Handle("/device/{deviceId}", http.HandlerFunc(a.GetDataForDevice))
+	a.router.Handle("/device/{deviceId}", http.HandlerFunc(a.GetDataForDevice)).Methods("GET")
 }
 
 func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 	//TODO validate deviceId against authorised user's company
+	var metadata Metadata
 	vars := mux.Vars(r)
 	deviceId := vars["deviceId"]
+	metadata.DeviceId = deviceId
+	startTime := r.URL.Query().Get("start")
+	stopTime := r.URL.Query().Get("stop")
+	a.formatQueryRange(startTime, stopTime)
 	var wg sync.WaitGroup
-	var metadata Metadata
 	var nwErr, cErr, qErr error
 	wg.Add(1)
 	go func() {
@@ -158,9 +163,9 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	jsonData, err := a.dataFetcher.GetData(metadata)
+	jsonData, err := a.dataFetcher.GetData(metadata, startTime, stopTime)
 	if err != nil {
-		log.Println("error getting data: %v", err)
+		log.Printf("error getting data: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -170,4 +175,24 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (a *Api) formatQueryRange(startTime, stopTime string) (string, error) {
+	relativeRange := false
+	if startTime == "" {
+		return "", fmt.Errorf("no start time provided")
+	}
+	if _, err := time.Parse(time.RFC3339, startTime); err != nil {
+		relativeRange = true
+	}
+	if _, err := time.Parse(time.RFC3339, startTime); err == nil && stopTime == "" {
+		return "", fmt.Errorf("start time is rfc3339, but stop time is empty. cannot procede")
+	}
+	if !relativeRange {
+		if _, err := time.Parse(time.RFC3339, stopTime); err != nil {
+			return "", fmt.Errorf("Invalid RFC3339 stop timestamp: %v", err)
+		}
+		return fmt.Sprintf("start: %s, stop: %s", startTime, stopTime), nil
+	}
+	return fmt.Sprintf("start: %s", startTime), nil
 }
