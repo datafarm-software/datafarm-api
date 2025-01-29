@@ -22,6 +22,8 @@ func (m *MockDataFetcher) GetData(metadata Metadata) ([]byte, error) {
 	return nil, nil
 }
 
+func (m *MockDataFetcher) Close() error { return nil }
+
 func DefaultTestApiOpts() ApiOpts {
 	return ApiOpts{
 		port:            ":8080",

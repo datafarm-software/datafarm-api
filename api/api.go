@@ -23,6 +23,7 @@ type metadataFetcher interface {
 
 type dataFetcher interface {
 	GetData(metadata Metadata) ([]byte, error)
+	Close() error
 }
 
 type Metadata struct {
@@ -86,6 +87,12 @@ func (a *Api) startGoRoutine(routineToBeExecuted func(ctx context.Context)) {
 func (a *Api) Shutdown() {
 	if err := a.server.Shutdown(g_ctx); err != nil {
 		log.Fatalf("HTTP shutdown error: %v", err)
+	}
+	if err := a.dataFetcher.Close(); err != nil {
+		log.Fatalf("datafetcher close error: %v", err)
+	}
+	if err := a.metadataFetcher.Close(); err != nil {
+		log.Fatalf("metadatafetcher close error: %v", err)
 	}
 	a.shutdownCtxFunc()
 	a.wg.Wait()

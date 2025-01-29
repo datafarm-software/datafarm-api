@@ -36,6 +36,11 @@ func NewInfluxDatafetcher(org, url, token string) (*InfluxDatafetcher, error) {
 	}, nil
 }
 
+func (i *InfluxDatafetcher) Close() error {
+	i.db.Close()
+	return nil
+}
+
 func (i *InfluxDatafetcher) GetData(metadata apiModule.Metadata) ([]byte, error) {
 	query := i.generateFluxQuery(metadata)
 	result, err := i.queryApi.Query(context.Background(), query)

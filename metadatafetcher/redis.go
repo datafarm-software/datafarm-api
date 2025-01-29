@@ -33,10 +33,11 @@ func NewRedisMetadata(addr, password string, db int) *RedisMetadata {
 	}
 }
 
-func (r *RedisMetadata) Close() {
+func (r *RedisMetadata) Close() error {
 	if err := r.db.Close(); err != nil {
-		log.Printf("error closing redis client: %v", err)
+		return fmt.Errorf("error closing redis client: %v", err)
 	}
+	return nil
 }
 
 func (r *RedisMetadata) GetMapValue(deviceId, mapKey string) (string, error) {
