@@ -17,6 +17,11 @@ type metadataFetcher interface{}
 
 type dataFetcher interface{}
 
+type Metadata struct {
+	Network, Company string
+	QueryFields      []string
+}
+
 type ApiOpts struct {
 	port            string
 	dataFetcher     dataFetcher
@@ -91,5 +96,69 @@ func (a *Api) registerRoutes() {
 }
 
 func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Gorilla!\n"))
+	//TODO valida deviceId against authorised user's company
+	vars := mux.Vars(r)
+	deviceId := vars["deviceId"]
+	var wg sync.WaitGroup
+	var metadata Metadata
+	var nwErr, cErr, qErr error
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		network, err := a.metadataFetcher.GetNetwork(deviceId)
+		if err != nil {
+			nwErr = fmt.Errorf("error getting network: %v", err)
+		}
+		metadata.Network = network
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		company, err := a.metadataFetcher.GetCompany(deviceId)
+		if err != nil {
+			cErr = fmt.Errorf("error getting company: %v", err)
+		}
+		metadata.Company = company
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		attachedSensors, err := a.metadataFetcher.GetAttachedSensors(deviceId)
+		if err != nil {
+			qErr = fmt.Errorf("error getting attached sensors: %v", err)
+		}
+		queryFields, err := a.metadataFetcher.GetQueryFields(attachedSensors)
+		if err != nil {
+			qErr = fmt.Errorf("error getting query fields: %v", err)
+		}
+		metadata.QueryFields = queryFields
+	}()
+	wg.Wait()
+	if nwErr != nil {
+		log.Println(nwErr)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	if cErr != nil {
+		log.Println(cErr)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	if qErr != nil {
+		log.Println(qErr)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	jsonData, err := a.dataFetcher.GetData(metadata)
+	if err != nil {
+		log.Println("error getting data: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	if _, err = w.Write(jsonData); err != nil {
+		log.Printf("Error writing response: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
 }
