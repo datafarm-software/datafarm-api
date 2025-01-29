@@ -38,9 +38,9 @@ func (r *RedisMetadata) Close() {
 	}
 }
 
-func (r *RedisMetadata) GetCompany(deviceId string) (string, error) {
-	key := fmt.Sprintf("fieldUnit:%s", deviceId)
-	company, err := r.db.HGet(g_ctx, key, "Company").Result()
+func (r *RedisMetadata) GetMapValue(deviceId, mapKey string) (string, error) {
+	hashName := fmt.Sprintf("fieldUnit:%s", deviceId)
+	company, err := r.db.HGet(g_ctx, hashName, mapKey).Result()
 	if err != nil {
 		return "", fmt.Errorf("redis: %v", err)
 	}

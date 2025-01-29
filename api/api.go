@@ -15,8 +15,7 @@ var g_ctx context.Context
 
 type metadataFetcher interface {
 	Close() error
-	GetCompany(deviceId string) (string, error)
-	GetNetwork(deviceId string) (string, error)
+	GetMapValue(deviceId, mapKey string) (string, error)
 	GetAttachedSensors(deviceId string) ([]string, error)
 	GetQueryFields(attachedSensors []string) ([]string, error)
 }
@@ -115,7 +114,7 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		network, err := a.metadataFetcher.GetNetwork(deviceId)
+		network, err := a.metadataFetcher.GetMapValue(deviceId, "Network")
 		if err != nil {
 			nwErr = fmt.Errorf("error getting network: %v", err)
 		}
@@ -124,7 +123,7 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		company, err := a.metadataFetcher.GetCompany(deviceId)
+		company, err := a.metadataFetcher.GetMapValue(deviceId, "Company")
 		if err != nil {
 			cErr = fmt.Errorf("error getting company: %v", err)
 		}
