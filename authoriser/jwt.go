@@ -49,3 +49,11 @@ func (j *JwtAuth) loadECDSAPublicKey(fs fs.FS, filePath string) (*ecdsa.PublicKe
 	}
 	return ecdsaPubKey, nil
 }
+
+func (j *JwtAuth) GetPublicKey() *ecdsa.PublicKey {
+	return j.publicKey
+}
+
+func (j *JwtAuth) GenerateJwt() (string, error) {
+	return "", nil
+}

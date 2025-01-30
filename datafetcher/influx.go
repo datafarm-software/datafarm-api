@@ -30,6 +30,13 @@ type DeviceData struct {
 
 func NewInfluxDatafetcher(org, url, token string) (*InfluxDatafetcher, error) {
 	db := influxdb2.NewClient(url, token)
+	ok, err := db.Ping(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("influx ping error: %v", err)
+	}
+	if !ok {
+		return nil, fmt.Errorf("influx server not running")
+	}
 	return &InfluxDatafetcher{
 		db:       db,
 		queryApi: db.QueryAPI(org),
