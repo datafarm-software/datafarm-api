@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
 )
+
+const EmptyPayloadLength int = 16
 
 var g_ctx context.Context
 
@@ -117,6 +120,7 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 	var metadata Metadata
 	vars := mux.Vars(r)
 	deviceId := vars["deviceId"]
+	deviceId = strings.TrimSpace(deviceId)
 	metadata.DeviceId = deviceId
 	startTime := r.URL.Query().Get("start")
 	stopTime := r.URL.Query().Get("stop")
@@ -183,7 +187,14 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	if _, err = w.Write(jsonData); err != nil {
+	w.Header().Set("Content-Type", "application/json")
+	var bytesToReturn []byte
+	if len(jsonData) > EmptyPayloadLength {
+		bytesToReturn = jsonData
+	} else {
+		bytesToReturn = []byte(`{"null"}`)
+	}
+	if _, err := w.Write(bytesToReturn); err != nil {
 		log.Printf("Error writing response: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
