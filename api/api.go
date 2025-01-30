@@ -124,21 +124,25 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 	metadata.DeviceId = deviceId
 	startTime := r.URL.Query().Get("start")
 	stopTime := r.URL.Query().Get("stop")
-	queryRange, err := a.formatQueryRange(startTime, stopTime)
-	if err != nil {
-		log.Printf("error formatting query range: %v", err)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-	metadata.QueryRange = queryRange
 	var wg sync.WaitGroup
-	var nwErr, cErr, qErr error
+	var tErr, nwErr, cErr, aErr, qErr error
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		queryRange, err := a.formatQueryRange(startTime, stopTime)
+		if err != nil {
+			tErr = fmt.Errorf("error formatting query range: %v", err)
+			return
+		}
+		metadata.QueryRange = queryRange
+	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		network, err := a.metadataFetcher.GetMapValue(deviceId, "Network")
 		if err != nil {
 			nwErr = fmt.Errorf("error getting network: %v", err)
+			return
 		}
 		metadata.Network = network
 	}()
@@ -148,6 +152,7 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 		company, err := a.metadataFetcher.GetMapValue(deviceId, "Company")
 		if err != nil {
 			cErr = fmt.Errorf("error getting company: %v", err)
+			return
 		}
 		metadata.Company = company
 	}()
@@ -156,28 +161,40 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 		defer wg.Done()
 		attachedSensors, err := a.metadataFetcher.GetAttachedSensors(deviceId)
 		if err != nil {
-			qErr = fmt.Errorf("error getting attached sensors: %v", err)
+			aErr = fmt.Errorf("error getting attached sensors: %v", err)
+			return
 		}
 		queryFields, err := a.metadataFetcher.GetQueryFields(attachedSensors)
 		if err != nil {
 			qErr = fmt.Errorf("error getting query fields: %v", err)
+			return
 		}
 		metadata.QueryFields = queryFields
 	}()
 	wg.Wait()
+	if tErr != nil {
+		log.Println(tErr)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
 	if nwErr != nil {
 		log.Println(nwErr)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 	if cErr != nil {
 		log.Println(cErr)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 	if qErr != nil {
 		log.Println(qErr)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	if aErr != nil {
+		log.Println(aErr)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 	jsonData, err := a.dataFetcher.GetData(metadata)
