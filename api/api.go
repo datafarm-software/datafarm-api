@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/mux"
 )
 
@@ -29,6 +30,10 @@ type dataFetcher interface {
 	Close() error
 }
 
+type authoriser interface {
+	GenerateJwt() (string, error)
+}
+
 type Metadata struct {
 	DeviceId, Network, Company, QueryRange string
 	QueryFields                            []string
@@ -38,16 +43,18 @@ type ApiOpts struct {
 	port            string
 	dataFetcher     dataFetcher
 	metadataFetcher metadataFetcher
+	authoriser      authoriser
 }
 
-func NewApiOpts(port string, mf metadataFetcher, df dataFetcher) (ApiOpts, error) {
-	if port == "" || mf == nil || df == nil {
+func NewApiOpts(port string, mf metadataFetcher, df dataFetcher, au authoriser) (ApiOpts, error) {
+	if port == "" || mf == nil || df == nil || au == nil {
 		return ApiOpts{}, fmt.Errorf("not all options present")
 	}
 	return ApiOpts{
 		port:            port,
 		metadataFetcher: mf,
 		dataFetcher:     df,
+		authoriser:      au,
 	}, nil
 }
 
@@ -58,6 +65,7 @@ type Api struct {
 	router          *mux.Router
 	metadataFetcher metadataFetcher
 	dataFetcher     dataFetcher
+	authoriser      authoriser
 	shutdownCtxFunc context.CancelFunc
 }
 
@@ -70,12 +78,14 @@ func NewApi(opts ApiOpts) (*Api, error) {
 		port:            opts.port,
 		metadataFetcher: opts.metadataFetcher,
 		dataFetcher:     opts.dataFetcher,
+		authoriser:      opts.authoriser,
 	}
 	api.server = &http.Server{
 		Addr:    opts.port,
 		Handler: api.router,
 	}
 	api.registerRoutes()
+	api.router.Use(api.verifyJwt)
 	return api, nil
 }
 
@@ -236,4 +246,49 @@ func (a *Api) formatQueryRange(startTime, stopTime string) (string, error) {
 		return fmt.Sprintf("start: %s, stop: %s", startTime, stopTime), nil
 	}
 	return fmt.Sprintf("start: %s", startTime), nil
+}
+
+func (a *Api) verifyJwt(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			log.Println("no auth header provided")
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			log.Println("Invalid Authorization header format")
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		tokenString := parts[1]
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
+				w.WriteHeader(http.StatusUnauthorized)
+				if _, err := w.Write([]byte("Unauthorized")); err != nil {
+					return nil, err
+				}
+			}
+			return a.publicKey, nil
+		})
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			if _, err := w.Write([]byte("Error parsing token")); err != nil {
+				log.Printf("error writing to responsewriter: %v", err)
+				return
+			}
+		}
+
+		if !token.Valid {
+			log.Println("Invalid token provided")
+			w.WriteHeader(http.StatusUnauthorized)
+			if _, err := w.Write([]byte("Unauthorized")); err != nil {
+				return
+			}
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
