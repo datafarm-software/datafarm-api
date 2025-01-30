@@ -2,9 +2,16 @@ package api
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"encoding/pem"
 	"reflect"
 	"testing"
 	"time"
+
+	"gomodules.xyz/memfs"
 )
 
 type MockMetadataFetcher struct{}
@@ -24,31 +31,67 @@ func (m *MockDataFetcher) GetData(metadata Metadata) ([]byte, error) {
 
 func (m *MockDataFetcher) Close() error { return nil }
 
+type MockAuthoriser struct{}
+
+func (m *MockAuthoriser) GenerateJwt() (string, error) { return "", nil }
+
 func DefaultTestApiOpts() ApiOpts {
 	return ApiOpts{
 		port:            ":8080",
+		publicKeyFile:   "key.pub",
+		fileSystem:      memfs.New(),
 		metadataFetcher: &MockMetadataFetcher{},
 		dataFetcher:     &MockDataFetcher{},
+		authoriser:      &MockAuthoriser{},
 	}
 }
 
+func GetFileSystemWithPublicKeyFile(t *testing.T, fileName string) *memfs.FS {
+	fs := memfs.New()
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Errorf("Error generating key: %v", err)
+	}
+	pubKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		t.Errorf("Error marshalling public key: %v", err)
+	}
+	publicPem := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubKeyBytes,
+	})
+	if err := fs.WriteFile(fileName, publicPem, 0644); err != nil {
+		t.Fatalf("Failed to create mock file %s: %v", fileName, err)
+	}
+	return fs
+}
+
 func Test_NewApiOpts(t *testing.T) {
+	fs := GetFileSystemWithPublicKeyFile(t, "key.pub")
 	tests := []struct {
-		name, port string
-		mf         metadataFetcher
-		df         dataFetcher
-		want       ApiOpts
-		wantErr    bool
+		name, port, pkf string
+		testFS          *memfs.FS
+		mf              metadataFetcher
+		df              dataFetcher
+		au              authoriser
+		want            ApiOpts
+		wantErr         bool
 	}{
 		{
-			name: "when all opts are given",
-			port: ":8080",
-			mf:   &MockMetadataFetcher{},
-			df:   &MockDataFetcher{},
+			name:   "when all opts are given",
+			port:   ":8080",
+			testFS: fs,
+			pkf:    "key.pub",
+			mf:     &MockMetadataFetcher{},
+			df:     &MockDataFetcher{},
+			au:     &MockAuthoriser{},
 			want: ApiOpts{
 				port:            ":8080",
+				publicKeyFile:   "key.pub",
+				fileSystem:      fs,
 				metadataFetcher: &MockMetadataFetcher{},
 				dataFetcher:     &MockDataFetcher{},
+				authoriser:      &MockAuthoriser{},
 			},
 			wantErr: false,
 		},
@@ -58,7 +101,7 @@ func Test_NewApiOpts(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		got, gotErr := NewApiOpts(tt.port, tt.mf, tt.df)
+		got, gotErr := NewApiOpts(tt.port, tt.pkf, tt.testFS, tt.mf, tt.df, tt.au)
 		if (gotErr != nil) != tt.wantErr {
 			t.Errorf("NewApiOpts() got error does not match want error. gotErr: %v, wantErr: %t", gotErr, tt.wantErr)
 		}
@@ -69,6 +112,8 @@ func Test_NewApiOpts(t *testing.T) {
 }
 
 func Test_NewApi(t *testing.T) {
+	opts := DefaultTestApiOpts()
+	opts.fileSystem = GetFileSystemWithPublicKeyFile(t, "key.pub")
 	tests := []struct {
 		name     string
 		opts     ApiOpts
@@ -78,7 +123,7 @@ func Test_NewApi(t *testing.T) {
 		{
 			name:    "when all options are given",
 			wantErr: false,
-			opts:    DefaultTestApiOpts(),
+			opts:    opts,
 			validate: func(t *testing.T, got *Api) {
 				if got == nil {
 					t.Fatalf("Expected non-nil Api, got nil")
@@ -92,22 +137,28 @@ func Test_NewApi(t *testing.T) {
 				if got.dataFetcher == nil {
 					t.Errorf("Api datafetcher is not initialized")
 				}
+				if got.authoriser == nil {
+					t.Errorf("Api authoriser is not initialized")
+				}
+				if got.publicKey == nil {
+					t.Errorf("Api publicKey is not initialized")
+				}
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotApp, gotErr := NewApi(tt.opts)
+			gotApi, gotErr := NewApi(tt.opts)
 			if (gotErr != nil) != tt.wantErr {
-				t.Errorf("NewApp() error = %v, wantErr = %v", gotErr, tt.wantErr)
+				t.Errorf("NewApi() error = %v, wantErr = %v", gotErr, tt.wantErr)
 				return
 			}
 			if tt.validate != nil {
-				tt.validate(t, gotApp)
+				tt.validate(t, gotApi)
 			}
-			if gotApp != nil {
-				gotApp.Shutdown()
+			if gotApi != nil {
+				gotApi.Shutdown()
 			}
 		})
 	}
@@ -115,6 +166,7 @@ func Test_NewApi(t *testing.T) {
 
 func TestStartMultipleGoRoutines(t *testing.T) {
 	opts := DefaultTestApiOpts()
+	opts.fileSystem = GetFileSystemWithPublicKeyFile(t, "key.pub")
 	app, err := NewApi(opts)
 	if err != nil {
 		t.Errorf("StartMultipleGoRoutines() error initializing app: %v", err)
@@ -137,6 +189,7 @@ func TestStartMultipleGoRoutines(t *testing.T) {
 
 func TestApp_StartHttpServer(t *testing.T) {
 	opts := DefaultTestApiOpts()
+	opts.fileSystem = GetFileSystemWithPublicKeyFile(t, "key.pub")
 	app, err := NewApi(opts)
 	if err != nil {
 		t.Errorf("StartHttpServer() error initializing app: %v", err)
@@ -151,6 +204,7 @@ func TestApp_StartHttpServer(t *testing.T) {
 
 func TestApi_formatQueryRange(t *testing.T) {
 	opts := DefaultTestApiOpts()
+	opts.fileSystem = GetFileSystemWithPublicKeyFile(t, "key.pub")
 	tests := []struct {
 		name      string
 		startTime string

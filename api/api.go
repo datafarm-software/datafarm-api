@@ -7,9 +7,10 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -45,18 +46,20 @@ type Metadata struct {
 
 type ApiOpts struct {
 	port, publicKeyFile string
+	fileSystem          fs.FS
 	dataFetcher         dataFetcher
 	metadataFetcher     metadataFetcher
 	authoriser          authoriser
 }
 
-func NewApiOpts(port, publicKeyFile string, mf metadataFetcher, df dataFetcher, au authoriser) (ApiOpts, error) {
-	if port == "" || publicKeyFile == "" || mf == nil || df == nil || au == nil {
+func NewApiOpts(port, publicKeyFile string, fs fs.FS, mf metadataFetcher, df dataFetcher, au authoriser) (ApiOpts, error) {
+	if port == "" || publicKeyFile == "" || fs == nil || mf == nil || df == nil || au == nil {
 		return ApiOpts{}, fmt.Errorf("not all options present")
 	}
 	return ApiOpts{
 		port:            port,
 		publicKeyFile:   publicKeyFile,
+		fileSystem:      fs,
 		metadataFetcher: mf,
 		dataFetcher:     df,
 		authoriser:      au,
@@ -92,7 +95,7 @@ func NewApi(opts ApiOpts) (*Api, error) {
 	}
 	api.registerRoutes()
 	api.router.Use(api.verifyJwt)
-	publicKey, err := api.loadECDSAPublicKey(opts.publicKeyFile)
+	publicKey, err := api.loadECDSAPublicKey(opts.fileSystem, opts.publicKeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("error loading public key: %v", err)
 	}
@@ -304,8 +307,12 @@ func (a *Api) verifyJwt(next http.Handler) http.Handler {
 	})
 }
 
-func (a *Api) loadECDSAPublicKey(filePath string) (*ecdsa.PublicKey, error) {
-	data, err := os.ReadFile(filePath)
+func (a *Api) loadECDSAPublicKey(fs fs.FS, filePath string) (*ecdsa.PublicKey, error) {
+	file, err := fs.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read public key file: %w", err)
+	}
+	data, err := io.ReadAll(file)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read public key file: %w", err)
 	}

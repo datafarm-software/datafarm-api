@@ -19,7 +19,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("error initializing influxdata fetcher: %v", err)
 	}
-	opts, err := apiModule.NewApiOpts(c.GetString("Port"), mf, df)
+	opts, err := apiModule.NewApiOpts(c.GetString("Port"), c.GetString("PublicKeyFile"), mf, df)
 	if err != nil {
 		log.Fatalf("error getting api opts: %v", err)
 	}
