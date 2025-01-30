@@ -125,6 +125,7 @@ func (a *Api) StartHttpServer() {
 
 func (a *Api) registerRoutes() {
 	a.router.Handle("/device/{deviceId}", http.HandlerFunc(a.GetDataForDevice)).Methods("GET")
+	a.router.Handle("/login", http.HandlerFunc(a.Login)).Methods("POST")
 }
 
 func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
@@ -252,6 +253,10 @@ func (a *Api) formatQueryRange(startTime, stopTime string) (string, error) {
 
 func (a *Api) verifyJwt(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/login" {
+			next.ServeHTTP(w, r)
+			return
+		}
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
 			log.Println("no auth header provided")
@@ -293,4 +298,19 @@ func (a *Api) verifyJwt(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (a *Api) Login(w http.ResponseWriter, r *http.Request) {
+	token, err := a.authoriser.GenerateJwt()
+	if err != nil {
+		log.Printf("error generating jwt: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "text/plain")
+	if _, err := w.Write([]byte(token)); err != nil {
+		log.Printf("error writing to response writer: %v", err)
+		return
+	}
 }

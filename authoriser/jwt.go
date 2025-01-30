@@ -88,7 +88,7 @@ func (j *JwtAuth) GetPublicKey() *ecdsa.PublicKey {
 }
 
 func (j *JwtAuth) GenerateJwt() (string, error) {
-	token := jwt.New(jwt.SigningMethodEdDSA)
+	token := jwt.New(jwt.SigningMethodES256)
 	claims := token.Claims.(jwt.MapClaims)
 	claims["exp"] = time.Now().Add(15 * time.Minute)
 	claims["authorized"] = true

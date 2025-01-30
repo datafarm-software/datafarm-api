@@ -86,7 +86,6 @@ func (i *InfluxDatafetcher) generateFluxQuery(metadata apiModule.Metadata) strin
 
 func (i *InfluxDatafetcher) queryResultToConsolidatedDeviceData(result *influxApi.QueryTableResult) (*ConsolidatedDeviceData, error) {
 	deviceDataMap := make(map[string]map[time.Time]map[string]interface{})
-
 	for result.Next() {
 		timestamp := result.Record().Time()
 		value := result.Record().Value()
@@ -95,11 +94,9 @@ func (i *InfluxDatafetcher) queryResultToConsolidatedDeviceData(result *influxAp
 			return nil, fmt.Errorf("invalid deviceID format")
 		}
 		field := result.Record().Field()
-
 		if _, exists := deviceDataMap[deviceID]; !exists {
 			deviceDataMap[deviceID] = make(map[time.Time]map[string]interface{})
 		}
-
 		merged := false
 		for existingTime := range deviceDataMap[deviceID] {
 			if math.Abs(existingTime.Sub(timestamp).Seconds()) <= 10 {
@@ -108,16 +105,13 @@ func (i *InfluxDatafetcher) queryResultToConsolidatedDeviceData(result *influxAp
 				break
 			}
 		}
-
 		if !merged {
 			deviceDataMap[deviceID][timestamp] = map[string]interface{}{field: value}
 		}
 	}
-
 	if err := result.Err(); err != nil {
 		return nil, fmt.Errorf("query parsing error: %s", err)
 	}
-
 	consolidated := &ConsolidatedDeviceData{}
 	for deviceID, timestamps := range deviceDataMap {
 		for timestamp, sensorData := range timestamps {
@@ -128,6 +122,5 @@ func (i *InfluxDatafetcher) queryResultToConsolidatedDeviceData(result *influxAp
 			})
 		}
 	}
-
 	return consolidated, nil
 }
