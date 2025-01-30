@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	apiModule "github.com/geraud22/aquahaus-api/api"
+	"github.com/geraud22/aquahaus-api/authoriser"
 	"github.com/geraud22/aquahaus-api/datafetcher"
 	"github.com/geraud22/aquahaus-api/metadatafetcher"
 	cfy "github.com/geraud22/config-from-yaml"
@@ -19,7 +20,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("error initializing influxdata fetcher: %v", err)
 	}
-	opts, err := apiModule.NewApiOpts(c.GetString("Port"), c.GetString("PublicKeyFile"), mf, df)
+	au, err := authoriser.NewJwtAuth(os.DirFS("."), c.GetString("PublicKeyFile"))
+	if err != nil {
+		log.Fatalf("error initializing jwt authoriser: %v", err)
+	}
+	opts, err := apiModule.NewApiOpts(c.GetString("Port"), mf, df, au)
 	if err != nil {
 		log.Fatalf("error getting api opts: %v", err)
 	}

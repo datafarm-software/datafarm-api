@@ -3,12 +3,8 @@ package api
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
-	"io"
-	"io/fs"
 	"log"
 	"net/http"
 	"strings"
@@ -37,6 +33,7 @@ type dataFetcher interface {
 
 type authoriser interface {
 	GenerateJwt() (string, error)
+	GetPublicKey() *ecdsa.PublicKey
 }
 
 type Metadata struct {
@@ -45,21 +42,18 @@ type Metadata struct {
 }
 
 type ApiOpts struct {
-	port, publicKeyFile string
-	fileSystem          fs.FS
-	dataFetcher         dataFetcher
-	metadataFetcher     metadataFetcher
-	authoriser          authoriser
+	port            string
+	dataFetcher     dataFetcher
+	metadataFetcher metadataFetcher
+	authoriser      authoriser
 }
 
-func NewApiOpts(port, publicKeyFile string, fs fs.FS, mf metadataFetcher, df dataFetcher, au authoriser) (ApiOpts, error) {
-	if port == "" || publicKeyFile == "" || fs == nil || mf == nil || df == nil || au == nil {
+func NewApiOpts(port string, mf metadataFetcher, df dataFetcher, au authoriser) (ApiOpts, error) {
+	if port == "" || mf == nil || df == nil || au == nil {
 		return ApiOpts{}, fmt.Errorf("not all options present")
 	}
 	return ApiOpts{
 		port:            port,
-		publicKeyFile:   publicKeyFile,
-		fileSystem:      fs,
 		metadataFetcher: mf,
 		dataFetcher:     df,
 		authoriser:      au,
@@ -68,7 +62,6 @@ func NewApiOpts(port, publicKeyFile string, fs fs.FS, mf metadataFetcher, df dat
 
 type Api struct {
 	port            string
-	publicKey       *ecdsa.PublicKey
 	wg              sync.WaitGroup
 	server          *http.Server
 	router          *mux.Router
@@ -95,11 +88,6 @@ func NewApi(opts ApiOpts) (*Api, error) {
 	}
 	api.registerRoutes()
 	api.router.Use(api.verifyJwt)
-	publicKey, err := api.loadECDSAPublicKey(opts.fileSystem, opts.publicKeyFile)
-	if err != nil {
-		return nil, fmt.Errorf("error loading public key: %v", err)
-	}
-	api.publicKey = publicKey
 	return api, nil
 }
 
@@ -285,7 +273,7 @@ func (a *Api) verifyJwt(next http.Handler) http.Handler {
 					return nil, err
 				}
 			}
-			return a.publicKey, nil
+			return a.authoriser.GetPublicKey(), nil
 		})
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -305,28 +293,4 @@ func (a *Api) verifyJwt(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
-}
-
-func (a *Api) loadECDSAPublicKey(fs fs.FS, filePath string) (*ecdsa.PublicKey, error) {
-	file, err := fs.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read public key file: %w", err)
-	}
-	data, err := io.ReadAll(file)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read public key file: %w", err)
-	}
-	block, _ := pem.Decode(data)
-	if block == nil {
-		return nil, fmt.Errorf("failed to decode PEM block")
-	}
-	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse ECDSA public key: %w", err)
-	}
-	ecdsaPubKey, ok := pubKey.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("invalid ECDSA public key")
-	}
-	return ecdsaPubKey, nil
 }
