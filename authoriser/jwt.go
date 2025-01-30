@@ -9,7 +9,7 @@ import (
 	"io/fs"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type JwtAuth struct {
@@ -90,7 +90,7 @@ func (j *JwtAuth) GetPublicKey() *ecdsa.PublicKey {
 func (j *JwtAuth) GenerateJwt() (string, error) {
 	token := jwt.New(jwt.SigningMethodES256)
 	claims := token.Claims.(jwt.MapClaims)
-	claims["exp"] = time.Now().Add(15 * time.Minute)
+	claims["exp"] = jwt.NewNumericDate(time.Now().UTC().Add(15 * time.Minute))
 	claims["authorized"] = true
 	tokenString, err := token.SignedString(j.privateKey)
 	if err != nil {

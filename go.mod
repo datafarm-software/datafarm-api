@@ -5,6 +5,7 @@ go 1.22.4
 require (
 	github.com/geraud22/config-from-yaml v0.0.0-20240812074530-6c59d4f5f454
 	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/gorilla/mux v1.8.1
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
 	github.com/redis/go-redis/v9 v9.7.0

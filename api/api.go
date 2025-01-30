@@ -271,29 +271,23 @@ func (a *Api) verifyJwt(next http.Handler) http.Handler {
 		}
 
 		tokenString := parts[1]
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(tokenString, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
-				w.WriteHeader(http.StatusUnauthorized)
-				if _, err := w.Write([]byte("Unauthorized")); err != nil {
-					return nil, err
-				}
+				log.Println("wrong signing method used")
+				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				return nil, nil
 			}
 			return a.authoriser.GetPublicKey(), nil
 		})
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			if _, err := w.Write([]byte("Error parsing token")); err != nil {
-				log.Printf("error writing to responsewriter: %v", err)
-				return
-			}
+			log.Printf("token parsing error: %v", err)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
 		}
 
 		if !token.Valid {
 			log.Println("Invalid token provided")
-			w.WriteHeader(http.StatusUnauthorized)
-			if _, err := w.Write([]byte("Unauthorized")); err != nil {
-				return
-			}
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 		next.ServeHTTP(w, r)
