@@ -255,7 +255,7 @@ func (a *Api) formatQueryRange(startTime, stopTime string) (string, error) {
 
 func (a *Api) verifyJwt(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/v1/login" || r.URL.Path == "/api/v1/register" {
+		if r.URL.Path == "/api/v1/login" {
 			next.ServeHTTP(w, r)
 			return
 		}
