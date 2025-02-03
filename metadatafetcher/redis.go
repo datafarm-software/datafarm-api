@@ -3,25 +3,13 @@ package metadatafetcher
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
+	"github.com/geraud22/aquahaus-api/authoriser"
 	"github.com/redis/go-redis/v9"
 )
 
 var g_ctx = context.Background()
-
-func connectRedis(addr, passw string, db int) *redis.Client {
-	client := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: passw,
-		DB:       db,
-	})
-	if _, err := client.Ping(g_ctx).Result(); err != nil {
-		log.Fatalf("Error connecting to Redis client: %v", err)
-	}
-	return client
-}
 
 type RedisMetadata struct {
 	db *redis.Client
@@ -29,7 +17,7 @@ type RedisMetadata struct {
 
 func NewRedisMetadata(addr, password string, db int) *RedisMetadata {
 	return &RedisMetadata{
-		db: connectRedis(addr, password, db),
+		db: authoriser.ConnectRedis(addr, password, db),
 	}
 }
 

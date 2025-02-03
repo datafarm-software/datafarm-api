@@ -32,9 +32,12 @@ type dataFetcher interface {
 	Close() error
 }
 
-type authoriser interface {
-	GenerateJwt() (string, error)
+type tokenAuth interface {
+	GenerateToken() (string, error)
 	GetPublicKey() *ecdsa.PublicKey
+}
+
+type basicAuth interface {
 	CheckCredentials(username, passw string) error
 }
 
@@ -47,18 +50,20 @@ type ApiOpts struct {
 	port            string
 	dataFetcher     dataFetcher
 	metadataFetcher metadataFetcher
-	authoriser      authoriser
+	tokenAuth       tokenAuth
+	basicAuth       basicAuth
 }
 
-func NewApiOpts(port string, mf metadataFetcher, df dataFetcher, au authoriser) (ApiOpts, error) {
-	if port == "" || mf == nil || df == nil || au == nil {
+func NewApiOpts(port string, mf metadataFetcher, df dataFetcher, t tokenAuth, b basicAuth) (ApiOpts, error) {
+	if port == "" || mf == nil || df == nil || t == nil || b == nil {
 		return ApiOpts{}, fmt.Errorf("not all options present")
 	}
 	return ApiOpts{
 		port:            port,
 		metadataFetcher: mf,
 		dataFetcher:     df,
-		authoriser:      au,
+		tokenAuth:       t,
+		basicAuth:       b,
 	}, nil
 }
 
@@ -69,7 +74,8 @@ type Api struct {
 	router          *mux.Router
 	metadataFetcher metadataFetcher
 	dataFetcher     dataFetcher
-	authoriser      authoriser
+	tokenAuth       tokenAuth
+	basicAuth       basicAuth
 	shutdownCtxFunc context.CancelFunc
 }
 
@@ -82,7 +88,8 @@ func NewApi(opts ApiOpts) (*Api, error) {
 		port:            opts.port,
 		metadataFetcher: opts.metadataFetcher,
 		dataFetcher:     opts.dataFetcher,
-		authoriser:      opts.authoriser,
+		tokenAuth:       opts.tokenAuth,
+		basicAuth:       opts.basicAuth,
 	}
 	api.server = &http.Server{
 		Addr:    opts.port,
@@ -279,7 +286,7 @@ func (a *Api) verifyJwt(next http.Handler) http.Handler {
 				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				return nil, nil
 			}
-			return a.authoriser.GetPublicKey(), nil
+			return a.tokenAuth.GetPublicKey(), nil
 		})
 		if err != nil {
 			log.Printf("token parsing error: %v", err)
@@ -323,12 +330,12 @@ func (a *Api) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	username := authInfo[0]
 	password := authInfo[1]
-	if err := a.authoriser.CheckCredentials(username, password); err != nil {
+	if err := a.basicAuth.CheckCredentials(username, password); err != nil {
 		log.Println("error checking credentials: %v", err)
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	token, err := a.authoriser.GenerateJwt()
+	token, err := a.tokenAuth.GenerateToken()
 	if err != nil {
 		log.Printf("error generating jwt: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

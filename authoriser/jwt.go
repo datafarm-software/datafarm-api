@@ -18,27 +18,11 @@ import (
 
 var g_ctx = context.Background()
 
-type Authoriser struct {
-	jwtAuth   *JwtAuth
-	basicAuth *RedisBasicAuth
-}
-
-type RedisBasicAuth struct {
+type redisBasicAuth struct {
 	db *redis.Client
 }
 
-func NewAuthoriser(addr, passw, privateKeyPath, publicKeyPath string, db int, fs fs.FS) (*Authoriser, error) {
-	jwtAuth, err := NewJwtAuth(fs, privateKeyPath, publicKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("jwt auth error: %v", err)
-	}
-	return &Authoriser{
-		jwtAuth:   jwtAuth,
-		basicAuth: NewRedisBasicAuth(addr, passw, db),
-	}, nil
-}
-
-func connectRedis(addr, passw string, db int) *redis.Client {
+func ConnectRedis(addr, passw string, db int) *redis.Client {
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: passw,
@@ -50,29 +34,29 @@ func connectRedis(addr, passw string, db int) *redis.Client {
 	return client
 }
 
-func NewRedisBasicAuth(addr, password string, db int) *RedisBasicAuth {
-	return &RedisBasicAuth{
-		db: connectRedis(addr, password, db),
+func NewRedisBasicAuth(addr, password string, db int) *redisBasicAuth {
+	return &redisBasicAuth{
+		db: ConnectRedis(addr, password, db),
 	}
 }
 
-func (r *RedisBasicAuth) Close() error {
+func (r *redisBasicAuth) Close() error {
 	if err := r.db.Close(); err != nil {
 		return fmt.Errorf("error closing redis client: %v", err)
 	}
 	return nil
 }
 
-type JwtAuth struct {
+type jwtAuth struct {
 	publicKey  *ecdsa.PublicKey
 	privateKey *ecdsa.PrivateKey
 }
 
-func NewJwtAuth(fs fs.FS, privateKeyPath, publicKeyPath string) (*JwtAuth, error) {
+func NewJwtAuth(fs fs.FS, privateKeyPath, publicKeyPath string) (*jwtAuth, error) {
 	if fs == nil || publicKeyPath == "" {
 		return nil, fmt.Errorf("not all options present")
 	}
-	var jwtAuth JwtAuth
+	var jwtAuth jwtAuth
 	publicKey, err := jwtAuth.loadECDSAPublicKey(fs, publicKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("error loading public key: %v", err)
@@ -86,7 +70,7 @@ func NewJwtAuth(fs fs.FS, privateKeyPath, publicKeyPath string) (*JwtAuth, error
 	return &jwtAuth, nil
 }
 
-func (j *JwtAuth) loadECDSAPublicKey(fs fs.FS, filePath string) (*ecdsa.PublicKey, error) {
+func (j *jwtAuth) loadECDSAPublicKey(fs fs.FS, filePath string) (*ecdsa.PublicKey, error) {
 	file, err := fs.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read public key file: %w", err)
@@ -111,7 +95,7 @@ func (j *JwtAuth) loadECDSAPublicKey(fs fs.FS, filePath string) (*ecdsa.PublicKe
 	return ecdsaPubKey, nil
 }
 
-func (j *JwtAuth) loadECDSAPrivateKey(fs fs.FS, filePath string) (*ecdsa.PrivateKey, error) {
+func (j *jwtAuth) loadECDSAPrivateKey(fs fs.FS, filePath string) (*ecdsa.PrivateKey, error) {
 	file, err := fs.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read private key file: %w", err)
@@ -132,28 +116,28 @@ func (j *JwtAuth) loadECDSAPrivateKey(fs fs.FS, filePath string) (*ecdsa.Private
 	return privKey, nil
 }
 
-func (a *Authoriser) GetPublicKey() *ecdsa.PublicKey {
-	return a.jwtAuth.publicKey
+func (j *jwtAuth) GetPublicKey() *ecdsa.PublicKey {
+	return j.publicKey
 }
 
-func (a *Authoriser) GenerateJwt() (string, error) {
+func (j *jwtAuth) GenerateToken() (string, error) {
 	token := jwt.New(jwt.SigningMethodES256)
 	claims := token.Claims.(jwt.MapClaims)
 	claims["exp"] = jwt.NewNumericDate(time.Now().UTC().Add(15 * time.Minute))
 	claims["authorized"] = true
-	tokenString, err := token.SignedString(a.jwtAuth.privateKey)
+	tokenString, err := token.SignedString(j.privateKey)
 	if err != nil {
 		return "", err
 	}
 	return tokenString, nil
 }
 
-func (a *Authoriser) CheckCredentials(username, passw string) error {
-	uuid, err := a.basicAuth.db.Get(g_ctx, "unique:"+username).Result()
+func (r *redisBasicAuth) CheckCredentials(username, passw string) error {
+	uuid, err := r.db.Get(g_ctx, "unique:"+username).Result()
 	if err != nil {
 		return fmt.Errorf("error getting uuid for username %s: %v", username, err)
 	}
-	passWordHash, err := a.basicAuth.db.HGet(g_ctx, "user:"+uuid, "password").Result()
+	passWordHash, err := r.db.HGet(g_ctx, "user:"+uuid, "password").Result()
 	if err != nil {
 		return fmt.Errorf("error getting password for username %s: %v", username, err)
 	}
