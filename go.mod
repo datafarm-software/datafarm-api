@@ -9,6 +9,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
 	github.com/redis/go-redis/v9 v9.7.0
+	golang.org/x/crypto v0.21.0
 	gomodules.xyz/memfs v0.0.1
 )
 

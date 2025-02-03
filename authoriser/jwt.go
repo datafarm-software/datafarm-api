@@ -13,6 +13,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var g_ctx = context.Background()
@@ -145,4 +146,19 @@ func (a *Authoriser) GenerateJwt() (string, error) {
 		return "", err
 	}
 	return tokenString, nil
+}
+
+func (a *Authoriser) CheckCredentials(username, passw string) error {
+	uuid, err := a.basicAuth.db.Get(g_ctx, "unique:"+username).Result()
+	if err != nil {
+		return fmt.Errorf("error getting uuid for username %s: %v", username, err)
+	}
+	passWordHash, err := a.basicAuth.db.HGet(g_ctx, "user:"+uuid, "password").Result()
+	if err != nil {
+		return fmt.Errorf("error getting password for username %s: %v", username, err)
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(passWordHash), []byte(passw)); err != nil {
+		return fmt.Errorf("passwords did not match: %v", err)
+	}
+	return nil
 }
