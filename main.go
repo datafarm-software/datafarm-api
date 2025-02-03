@@ -15,12 +15,14 @@ import (
 
 func main() {
 	c := cfy.Get("config")
-	mf := metadatafetcher.NewRedisMetadata(c.GetString("Redis.Address"), c.GetString("Redis.Password"), c.GetInt("Redis.DB"))
+	metadataDB := c.GetInt("Redis.DB")
+	authDB := c.GetInt("Redis.DB") + 2
+	mf := metadatafetcher.NewRedisMetadata(c.GetString("Redis.Address"), c.GetString("Redis.Password"), metadataDB)
 	df, err := datafetcher.NewInfluxDatafetcher(c.GetString("Influx.Org"), c.GetString("Influx.URL"), c.GetString("Influx.Token"))
 	if err != nil {
 		log.Fatalf("error initializing influxdata fetcher: %v", err)
 	}
-	au, err := authoriser.NewAuthoriser(c.GetString("Redis.Address"), c.GetString("Redis.Password"), c.GetString("PrivateKeyFile"), c.GetString("PublicKeyFile"), c.GetInt("Redis.DB"), os.DirFS("."))
+	au, err := authoriser.NewAuthoriser(c.GetString("Redis.Address"), c.GetString("Redis.Password"), c.GetString("PrivateKeyFile"), c.GetString("PublicKeyFile"), authDB, os.DirFS("."))
 	if err != nil {
 		log.Fatalf("error initializing jwt authoriser: %v", err)
 	}
