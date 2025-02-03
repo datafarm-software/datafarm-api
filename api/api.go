@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
@@ -34,6 +35,7 @@ type dataFetcher interface {
 type authoriser interface {
 	GenerateJwt() (string, error)
 	GetPublicKey() *ecdsa.PublicKey
+	CheckCredentials(username, passw string) error
 }
 
 type Metadata struct {
@@ -295,6 +297,37 @@ func (a *Api) verifyJwt(next http.Handler) http.Handler {
 }
 
 func (a *Api) Login(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		log.Println("no auth header provided")
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Basic" {
+		log.Println("Invalid Authorization header format")
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	authBytes, err := base64.StdEncoding.DecodeString(parts[1])
+	if err != nil {
+		log.Println("error decoding given base64: %v", err)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	authInfo := strings.Split(string(authBytes), ":")
+	if len(authInfo) != 2 {
+		log.Println("Invalid Basic format provided")
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	username := authInfo[0]
+	password := authInfo[1]
+	if err := a.authoriser.CheckCredentials(username, password); err != nil {
+		log.Println("error checking credentials: %v", err)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
 	token, err := a.authoriser.GenerateJwt()
 	if err != nil {
 		log.Printf("error generating jwt: %v", err)
