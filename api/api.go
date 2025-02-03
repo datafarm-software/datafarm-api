@@ -33,7 +33,7 @@ type dataFetcher interface {
 }
 
 type tokenAuth interface {
-	GenerateToken() (string, error)
+	GenerateToken(username string) (string, error)
 	GetPublicKey() *ecdsa.PublicKey
 }
 
@@ -335,7 +335,7 @@ func (a *Api) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	token, err := a.tokenAuth.GenerateToken()
+	token, err := a.tokenAuth.GenerateToken(username)
 	if err != nil {
 		log.Printf("error generating jwt: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
