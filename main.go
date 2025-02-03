@@ -20,7 +20,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("error initializing influxdata fetcher: %v", err)
 	}
-	au, err := authoriser.NewJwtAuth(os.DirFS("."), c.GetString("PrivateKeyFile"), c.GetString("PublicKeyFile"))
+	au, err := authoriser.NewAuthoriser(c.GetString("Redis.Address"), c.GetString("Redis.Password"), c.GetString("PrivateKeyFile"), c.GetString("PublicKeyFile"), c.GetInt("Redis.DB"), os.DirFS("."))
 	if err != nil {
 		log.Fatalf("error initializing jwt authoriser: %v", err)
 	}
