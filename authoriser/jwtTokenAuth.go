@@ -35,6 +35,10 @@ func NewJwtAuth(fs fs.FS, privateKeyPath, publicKeyPath string) (*jwtAuth, error
 	return &jwtAuth, nil
 }
 
+func (j *jwtAuth) Close() error {
+	return nil
+}
+
 func (j *jwtAuth) loadECDSAPublicKey(fs fs.FS, filePath string) (*ecdsa.PublicKey, error) {
 	file, err := fs.Open(filePath)
 	if err != nil {

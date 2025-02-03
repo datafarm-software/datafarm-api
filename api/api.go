@@ -33,11 +33,13 @@ type dataFetcher interface {
 }
 
 type tokenAuth interface {
+	Close() error
 	GenerateToken(username string) (string, error)
 	GetPublicKey() *ecdsa.PublicKey
 }
 
 type basicAuth interface {
+	Close() error
 	CheckCredentials(username, passw string) error
 }
 
@@ -98,6 +100,22 @@ func NewApi(opts ApiOpts) (*Api, error) {
 	api.registerRoutes()
 	api.router.Use(api.verifyJwt)
 	return api, nil
+}
+
+func (a *Api) Close() error {
+	if err := a.metadataFetcher.Close(); err != nil {
+		return fmt.Errorf("error closing metadatafetcher: %v", err)
+	}
+	if err := a.dataFetcher.Close(); err != nil {
+		return fmt.Errorf("error closing datafetcher: %v", err)
+	}
+	if err := a.tokenAuth.Close(); err != nil {
+		return fmt.Errorf("error closing token auth: %v", err)
+	}
+	if err := a.basicAuth.Close(); err != nil {
+		return fmt.Errorf("error closing basic auth: %v", err)
+	}
+	return nil
 }
 
 func (a *Api) startGoRoutine(routineToBeExecuted func(ctx context.Context)) {
