@@ -318,7 +318,7 @@ func (a *Api) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	authBytes, err := base64.StdEncoding.DecodeString(parts[1])
 	if err != nil {
-		log.Println("error decoding given base64: %v", err)
+		log.Printf("error decoding given base64: %v", err)
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
@@ -331,7 +331,7 @@ func (a *Api) Login(w http.ResponseWriter, r *http.Request) {
 	username := authInfo[0]
 	password := authInfo[1]
 	if err := a.basicAuth.CheckCredentials(username, password); err != nil {
-		log.Println("error checking credentials: %v", err)
+		log.Printf("error checking credentials: %v", err)
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}

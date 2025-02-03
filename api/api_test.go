@@ -31,17 +31,22 @@ func (m *MockDataFetcher) GetData(metadata Metadata) ([]byte, error) {
 
 func (m *MockDataFetcher) Close() error { return nil }
 
-type MockAuthoriser struct{}
+type MockTokenAuth struct{}
 
-func (m *MockAuthoriser) GenerateJwt() (string, error)   { return "", nil }
-func (m *MockAuthoriser) GetPublicKey() *ecdsa.PublicKey { return nil }
+func (m *MockTokenAuth) GenerateToken() (string, error) { return "", nil }
+func (m *MockTokenAuth) GetPublicKey() *ecdsa.PublicKey { return nil }
+
+type MockBasicAuth struct{}
+
+func (m *MockBasicAuth) CheckCredentials(username, passw string) error { return nil }
 
 func DefaultTestApiOpts() ApiOpts {
 	return ApiOpts{
 		port:            ":8080",
 		metadataFetcher: &MockMetadataFetcher{},
 		dataFetcher:     &MockDataFetcher{},
-		authoriser:      &MockAuthoriser{},
+		tokenAuth:       &MockTokenAuth{},
+		basicAuth:       &MockBasicAuth{},
 	}
 }
 
@@ -71,7 +76,8 @@ func Test_NewApiOpts(t *testing.T) {
 		testFS          *memfs.FS
 		mf              metadataFetcher
 		df              dataFetcher
-		au              authoriser
+		ta              tokenAuth
+		ba              basicAuth
 		want            ApiOpts
 		wantErr         bool
 	}{
@@ -80,12 +86,14 @@ func Test_NewApiOpts(t *testing.T) {
 			port: ":8080",
 			mf:   &MockMetadataFetcher{},
 			df:   &MockDataFetcher{},
-			au:   &MockAuthoriser{},
+			ta:   &MockTokenAuth{},
+			ba:   &MockBasicAuth{},
 			want: ApiOpts{
 				port:            ":8080",
 				metadataFetcher: &MockMetadataFetcher{},
 				dataFetcher:     &MockDataFetcher{},
-				authoriser:      &MockAuthoriser{},
+				tokenAuth:       &MockTokenAuth{},
+				basicAuth:       &MockBasicAuth{},
 			},
 			wantErr: false,
 		},
@@ -95,7 +103,7 @@ func Test_NewApiOpts(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		got, gotErr := NewApiOpts(tt.port, tt.mf, tt.df, tt.au)
+		got, gotErr := NewApiOpts(tt.port, tt.mf, tt.df, tt.ta, tt.ba)
 		if (gotErr != nil) != tt.wantErr {
 			t.Errorf("NewApiOpts() got error does not match want error. gotErr: %v, wantErr: %t", gotErr, tt.wantErr)
 		}
@@ -130,8 +138,11 @@ func Test_NewApi(t *testing.T) {
 				if got.dataFetcher == nil {
 					t.Errorf("Api datafetcher is not initialized")
 				}
-				if got.authoriser == nil {
-					t.Errorf("Api authoriser is not initialized")
+				if got.tokenAuth == nil {
+					t.Errorf("token auth is not initialized")
+				}
+				if got.basicAuth == nil {
+					t.Errorf("basic auth is not initialized")
 				}
 			},
 		},
