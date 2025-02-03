@@ -125,7 +125,7 @@ func (a *Api) StartHttpServer() {
 
 func (a *Api) registerRoutes() {
 	a.router.Handle("/device/{deviceId}", http.HandlerFunc(a.GetDataForDevice)).Methods("GET")
-	a.router.Handle("/login", http.HandlerFunc(a.Login)).Methods("POST")
+	a.router.Handle("/login", http.HandlerFunc(a.Login)).Methods("GET", "POST")
 }
 
 func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
@@ -253,7 +253,7 @@ func (a *Api) formatQueryRange(startTime, stopTime string) (string, error) {
 
 func (a *Api) verifyJwt(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/v1/login" {
+		if r.URL.Path == "/api/v1/login" || r.URL.Path == "/api/v1/register" {
 			next.ServeHTTP(w, r)
 			return
 		}
