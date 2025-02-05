@@ -34,13 +34,13 @@ type dataFetcher interface {
 
 type tokenAuth interface {
 	Close() error
-	GenerateToken(username string) (string, error)
+	GenerateToken(userInfo map[string]string) (string, error)
 	GetPublicKey() *ecdsa.PublicKey
 }
 
 type basicAuth interface {
 	Close() error
-	CheckCredentials(username, passw string) error
+	CheckCredentials(username, passw string) (map[string]string, error)
 }
 
 type Metadata struct {
@@ -348,12 +348,13 @@ func (a *Api) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	username := authInfo[0]
 	password := authInfo[1]
-	if err := a.basicAuth.CheckCredentials(username, password); err != nil {
+	userInfo, err := a.basicAuth.CheckCredentials(username, password)
+	if err != nil {
 		log.Printf("error checking credentials: %v", err)
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	token, err := a.tokenAuth.GenerateToken(username)
+	token, err := a.tokenAuth.GenerateToken(userInfo)
 	if err != nil {
 		log.Printf("error generating jwt: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

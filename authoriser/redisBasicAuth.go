@@ -40,24 +40,31 @@ func (r *redisBasicAuth) Close() error {
 	return nil
 }
 
-func (r *redisBasicAuth) CheckCredentials(username, passw string) error {
+func (r *redisBasicAuth) CheckCredentials(username, passw string) (map[string]string, error) {
 	uuid, err := r.db.Get(g_ctx, "unique:"+username).Result()
 	if err != nil {
-		return fmt.Errorf("error getting uuid for username %s: %v", username, err)
+		return nil, fmt.Errorf("error getting uuid for username %s: %v", username, err)
 	}
-	passWordHash, err := r.db.HGet(g_ctx, "user:"+uuid, "password").Result()
+	userHash, err := r.db.HGetAll(g_ctx, "user:"+uuid).Result()
 	if err != nil {
-		return fmt.Errorf("error getting password for username %s: %v", username, err)
+		return nil, fmt.Errorf("error getting password for username %s: %v", username, err)
+	}
+	passWordHash := userHash["password"]
+	company := userHash["company"]
+	role := userHash["role"]
+	network := userHash["network"]
+	if passWordHash == "" || company == "" || role == "" || network == "" {
+		return nil, fmt.Errorf("incomprehensive user hash found")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(passWordHash), []byte(passw)); err != nil {
-		return fmt.Errorf("passwords did not match: %v", err)
-	}
-	role, err := r.db.HGet(g_ctx, "user:"+uuid, "role").Result()
-	if err != nil {
-		return fmt.Errorf("found no role for user %s: %v", username, err)
+		return nil, fmt.Errorf("passwords did not match: %v", err)
 	}
 	if role == "" || role != "api-viewer" && role != "admin" {
-		return fmt.Errorf("insufficient role to access the api")
+		return nil, fmt.Errorf("insufficient role to access the api")
 	}
-	return nil
+	return map[string]string{
+		"username": username,
+		"company":  company,
+		"network":  network,
+	}, nil
 }
