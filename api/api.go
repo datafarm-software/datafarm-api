@@ -45,8 +45,8 @@ type basicAuth interface {
 }
 
 type Metadata struct {
-	DeviceId, Network, Company, QueryRange string
-	QueryFields                            []string
+	DeviceId, Company, QueryRange string
+	QueryFields                   []string
 }
 
 type ApiOpts struct {
@@ -168,12 +168,6 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	network, ok := claims["network"].(string)
-	if !ok {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-	metadata.Network = network
 	company, ok := claims["company"].(string)
 	if !ok {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

@@ -67,7 +67,7 @@ func (i *InfluxDatafetcher) GetData(metadata apiModule.Metadata) ([]byte, error)
 
 func (i *InfluxDatafetcher) generateFluxQuery(metadata apiModule.Metadata) string {
 	var queryBuilder strings.Builder
-	queryBuilder.WriteString(fmt.Sprintf(`from(bucket: "%s")`, metadata.Network))
+	queryBuilder.WriteString(`from(bucket: "Datafarm")`)
 	queryBuilder.WriteString(fmt.Sprintf(` |> range(%s)`, metadata.QueryRange))
 	queryBuilder.WriteString(fmt.Sprintf(` |> filter(fn: (r) => r["_measurement"] == "%s")`, metadata.Company))
 	queryBuilder.WriteString(fmt.Sprintf(` |> filter(fn: (r) => r["deviceID"] == "%s")`, metadata.DeviceId))

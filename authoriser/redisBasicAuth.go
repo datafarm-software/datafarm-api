@@ -52,8 +52,7 @@ func (r *redisBasicAuth) CheckCredentials(username, passw string) (map[string]st
 	passWordHash := userHash["password"]
 	company := userHash["company"]
 	role := userHash["role"]
-	network := userHash["network"]
-	if passWordHash == "" || company == "" || role == "" || network == "" {
+	if passWordHash == "" || company == "" || role == "" {
 		return nil, fmt.Errorf("incomprehensive user hash found")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(passWordHash), []byte(passw)); err != nil {
@@ -65,6 +64,5 @@ func (r *redisBasicAuth) CheckCredentials(username, passw string) (map[string]st
 	return map[string]string{
 		"username": username,
 		"company":  company,
-		"network":  network,
 	}, nil
 }
