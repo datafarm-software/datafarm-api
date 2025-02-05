@@ -19,6 +19,7 @@ import (
 const EmptyPayloadLength int = 16
 
 var g_ctx context.Context
+var claimsKey string = "jwtClaims"
 
 type metadataFetcher interface {
 	Close() error
@@ -156,87 +157,50 @@ func (a *Api) registerRoutes() {
 }
 
 func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
-	//TODO validate deviceId against authorised user's company
 	var metadata Metadata
-	vars := mux.Vars(r)
-	deviceId := vars["deviceId"]
+	routeVars := mux.Vars(r)
+	deviceId := routeVars["deviceId"]
 	deviceId = strings.TrimSpace(deviceId)
-	metadata.DeviceId = deviceId
 	startTime := r.URL.Query().Get("start")
 	stopTime := r.URL.Query().Get("stop")
-	var wg sync.WaitGroup
-	var tErr, nwErr, cErr, aErr, qErr error
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		queryRange, err := a.formatQueryRange(startTime, stopTime)
-		if err != nil {
-			tErr = fmt.Errorf("error formatting query range: %v", err)
-			return
-		}
-		metadata.QueryRange = queryRange
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		network, err := a.metadataFetcher.GetMapValue(deviceId, "Network")
-		if err != nil {
-			nwErr = fmt.Errorf("error getting network: %v", err)
-			return
-		}
-		metadata.Network = network
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		company, err := a.metadataFetcher.GetMapValue(deviceId, "Company")
-		if err != nil {
-			cErr = fmt.Errorf("error getting company: %v", err)
-			return
-		}
-		metadata.Company = company
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		attachedSensors, err := a.metadataFetcher.GetAttachedSensors(deviceId)
-		if err != nil {
-			aErr = fmt.Errorf("error getting attached sensors: %v", err)
-			return
-		}
-		queryFields, err := a.metadataFetcher.GetQueryFields(attachedSensors)
-		if err != nil {
-			qErr = fmt.Errorf("error getting query fields: %v", err)
-			return
-		}
-		metadata.QueryFields = queryFields
-	}()
-	wg.Wait()
-	if tErr != nil {
-		log.Println(tErr)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-	if nwErr != nil {
-		log.Println(nwErr)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-	if cErr != nil {
-		log.Println(cErr)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-	if qErr != nil {
-		log.Println(qErr)
+	claims, ok := r.Context().Value(claimsKey).(jwt.MapClaims)
+	if !ok {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	if aErr != nil {
-		log.Println(aErr)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+	network, ok := claims["network"].(string)
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
+	metadata.Network = network
+	company, ok := claims["company"].(string)
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	metadata.Company = company
+	metadata.DeviceId = deviceId
+	queryRange, err := a.formatQueryRange(startTime, stopTime)
+	if err != nil {
+		log.Printf("error formatting query range: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	metadata.QueryRange = queryRange
+	attachedSensors, err := a.metadataFetcher.GetAttachedSensors(deviceId)
+	if err != nil {
+		log.Printf("error getting attached sensors: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	queryFields, err := a.metadataFetcher.GetQueryFields(attachedSensors)
+	if err != nil {
+		log.Printf("error getting query fields: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	metadata.QueryFields = queryFields
 	jsonData, err := a.dataFetcher.GetData(metadata)
 	if err != nil {
 		log.Printf("error getting data: %v", err)
@@ -298,7 +262,8 @@ func (a *Api) verifyJwt(next http.Handler) http.Handler {
 		}
 
 		tokenString := parts[1]
-		token, err := jwt.ParseWithClaims(tokenString, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+		claims := jwt.MapClaims{}
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
 				log.Println("wrong signing method used")
 				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
@@ -317,7 +282,8 @@ func (a *Api) verifyJwt(next http.Handler) http.Handler {
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
-		next.ServeHTTP(w, r)
+		ctx := context.WithValue(r.Context(), claimsKey, claims)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
