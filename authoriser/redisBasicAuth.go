@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/geraud22/aquahaus-api/api"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -40,29 +41,34 @@ func (r *redisBasicAuth) Close() error {
 	return nil
 }
 
-func (r *redisBasicAuth) CheckCredentials(username, passw string) (map[string]string, error) {
+func (r *redisBasicAuth) GetUserInfo(username, passw string) (api.UserInfo, error) {
 	uuid, err := r.db.Get(g_ctx, "unique:"+username).Result()
 	if err != nil {
-		return nil, fmt.Errorf("error getting uuid for username %s: %v", username, err)
+		return api.UserInfo{}, fmt.Errorf("error getting uuid for username %s: %v", username, err)
 	}
 	userHash, err := r.db.HGetAll(g_ctx, "user:"+uuid).Result()
 	if err != nil {
-		return nil, fmt.Errorf("error getting password for username %s: %v", username, err)
+		return api.UserInfo{}, fmt.Errorf("error getting password for username %s: %v", username, err)
 	}
 	passWordHash := userHash["password"]
 	company := userHash["company"]
 	role := userHash["role"]
+	network, err := r.db.Get(g_ctx, "network:"+company).Result()
+	if err != nil {
+		return api.UserInfo{}, fmt.Errorf("error getting network: %v", err)
+	}
 	if passWordHash == "" || company == "" || role == "" {
-		return nil, fmt.Errorf("incomprehensive user hash found")
+		return api.UserInfo{}, fmt.Errorf("incomprehensive user hash found")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(passWordHash), []byte(passw)); err != nil {
-		return nil, fmt.Errorf("passwords did not match: %v", err)
+		return api.UserInfo{}, fmt.Errorf("passwords did not match: %v", err)
 	}
 	if role == "" || role != "viewer-api" && role != "admin" {
-		return nil, fmt.Errorf("insufficient role to access the api")
+		return api.UserInfo{}, fmt.Errorf("insufficient role to access the api: %s", username)
 	}
-	return map[string]string{
-		"username": username,
-		"company":  company,
+	return api.UserInfo{
+		Username: username,
+		Company:  company,
+		Network:  network,
 	}, nil
 }

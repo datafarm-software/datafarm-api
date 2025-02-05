@@ -35,18 +35,22 @@ type dataFetcher interface {
 
 type tokenAuth interface {
 	Close() error
-	GenerateToken(userInfo map[string]string) (string, error)
+	GenerateToken(userInfo UserInfo) (string, error)
 	GetPublicKey() *ecdsa.PublicKey
 }
 
 type basicAuth interface {
 	Close() error
-	CheckCredentials(username, passw string) (map[string]string, error)
+	GetUserInfo(username, passw string) (UserInfo, error)
 }
 
 type Metadata struct {
-	DeviceId, Company, QueryRange string
-	QueryFields                   []string
+	DeviceId, Company, Network, QueryRange string
+	QueryFields                            []string
+}
+
+type UserInfo struct {
+	Username, Company, Network string
 }
 
 type ApiOpts struct {
@@ -173,8 +177,14 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
+	network, ok := claims["network"].(string)
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
 	metadata.Company = company
 	metadata.DeviceId = deviceId
+	metadata.Network = network
 	queryRange, err := a.formatQueryRange(startTime, stopTime)
 	if err != nil {
 		log.Printf("error formatting query range: %v", err)
@@ -308,7 +318,7 @@ func (a *Api) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	username := authInfo[0]
 	password := authInfo[1]
-	userInfo, err := a.basicAuth.CheckCredentials(username, password)
+	userInfo, err := a.basicAuth.GetUserInfo(username, password)
 	if err != nil {
 		log.Printf("error checking credentials: %v", err)
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)

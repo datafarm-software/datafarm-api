@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"time"
 
+	"github.com/geraud22/aquahaus-api/api"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -89,13 +90,14 @@ func (j *jwtAuth) GetPublicKey() *ecdsa.PublicKey {
 	return j.publicKey
 }
 
-func (j *jwtAuth) GenerateToken(userInfo map[string]string) (string, error) {
+func (j *jwtAuth) GenerateToken(userInfo api.UserInfo) (string, error) {
 	token := jwt.New(jwt.SigningMethodES256)
 	claims := token.Claims.(jwt.MapClaims)
 	claims["exp"] = jwt.NewNumericDate(time.Now().UTC().Add(15 * time.Minute))
 	claims["authorized"] = true
-	claims["company"] = userInfo["company"]
-	claims["username"] = userInfo["username"]
+	claims["company"] = userInfo.Company
+	claims["username"] = userInfo.Username
+	claims["network"] = userInfo.Network
 	tokenString, err := token.SignedString(j.privateKey)
 	if err != nil {
 		return "", err
