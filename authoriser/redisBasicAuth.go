@@ -52,19 +52,15 @@ func (r *redisBasicAuth) GetUserInfo(username, passw string) (api.UserInfo, erro
 	}
 	passWordHash := userHash["password"]
 	company := userHash["company"]
-	role := userHash["role"]
 	network, err := r.db.Get(g_ctx, "network:"+company).Result()
 	if err != nil {
 		return api.UserInfo{}, fmt.Errorf("error getting network: %v", err)
 	}
-	if passWordHash == "" || company == "" || role == "" {
+	if passWordHash == "" || company == "" {
 		return api.UserInfo{}, fmt.Errorf("incomprehensive user hash found")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(passWordHash), []byte(passw)); err != nil {
 		return api.UserInfo{}, fmt.Errorf("passwords did not match: %v", err)
-	}
-	if role == "" || role != "viewer-api" && role != "admin" {
-		return api.UserInfo{}, fmt.Errorf("insufficient role to access the api: %s", username)
 	}
 	return api.UserInfo{
 		Username: username,
