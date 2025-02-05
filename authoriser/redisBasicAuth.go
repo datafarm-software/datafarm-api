@@ -58,7 +58,7 @@ func (r *redisBasicAuth) CheckCredentials(username, passw string) (map[string]st
 	if err := bcrypt.CompareHashAndPassword([]byte(passWordHash), []byte(passw)); err != nil {
 		return nil, fmt.Errorf("passwords did not match: %v", err)
 	}
-	if role == "" || role != "api-viewer" && role != "admin" {
+	if role == "" || role != "viewer-api" && role != "admin" {
 		return nil, fmt.Errorf("insufficient role to access the api")
 	}
 	return map[string]string{
