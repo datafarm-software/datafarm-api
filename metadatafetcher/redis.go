@@ -3,7 +3,6 @@ package metadatafetcher
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/geraud22/aquahaus-api/authoriser"
 	"github.com/redis/go-redis/v9"
@@ -38,8 +37,8 @@ func (r *RedisMetadata) GetMapValue(deviceId, mapKey string) (string, error) {
 }
 
 func (r *RedisMetadata) GetAttachedSensors(deviceId string) ([]string, error) {
-	key := fmt.Sprintf("fieldUnit:%s:attached_sensors", deviceId)
-	attachedSensors, err := r.db.LRange(g_ctx, key, 0, -1).Result()
+	key := fmt.Sprintf("attachedSensors:%s", deviceId)
+	attachedSensors, err := r.db.SMembers(g_ctx, key).Result()
 	if err != nil {
 		return nil, fmt.Errorf("redis: %v", err)
 	}
@@ -49,9 +48,7 @@ func (r *RedisMetadata) GetAttachedSensors(deviceId string) ([]string, error) {
 func (r *RedisMetadata) GetQueryFields(attachedSensors []string) ([]string, error) {
 	queryfields := make([]string, 0)
 	for _, a := range attachedSensors {
-		fields := strings.Fields(a)
-		squashed := strings.Join(fields, "")
-		key := fmt.Sprintf("sensorType:%s:query_fields", squashed)
+		key := fmt.Sprintf("queryFields:%s", a)
 		qf, err := r.db.SMembers(g_ctx, key).Result()
 		if err != nil {
 			return nil, fmt.Errorf("redis smembers: %v", err)

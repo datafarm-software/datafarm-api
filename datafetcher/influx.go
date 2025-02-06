@@ -122,5 +122,8 @@ func (i *InfluxDatafetcher) queryResultToConsolidatedDeviceData(result *influxAp
 			})
 		}
 	}
+	if len(consolidated.DeviceData) < 2 {
+		return nil, fmt.Errorf("no data found")
+	}
 	return consolidated, nil
 }
