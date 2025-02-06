@@ -28,6 +28,13 @@ type DeviceData struct {
 	SensorData map[string]interface{}
 }
 
+type DataRow struct {
+	DeviceID string
+	Field    string
+	Time     time.Time
+	Value    interface{}
+}
+
 func NewInfluxDatafetcher(org, url, token string) (*InfluxDatafetcher, error) {
 	db := influxdb2.NewClient(url, token)
 	ok, err := db.Ping(context.Background())
@@ -54,10 +61,11 @@ func (i *InfluxDatafetcher) GetData(metadata apiModule.Metadata) ([]byte, error)
 	if err != nil {
 		return nil, fmt.Errorf("error querying influxdb: %v", err)
 	}
-	deviceData, err := i.queryResultToConsolidatedDeviceData(result)
+	dataRows, err := i.ExtractValue(result)
 	if err != nil {
 		return nil, fmt.Errorf("error converting query result to consolidated device data: %v", err)
 	}
+	deviceData := i.DataRows2ConsolidatedDeviceData(dataRows)
 	jsonData, err := json.Marshal(deviceData)
 	if err != nil {
 		return nil, fmt.Errorf("error marshalling deviceData to json: %v", err)
@@ -84,46 +92,44 @@ func (i *InfluxDatafetcher) generateFluxQuery(metadata apiModule.Metadata) strin
 	return queryBuilder.String()
 }
 
-func (i *InfluxDatafetcher) queryResultToConsolidatedDeviceData(result *influxApi.QueryTableResult) (*ConsolidatedDeviceData, error) {
-	deviceDataMap := make(map[string]map[time.Time]map[string]interface{})
+func (i *InfluxDatafetcher) ExtractValue(result *influxApi.QueryTableResult) ([]DataRow, error) {
+	var records []DataRow
 	for result.Next() {
-		timestamp := result.Record().Time()
-		value := result.Record().Value()
-		deviceID, ok := result.Record().ValueByKey("deviceID").(string)
-		if !ok {
-			return nil, fmt.Errorf("invalid deviceID format")
+		dataRow := DataRow{
+			Time:     result.Record().Time(),
+			Value:    result.Record().Value(),
+			DeviceID: result.Record().ValueByKey("deviceID").(string),
+			Field:    result.Record().Field(),
 		}
-		field := result.Record().Field()
-		if _, exists := deviceDataMap[deviceID]; !exists {
-			deviceDataMap[deviceID] = make(map[time.Time]map[string]interface{})
-		}
-		merged := false
-		for existingTime := range deviceDataMap[deviceID] {
-			if math.Abs(existingTime.Sub(timestamp).Seconds()) <= 10 {
-				deviceDataMap[deviceID][existingTime][field] = value
-				merged = true
+		records = append(records, dataRow)
+	}
+	if result.Err() != nil {
+		return nil, fmt.Errorf("query parsing error: %s", result.Err().Error())
+	}
+	return records, nil
+}
+
+func (i *InfluxDatafetcher) DataRows2ConsolidatedDeviceData(data []DataRow) *ConsolidatedDeviceData {
+	var deviceDataSlice []DeviceData
+	for _, row := range data {
+		found := false
+		for i, deviceData := range deviceDataSlice {
+			if deviceData.DeviceID == row.DeviceID && math.Abs(float64(deviceData.Timestamp.Sub(row.Time).Seconds())) <= 10 {
+				deviceDataSlice[i].SensorData[row.Field] = row.Value
+				found = true
 				break
 			}
 		}
-		if !merged {
-			deviceDataMap[deviceID][timestamp] = map[string]interface{}{field: value}
+		if !found {
+			newDeviceData := DeviceData{
+				DeviceID:   row.DeviceID,
+				Timestamp:  row.Time,
+				SensorData: map[string]interface{}{row.Field: row.Value},
+			}
+			deviceDataSlice = append(deviceDataSlice, newDeviceData)
 		}
 	}
-	if err := result.Err(); err != nil {
-		return nil, fmt.Errorf("query parsing error: %s", err)
+	return &ConsolidatedDeviceData{
+		DeviceData: deviceDataSlice,
 	}
-	consolidated := &ConsolidatedDeviceData{}
-	for deviceID, timestamps := range deviceDataMap {
-		for timestamp, sensorData := range timestamps {
-			consolidated.DeviceData = append(consolidated.DeviceData, DeviceData{
-				DeviceID:   deviceID,
-				Timestamp:  timestamp,
-				SensorData: sensorData,
-			})
-		}
-	}
-	if len(consolidated.DeviceData) < 2 {
-		return nil, fmt.Errorf("no data found")
-	}
-	return consolidated, nil
 }
