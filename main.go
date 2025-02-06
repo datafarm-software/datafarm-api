@@ -34,7 +34,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("error initializing app: %v", err)
 	}
-	defer api.Close()
 	api.StartHttpServer()
 	log.Printf("Started server on %s", c.GetString("Port"))
 	sigChan := make(chan os.Signal, 1)

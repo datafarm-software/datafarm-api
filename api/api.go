@@ -107,22 +107,6 @@ func NewApi(opts ApiOpts) (*Api, error) {
 	return api, nil
 }
 
-func (a *Api) Close() error {
-	if err := a.metadataFetcher.Close(); err != nil {
-		return fmt.Errorf("error closing metadatafetcher: %v", err)
-	}
-	if err := a.dataFetcher.Close(); err != nil {
-		return fmt.Errorf("error closing datafetcher: %v", err)
-	}
-	if err := a.tokenAuth.Close(); err != nil {
-		return fmt.Errorf("error closing token auth: %v", err)
-	}
-	if err := a.basicAuth.Close(); err != nil {
-		return fmt.Errorf("error closing basic auth: %v", err)
-	}
-	return nil
-}
-
 func (a *Api) startGoRoutine(routineToBeExecuted func(ctx context.Context)) {
 	a.wg.Add(1)
 	go func() {
@@ -135,11 +119,17 @@ func (a *Api) Shutdown() {
 	if err := a.server.Shutdown(g_ctx); err != nil {
 		log.Fatalf("HTTP shutdown error: %v", err)
 	}
-	if err := a.dataFetcher.Close(); err != nil {
-		log.Fatalf("datafetcher close error: %v", err)
-	}
 	if err := a.metadataFetcher.Close(); err != nil {
-		log.Fatalf("metadatafetcher close error: %v", err)
+		log.Fatalf("error closing metadatafetcher: %v", err)
+	}
+	if err := a.dataFetcher.Close(); err != nil {
+		log.Fatalf("error closing datafetcher: %v", err)
+	}
+	if err := a.tokenAuth.Close(); err != nil {
+		log.Fatalf("error closing token auth: %v", err)
+	}
+	if err := a.basicAuth.Close(); err != nil {
+		log.Fatalf("error closing basic auth: %v", err)
 	}
 	a.shutdownCtxFunc()
 	a.wg.Wait()
