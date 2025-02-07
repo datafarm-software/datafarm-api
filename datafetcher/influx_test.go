@@ -13,14 +13,14 @@ func TestApi_formatQueryRange(t *testing.T) {
 		{
 			name:      "relative time",
 			startTime: "-6d",
-			stopTime:  "can be anything",
+			stopTime:  "",
 			want:      "start: -6d",
 			wantErr:   false,
 		},
 		{
 			name:      "no start time provided",
 			startTime: "",
-			stopTime:  "can be anything",
+			stopTime:  "",
 			want:      "",
 			wantErr:   true,
 		},
