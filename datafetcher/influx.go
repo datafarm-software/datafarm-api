@@ -2,7 +2,6 @@ package datafetcher
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
@@ -16,16 +15,6 @@ import (
 type InfluxDatafetcher struct {
 	db       influxdb2.Client
 	queryApi influxApi.QueryAPI
-}
-
-type ConsolidatedDeviceData struct {
-	DeviceData []DeviceData `json:"payload"`
-}
-
-type DeviceData struct {
-	DeviceID   string    `json:"rtuid"`
-	Timestamp  time.Time `json:"timestamp"`
-	SensorData map[string]interface{}
 }
 
 type DataRow struct {
@@ -55,22 +44,17 @@ func (i *InfluxDatafetcher) Close() error {
 	return nil
 }
 
-func (i *InfluxDatafetcher) GetData(metadata apiModule.Metadata) ([]byte, error) {
+func (i *InfluxDatafetcher) GetData(metadata apiModule.Metadata) (*apiModule.ConsolidatedDeviceData, error) {
 	query := i.generateFluxQuery(metadata)
 	result, err := i.queryApi.Query(context.Background(), query)
 	if err != nil {
 		return nil, fmt.Errorf("error querying influxdb: %v", err)
 	}
-	dataRows, err := i.ExtractValue(result)
+	dataRows, err := i.extractValue(result)
 	if err != nil {
 		return nil, fmt.Errorf("error converting query result to consolidated device data: %v", err)
 	}
-	deviceData := i.DataRows2ConsolidatedDeviceData(dataRows)
-	jsonData, err := json.Marshal(deviceData)
-	if err != nil {
-		return nil, fmt.Errorf("error marshalling deviceData to json: %v", err)
-	}
-	return jsonData, nil
+	return i.dataRows2ConsolidatedDeviceData(dataRows), nil
 }
 
 func (i *InfluxDatafetcher) generateFluxQuery(metadata apiModule.Metadata) string {
@@ -92,7 +76,7 @@ func (i *InfluxDatafetcher) generateFluxQuery(metadata apiModule.Metadata) strin
 	return queryBuilder.String()
 }
 
-func (i *InfluxDatafetcher) ExtractValue(result *influxApi.QueryTableResult) ([]DataRow, error) {
+func (i *InfluxDatafetcher) extractValue(result *influxApi.QueryTableResult) ([]DataRow, error) {
 	var records []DataRow
 	for result.Next() {
 		dataRow := DataRow{
@@ -109,8 +93,8 @@ func (i *InfluxDatafetcher) ExtractValue(result *influxApi.QueryTableResult) ([]
 	return records, nil
 }
 
-func (i *InfluxDatafetcher) DataRows2ConsolidatedDeviceData(data []DataRow) *ConsolidatedDeviceData {
-	var deviceDataSlice []DeviceData
+func (i *InfluxDatafetcher) dataRows2ConsolidatedDeviceData(data []DataRow) *apiModule.ConsolidatedDeviceData {
+	var deviceDataSlice []apiModule.DeviceData
 	for _, row := range data {
 		found := false
 		for i, deviceData := range deviceDataSlice {
@@ -121,7 +105,7 @@ func (i *InfluxDatafetcher) DataRows2ConsolidatedDeviceData(data []DataRow) *Con
 			}
 		}
 		if !found {
-			newDeviceData := DeviceData{
+			newDeviceData := apiModule.DeviceData{
 				DeviceID:   row.DeviceID,
 				Timestamp:  row.Time,
 				SensorData: map[string]interface{}{row.Field: row.Value},
@@ -129,7 +113,7 @@ func (i *InfluxDatafetcher) DataRows2ConsolidatedDeviceData(data []DataRow) *Con
 			deviceDataSlice = append(deviceDataSlice, newDeviceData)
 		}
 	}
-	return &ConsolidatedDeviceData{
+	return &apiModule.ConsolidatedDeviceData{
 		DeviceData: deviceDataSlice,
 	}
 }

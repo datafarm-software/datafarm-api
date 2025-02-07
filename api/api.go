@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -29,7 +30,7 @@ type metadataFetcher interface {
 }
 
 type dataFetcher interface {
-	GetData(metadata Metadata) ([]byte, error)
+	GetData(metadata Metadata) (*ConsolidatedDeviceData, error)
 	Close() error
 }
 
@@ -42,6 +43,16 @@ type tokenAuth interface {
 type basicAuth interface {
 	Close() error
 	GetUserInfo(username, passw string) (UserInfo, error)
+}
+
+type ConsolidatedDeviceData struct {
+	DeviceData []DeviceData `json:"payload"`
+}
+
+type DeviceData struct {
+	DeviceID   string    `json:"rtuid"`
+	Timestamp  time.Time `json:"timestamp"`
+	SensorData map[string]interface{}
 }
 
 type Metadata struct {
@@ -195,11 +206,16 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	metadata.QueryFields = queryFields
-	jsonData, err := a.dataFetcher.GetData(metadata)
+	deviceData, err := a.dataFetcher.GetData(metadata)
 	if err != nil {
 		log.Printf("error getting data: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
+	}
+	jsonData, err := json.Marshal(deviceData)
+	if err != nil {
+		log.Printf("error marshalling deviceData to json: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
