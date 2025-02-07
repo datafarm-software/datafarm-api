@@ -238,9 +238,9 @@ func (a *Api) formatQueryRange(startTime, stopTime string) (string, error) {
 	}
 	if _, err := time.Parse(time.RFC3339, startTime); err != nil {
 		relativeRange = true
-	}
-	if _, err := time.Parse(time.RFC3339, startTime); err == nil && stopTime == "" {
-		return "", fmt.Errorf("start time is rfc3339, but stop time is empty. cannot procede")
+		if stopTime == "" {
+			return "", fmt.Errorf("start time is rfc3339, but stop time is empty. cannot procede")
+		}
 	}
 	if !relativeRange {
 		if _, err := time.Parse(time.RFC3339, stopTime); err != nil {

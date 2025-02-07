@@ -24,7 +24,7 @@ func (m *MockMetadataFetcher) GetQueryFields(attachedSensors []string) ([]string
 
 type MockDataFetcher struct{}
 
-func (m *MockDataFetcher) GetData(metadata Metadata) ([]byte, error) {
+func (m *MockDataFetcher) GetData(metadata Metadata) (*ConsolidatedDeviceData, error) {
 	return nil, nil
 }
 
@@ -32,12 +32,15 @@ func (m *MockDataFetcher) Close() error { return nil }
 
 type MockTokenAuth struct{}
 
-func (m *MockTokenAuth) GenerateToken() (string, error) { return "", nil }
-func (m *MockTokenAuth) GetPublicKey() *ecdsa.PublicKey { return nil }
+func (m *MockTokenAuth) GenerateToken(userInfo UserInfo) (string, error) { return "", nil }
+func (m *MockTokenAuth) GetPublicKey() *ecdsa.PublicKey                  { return nil }
+func (m *MockTokenAuth) Close() error                                    { return nil }
 
 type MockBasicAuth struct{}
 
-func (m *MockBasicAuth) CheckCredentials(username, passw string) error { return nil }
+func (m *MockBasicAuth) CheckCredentials(username, passw string) error        { return nil }
+func (m *MockBasicAuth) GetUserInfo(username, passw string) (UserInfo, error) { return UserInfo{}, nil }
+func (m *MockBasicAuth) Close() error                                         { return nil }
 
 func DefaultTestApiOpts() ApiOpts {
 	return ApiOpts{
