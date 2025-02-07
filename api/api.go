@@ -42,7 +42,7 @@ type tokenAuth interface {
 
 type basicAuth interface {
 	Close() error
-	GetUserInfo(username, passw string) (UserInfo, error)
+	CheckCredentials(username, passw string) (UserInfo, error)
 }
 
 type ConsolidatedDeviceData struct {
@@ -306,20 +306,20 @@ func (a *Api) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	username := authInfo[0]
 	password := authInfo[1]
-	userInfo, err := a.basicAuth.GetUserInfo(username, password)
+	verifiedUserInfo, err := a.basicAuth.CheckCredentials(username, password)
 	if err != nil {
 		log.Printf("error checking credentials: %v", err)
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	token, err := a.tokenAuth.GenerateToken(userInfo)
+	token, err := a.tokenAuth.GenerateToken(verifiedUserInfo)
 	if err != nil {
 		log.Printf("error generating jwt: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Type", "application/json")
 	if _, err := w.Write([]byte(token)); err != nil {
 		log.Printf("error writing to response writer: %v", err)
 		return

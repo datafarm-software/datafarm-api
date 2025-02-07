@@ -41,7 +41,7 @@ func (r *redisBasicAuth) Close() error {
 	return nil
 }
 
-func (r *redisBasicAuth) GetUserInfo(username, passw string) (api.UserInfo, error) {
+func (r *redisBasicAuth) CheckCredentials(username, passw string) (api.UserInfo, error) {
 	uuid, err := r.db.Get(g_ctx, "unique:"+username).Result()
 	if err != nil {
 		return api.UserInfo{}, fmt.Errorf("error getting uuid for username %s: %v", username, err)
@@ -56,7 +56,7 @@ func (r *redisBasicAuth) GetUserInfo(username, passw string) (api.UserInfo, erro
 	if err != nil {
 		return api.UserInfo{}, fmt.Errorf("error getting network: %v", err)
 	}
-	if passWordHash == "" || company == "" {
+	if passWordHash == "" || company == "" || network == "" {
 		return api.UserInfo{}, fmt.Errorf("incomprehensive user hash found")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(passWordHash), []byte(passw)); err != nil {
