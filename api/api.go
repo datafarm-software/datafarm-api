@@ -55,8 +55,8 @@ type DeviceData struct {
 }
 
 type Metadata struct {
-	DeviceId, Company, Network, QueryRange string
-	QueryFields                            []string
+	DeviceId, Company, Network, QueryRange, StartTime, StopTime string
+	QueryFields                                                 []string
 }
 
 type UserInfo struct {
@@ -185,13 +185,8 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 	metadata.Company = company
 	metadata.DeviceId = deviceId
 	metadata.Network = network
-	queryRange, err := a.formatQueryRange(startTime, stopTime)
-	if err != nil {
-		log.Printf("error formatting query range: %v", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-	metadata.QueryRange = queryRange
+	metadata.StartTime = startTime
+	metadata.StopTime = stopTime
 	attachedSensors, err := a.metadataFetcher.GetAttachedSensors(deviceId)
 	if err != nil {
 		log.Printf("error getting attached sensors: %v", err)
@@ -229,26 +224,6 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-}
-
-func (a *Api) formatQueryRange(startTime, stopTime string) (string, error) {
-	relativeRange := false
-	if startTime == "" {
-		return "", fmt.Errorf("no start time provided")
-	}
-	if _, err := time.Parse(time.RFC3339, startTime); err != nil {
-		relativeRange = true
-		if stopTime == "" {
-			return "", fmt.Errorf("start time is rfc3339, but stop time is empty. cannot procede")
-		}
-	}
-	if !relativeRange {
-		if _, err := time.Parse(time.RFC3339, stopTime); err != nil {
-			return "", fmt.Errorf("Invalid RFC3339 stop timestamp: %v", err)
-		}
-		return fmt.Sprintf("start: %s, stop: %s", startTime, stopTime), nil
-	}
-	return fmt.Sprintf("start: %s", startTime), nil
 }
 
 func (a *Api) verifyJwt(next http.Handler) http.Handler {

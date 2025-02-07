@@ -45,6 +45,11 @@ func (i *InfluxDatafetcher) Close() error {
 }
 
 func (i *InfluxDatafetcher) GetData(metadata apiModule.Metadata) (*apiModule.ConsolidatedDeviceData, error) {
+	formattedQueryRange, err := i.formatQueryRange(metadata.StartTime, metadata.StopTime)
+	if err != nil {
+		return nil, fmt.Errorf("error formatting query range: %v", err)
+	}
+	metadata.QueryRange = formattedQueryRange
 	query := i.generateFluxQuery(metadata)
 	result, err := i.queryApi.Query(context.Background(), query)
 	if err != nil {
@@ -52,7 +57,7 @@ func (i *InfluxDatafetcher) GetData(metadata apiModule.Metadata) (*apiModule.Con
 	}
 	dataRows, err := i.extractValue(result)
 	if err != nil {
-		return nil, fmt.Errorf("error converting query result to consolidated device data: %v", err)
+		return nil, fmt.Errorf("error processing query result: %v", err)
 	}
 	return i.dataRows2ConsolidatedDeviceData(dataRows), nil
 }
@@ -116,4 +121,24 @@ func (i *InfluxDatafetcher) dataRows2ConsolidatedDeviceData(data []DataRow) *api
 	return &apiModule.ConsolidatedDeviceData{
 		DeviceData: deviceDataSlice,
 	}
+}
+
+func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string, error) {
+	relativeRange := false
+	if startTime == "" {
+		return "", fmt.Errorf("no start time provided")
+	}
+	if _, err := time.Parse(time.RFC3339, startTime); err != nil {
+		relativeRange = true
+		if stopTime == "" {
+			return "", fmt.Errorf("start time is rfc3339, but stop time is empty. cannot procede")
+		}
+	}
+	if !relativeRange {
+		if _, err := time.Parse(time.RFC3339, stopTime); err != nil {
+			return "", fmt.Errorf("Invalid RFC3339 stop timestamp: %v", err)
+		}
+		return fmt.Sprintf("start: %s, stop: %s", startTime, stopTime), nil
+	}
+	return fmt.Sprintf("start: %s", startTime), nil
 }
