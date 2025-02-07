@@ -24,7 +24,6 @@ var claimsKey string = "jwtClaims"
 
 type metadataFetcher interface {
 	Close() error
-	GetMapValue(deviceId, mapKey string) (string, error)
 	GetAttachedSensors(deviceId string) ([]string, error)
 	GetQueryFields(attachedSensors []string) ([]string, error)
 }
@@ -223,7 +222,7 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 	if len(jsonData) > EmptyPayloadLength {
 		bytesToReturn = jsonData
 	} else {
-		bytesToReturn = []byte(`{"null"}`)
+		bytesToReturn = []byte(`{"payload": []}`)
 	}
 	if _, err := w.Write(bytesToReturn); err != nil {
 		log.Printf("Error writing response: %v", err)

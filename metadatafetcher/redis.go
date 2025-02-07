@@ -27,15 +27,6 @@ func (r *RedisMetadata) Close() error {
 	return nil
 }
 
-func (r *RedisMetadata) GetMapValue(deviceId, mapKey string) (string, error) {
-	hashName := fmt.Sprintf("fieldUnit:%s", deviceId)
-	company, err := r.db.HGet(g_ctx, hashName, mapKey).Result()
-	if err != nil {
-		return "", fmt.Errorf("redis: %v", err)
-	}
-	return company, nil
-}
-
 func (r *RedisMetadata) GetAttachedSensors(deviceId string) ([]string, error) {
 	key := fmt.Sprintf("attachedSensors:%s", deviceId)
 	attachedSensors, err := r.db.SMembers(g_ctx, key).Result()

@@ -17,7 +17,6 @@ import (
 type MockMetadataFetcher struct{}
 
 func (m *MockMetadataFetcher) Close() error                                         { return nil }
-func (m *MockMetadataFetcher) GetMapValue(deviceId, mapKey string) (string, error)  { return "", nil }
 func (m *MockMetadataFetcher) GetAttachedSensors(deviceId string) ([]string, error) { return nil, nil }
 func (m *MockMetadataFetcher) GetQueryFields(attachedSensors []string) ([]string, error) {
 	return nil, nil
