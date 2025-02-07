@@ -49,7 +49,7 @@ func TestApi_formatQueryRange(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := InfluxDatafetcher{}
-			got, gotErr := i.formatQueryRange(tt.startTime, tt.stopTime)
+			got, gotErr := i.FormatQueryRange(tt.startTime, tt.stopTime)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("formatQueryRange() failed: %v", gotErr)

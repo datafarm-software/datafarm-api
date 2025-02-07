@@ -30,6 +30,7 @@ type metadataFetcher interface {
 
 type dataFetcher interface {
 	GetData(metadata Metadata) (*ConsolidatedDeviceData, error)
+	FormatQueryRange(startTime, stopTime string) (interface{}, error)
 	Close() error
 }
 
@@ -55,8 +56,9 @@ type DeviceData struct {
 }
 
 type Metadata struct {
-	DeviceId, Company, Network, QueryRange, StartTime, StopTime string
-	QueryFields                                                 []string
+	DeviceId, Company, Network string
+	QueryRange                 interface{}
+	QueryFields                []string
 }
 
 type UserInfo struct {
@@ -161,7 +163,6 @@ func (a *Api) registerRoutes() {
 }
 
 func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
-	var metadata Metadata
 	routeVars := mux.Vars(r)
 	deviceId := routeVars["deviceId"]
 	deviceId = strings.TrimSpace(deviceId)
@@ -182,11 +183,12 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	metadata.Company = company
-	metadata.DeviceId = deviceId
-	metadata.Network = network
-	metadata.StartTime = startTime
-	metadata.StopTime = stopTime
+	formattedQueryRange, err := a.dataFetcher.FormatQueryRange(startTime, stopTime)
+	if err != nil {
+		log.Printf("error formatting query range: %v", err)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
 	attachedSensors, err := a.metadataFetcher.GetAttachedSensors(deviceId)
 	if err != nil {
 		log.Printf("error getting attached sensors: %v", err)
@@ -199,7 +201,13 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	metadata.QueryFields = queryFields
+	metadata := Metadata{
+		Company:     company,
+		DeviceId:    deviceId,
+		Network:     network,
+		QueryRange:  formattedQueryRange,
+		QueryFields: queryFields,
+	}
 	deviceData, err := a.dataFetcher.GetData(metadata)
 	if err != nil {
 		log.Printf("error getting data: %v", err)
