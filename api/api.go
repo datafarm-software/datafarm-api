@@ -168,6 +168,7 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 	deviceId = strings.TrimSpace(deviceId)
 	startTime := r.URL.Query().Get("start")
 	stopTime := r.URL.Query().Get("stop")
+	requestedQueryField := r.URL.Query().Get("queryField")
 	claims, ok := r.Context().Value(claimsKey).(jwt.MapClaims)
 	if !ok {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -189,17 +190,23 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	attachedSensors, err := a.metadataFetcher.GetAttachedSensors(deviceId)
-	if err != nil {
-		log.Printf("error getting attached sensors: %v", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-	queryFields, err := a.metadataFetcher.GetQueryFields(attachedSensors)
-	if err != nil {
-		log.Printf("error getting query fields: %v", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
+	queryFields := make([]string, 0)
+	if requestedQueryField == "" || requestedQueryField == "all" {
+		attachedSensors, err := a.metadataFetcher.GetAttachedSensors(deviceId)
+		if err != nil {
+			log.Printf("error getting attached sensors: %v", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		qf, err := a.metadataFetcher.GetQueryFields(attachedSensors)
+		if err != nil {
+			log.Printf("error getting query fields: %v", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		queryFields = qf
+	} else {
+		queryFields = append(queryFields, requestedQueryField)
 	}
 	metadata := Metadata{
 		Company:     company,
