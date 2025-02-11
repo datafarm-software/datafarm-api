@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -167,8 +168,16 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 	deviceId := routeVars["deviceId"]
 	deviceId = strings.TrimSpace(deviceId)
 	startTime := r.URL.Query().Get("start")
+	startTime = strings.TrimSpace(startTime)
 	stopTime := r.URL.Query().Get("stop")
+	stopTime = strings.TrimSpace(stopTime)
 	requestedQueryField := r.URL.Query().Get("queryField")
+	requestedQueryField = strings.TrimSpace(requestedQueryField)
+	validInput := regexp.MustCompile(`^[a-zA-Z0-9_\-\s:]*$`)
+	if !validInput.MatchString(requestedQueryField) || !validInput.MatchString(startTime) || !validInput.MatchString(stopTime) {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
 	claims, ok := r.Context().Value(claimsKey).(jwt.MapClaims)
 	if !ok {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
