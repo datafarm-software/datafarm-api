@@ -16,7 +16,7 @@ import (
 func main() {
 	c := cfy.Get("config")
 	db := c.GetInt("Redis.DB")
-	mf := metadatafetcher.NewRedisMetadata(c.GetString("Redis.Address"), c.GetString("Redis.Password"), db)
+	mf := metadatafetcher.NewRedisMetadata(c.GetString("Redis.Address"), c.GetString("Redis.Username"), c.GetString("Redis.Password"), db)
 	df, err := datafetcher.NewInfluxDatafetcher(c.GetString("Influx.Org"), c.GetString("Influx.URL"), c.GetString("Influx.Token"))
 	if err != nil {
 		log.Fatalf("error initializing influxdata fetcher: %v", err)
@@ -25,7 +25,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("error initializing jwt authoriser: %v", err)
 	}
-	basicAuth := authoriser.NewRedisBasicAuth(c.GetString("Redis.Address"), c.GetString("Redis.Password"), db)
+	basicAuth := authoriser.NewRedisBasicAuth(c.GetString("Redis.Address"), c.GetString("Redis.Username"), c.GetString("Redis.Password"), db)
 	opts, err := apiModule.NewApiOpts(c.GetString("Port"), mf, df, tokenAuth, basicAuth)
 	if err != nil {
 		log.Fatalf("error getting api opts: %v", err)
@@ -37,7 +37,7 @@ func main() {
 	api.StartHttpServer()
 	log.Printf("Started server on %s", c.GetString("Port"))
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	<-sigChan
 	log.Println("Received shutdown signal...")
 	api.Shutdown()

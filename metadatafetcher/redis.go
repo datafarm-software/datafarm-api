@@ -14,9 +14,9 @@ type RedisMetadata struct {
 	db *redis.Client
 }
 
-func NewRedisMetadata(addr, password string, db int) *RedisMetadata {
+func NewRedisMetadata(addr, username, password string, db int) *RedisMetadata {
 	return &RedisMetadata{
-		db: authoriser.ConnectRedis(addr, password, db),
+		db: authoriser.ConnectRedis(addr, username, password, db),
 	}
 }
 

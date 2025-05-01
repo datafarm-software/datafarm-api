@@ -16,9 +16,10 @@ type redisBasicAuth struct {
 	db *redis.Client
 }
 
-func ConnectRedis(addr, passw string, db int) *redis.Client {
+func ConnectRedis(addr, username, passw string, db int) *redis.Client {
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
+		Username: username,
 		Password: passw,
 		DB:       db,
 	})
@@ -28,9 +29,9 @@ func ConnectRedis(addr, passw string, db int) *redis.Client {
 	return client
 }
 
-func NewRedisBasicAuth(addr, password string, db int) *redisBasicAuth {
+func NewRedisBasicAuth(addr, username, password string, db int) *redisBasicAuth {
 	return &redisBasicAuth{
-		db: ConnectRedis(addr, password, db),
+		db: ConnectRedis(addr, username, password, db),
 	}
 }
 
@@ -52,12 +53,10 @@ func (r *redisBasicAuth) CheckCredentials(username, passw string) (api.UserInfo,
 	}
 	passWordHash := userHash["password"]
 	company := userHash["company"]
+	// role := userHash["role"]
 	network, err := r.db.Get(g_ctx, "network:"+company).Result()
 	if err != nil {
 		return api.UserInfo{}, fmt.Errorf("error getting network: %v", err)
-	}
-	if passWordHash == "" || company == "" || network == "" {
-		return api.UserInfo{}, fmt.Errorf("incomprehensive user hash found")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(passWordHash), []byte(passw)); err != nil {
 		return api.UserInfo{}, fmt.Errorf("passwords did not match: %v", err)
