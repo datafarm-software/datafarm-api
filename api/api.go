@@ -162,11 +162,11 @@ func (a *Api) StartHttpServer() {
 }
 
 func (a *Api) registerRoutes() {
-	a.router.Handle("/device/{deviceId}", http.HandlerFunc(a.GetDataForDevice)).Methods("GET")
+	a.router.Handle("/device/{deviceId}", http.HandlerFunc(a.GetDeviceData)).Methods("GET")
 	a.router.Handle("/login", http.HandlerFunc(a.Login)).Methods("GET", "POST")
 }
 
-func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
+func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		log.Println("error parsing form while loading dashboard: %v", err)
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
