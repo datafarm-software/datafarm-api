@@ -127,7 +127,7 @@ func (i *InfluxDatafetcher) FormatQueryRange(startTime, stopTime string) (interf
 		relativeRange = true
 	} else {
 		if stopTime == "" {
-			return nil, fmt.Errorf("start time is rfc3339, but stop time is empty. cannot procede")
+			return nil, fmt.Errorf("start time is rfc3339, but stop time is empty. cannot proceed.")
 		}
 	}
 	if !relativeRange {

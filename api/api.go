@@ -234,6 +234,7 @@ func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("error marshalling deviceData to json: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
