@@ -183,7 +183,6 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 	startTime := r.FormValue("start")
 	startTime = strings.TrimSpace(startTime)
 	if !RELATIVETIME_REGEX.MatchString(startTime) {
-		log.Println("startTime failed the relative regex: ", startTime)
 		if _, err := time.Parse(time.RFC3339Nano, startTime); err != nil {
 			log.Println("start time is invalid rfc")
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
