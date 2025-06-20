@@ -22,6 +22,9 @@ const EmptyPayloadLength int = 16
 
 var g_ctx context.Context
 var claimsKey string = "jwtClaims"
+var QUERYFIELD_REGEX = regexp.MustCompile(`^[a-zA-Z0-9_\-\s:]*$`)
+var DEVICE_ID_REGEX = regexp.MustCompile(`\w{30}`)
+var RELATIVETIME_REGEX = regexp.MustCompile(`-\d{1,3}(?:[hdwy]|mo?)`)
 
 type metadataFetcher interface {
 	Close() error
@@ -164,32 +167,60 @@ func (a *Api) registerRoutes() {
 }
 
 func (a *Api) GetDataForDevice(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		log.Println("error parsing form while loading dashboard: %v", err)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
 	routeVars := mux.Vars(r)
 	deviceId := routeVars["deviceId"]
 	deviceId = strings.TrimSpace(deviceId)
-	startTime := r.URL.Query().Get("start")
+	if !DEVICE_ID_REGEX.MatchString(deviceId) {
+		log.Println("deviceid failed the regex")
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	startTime := routeVars["start"]
 	startTime = strings.TrimSpace(startTime)
-	stopTime := r.URL.Query().Get("stop")
+	if !RELATIVETIME_REGEX.MatchString(startTime) {
+		if _, err := time.Parse(time.RFC3339Nano, startTime); err != nil {
+			log.Println("start time is invalid rfc")
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+	}
+	stopTime := routeVars["stop"]
 	stopTime = strings.TrimSpace(stopTime)
-	requestedQueryField := r.URL.Query().Get("queryField")
+	if !RELATIVETIME_REGEX.MatchString(stopTime) {
+		if _, err := time.Parse(time.RFC3339Nano, stopTime); err != nil {
+			log.Println("start time is invalid rfc")
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+	}
+	//TODO: allow users to ask for multiple queryfields at once
+	requestedQueryField := routeVars["queryField"]
 	requestedQueryField = strings.TrimSpace(requestedQueryField)
-	validInput := regexp.MustCompile(`^[a-zA-Z0-9_\-\s:]*$`)
-	if !validInput.MatchString(requestedQueryField) || !validInput.MatchString(startTime) || !validInput.MatchString(stopTime) {
+	if !QUERYFIELD_REGEX.MatchString(requestedQueryField) {
+		log.Println("queryField failed the regex")
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 	claims, ok := r.Context().Value(claimsKey).(jwt.MapClaims)
 	if !ok {
+		log.Println("no jwt claims")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 	company, ok := claims["company"].(string)
 	if !ok {
+		log.Println("no company claims")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 	network, ok := claims["network"].(string)
 	if !ok {
+		log.Println("no network claims")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
