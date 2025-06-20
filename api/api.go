@@ -23,7 +23,7 @@ const EmptyPayloadLength int = 16
 var g_ctx context.Context
 var claimsKey string = "jwtClaims"
 var QUERYFIELD_REGEX = regexp.MustCompile(`^[a-zA-Z0-9_\-\s:]*$`)
-var DEVICE_ID_REGEX = regexp.MustCompile(`\w{30}`)
+var DEVICE_ID_REGEX = regexp.MustCompile(`\w{1,30}`)
 var RELATIVETIME_REGEX = regexp.MustCompile(`-\d{1,3}(?:[hdwy]|mo?)`)
 
 type metadataFetcher interface {
@@ -176,30 +176,33 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 	deviceId := routeVars["deviceId"]
 	deviceId = strings.TrimSpace(deviceId)
 	if !DEVICE_ID_REGEX.MatchString(deviceId) {
-		log.Println("deviceid failed the regex")
+		log.Printf("deviceid failed the regex")
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	startTime := routeVars["start"]
+	startTime := r.FormValue("start")
 	startTime = strings.TrimSpace(startTime)
 	if !RELATIVETIME_REGEX.MatchString(startTime) {
+		log.Println("startTime failed the relative regex: ", startTime)
 		if _, err := time.Parse(time.RFC3339Nano, startTime); err != nil {
 			log.Println("start time is invalid rfc")
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
 	}
-	stopTime := routeVars["stop"]
+	stopTime := r.FormValue("stop")
 	stopTime = strings.TrimSpace(stopTime)
-	if !RELATIVETIME_REGEX.MatchString(stopTime) {
-		if _, err := time.Parse(time.RFC3339Nano, stopTime); err != nil {
-			log.Println("start time is invalid rfc")
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
+	if stopTime != "" {
+		if !RELATIVETIME_REGEX.MatchString(stopTime) {
+			if _, err := time.Parse(time.RFC3339Nano, stopTime); err != nil {
+				log.Println("stop time is invalid rfc")
+				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+				return
+			}
 		}
 	}
 	//TODO: allow users to ask for multiple queryfields at once
-	requestedQueryField := routeVars["queryField"]
+	requestedQueryField := r.FormValue("queryField")
 	requestedQueryField = strings.TrimSpace(requestedQueryField)
 	if !QUERYFIELD_REGEX.MatchString(requestedQueryField) {
 		log.Println("queryField failed the regex")

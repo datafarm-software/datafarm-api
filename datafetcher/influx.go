@@ -67,11 +67,6 @@ func (i *InfluxDatafetcher) generateFluxQuery(metadata apiModule.Metadata) strin
 	for _, filter := range metadata.QueryFields {
 		queryBuilder.WriteString(fmt.Sprintf(` r["_field"] == "%s" or`, filter))
 	}
-	queryBuilder.WriteString(` r["_field"] == "batv" or`)
-	queryBuilder.WriteString(` r["_field"] == "BatV" or`)
-	queryBuilder.WriteString(` r["_field"] == "signal_strength" or`)
-	queryBuilder.WriteString(` r["_field"] == "rssi" or`)
-	queryBuilder.WriteString(` r["_field"] == "snr")`)
 	queryBuilder.WriteString(` |> yield(name: "last")`)
 	return queryBuilder.String()
 }
