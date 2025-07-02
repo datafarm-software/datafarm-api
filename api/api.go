@@ -200,14 +200,6 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	//TODO: allow users to ask for multiple queryfields at once
-	requestedQueryField := r.FormValue("queryField")
-	requestedQueryField = strings.TrimSpace(requestedQueryField)
-	if !QUERYFIELD_REGEX.MatchString(requestedQueryField) {
-		log.Println("queryField failed the regex")
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
 	claims, ok := r.Context().Value(claimsKey).(jwt.MapClaims)
 	if !ok {
 		log.Println("no jwt claims")
@@ -229,6 +221,14 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 	formattedQueryRange, err := a.dataFetcher.FormatQueryRange(startTime, stopTime)
 	if err != nil {
 		log.Printf("error formatting query range: %v", err)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	//TODO: allow users to ask for multiple queryfields at once
+	requestedQueryField := r.FormValue("queryField")
+	requestedQueryField = strings.TrimSpace(requestedQueryField)
+	if !QUERYFIELD_REGEX.MatchString(requestedQueryField) {
+		log.Println("queryField failed the regex")
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
