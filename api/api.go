@@ -18,6 +18,7 @@ import (
 	"github.com/geraud22/aquahaus-api/authoriser"
 	"github.com/geraud22/aquahaus-api/datafetcher"
 	"github.com/geraud22/aquahaus-api/metadatafetcher"
+	cfy "github.com/geraud22/config-from-yaml"
 	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/mux"
 )
@@ -74,24 +75,9 @@ type UserInfo struct {
 }
 
 type ApiOpts struct {
-	port            string
-	dataFetcher     dataFetcher
-	metadataFetcher metadataFetcher
-	tokenAuth       tokenAuth
-	basicAuth       basicAuth
-}
-
-func NewApiOpts(port string, mf metadataFetcher, df dataFetcher, t tokenAuth, b basicAuth) (ApiOpts, error) {
-	if port == "" || mf == nil || df == nil || t == nil || b == nil {
-		return ApiOpts{}, fmt.Errorf("not all options present")
-	}
-	return ApiOpts{
-		port:            port,
-		metadataFetcher: mf,
-		dataFetcher:     df,
-		tokenAuth:       t,
-		basicAuth:       b,
-	}, nil
+	Port       string                            `mapstructure:"port" validate:"required"`
+	RedisOpts  metadatafetcher.RedisMetadataOpts `mapstructure:"Redis" validate:"required"`
+	InfluxOpts datafetcher.InfluxOpts            `mapstructure:"Influx" validate:"required"`
 }
 
 type Api struct {
@@ -109,10 +95,13 @@ type Api struct {
 func NewApi(opts ApiOpts) (*Api, error) {
 	c := cfy.Get("config")
 	db := c.GetInt("Redis.DB")
-	mf := metadatafetcher.NewRedisMetadata(c.GetString("Redis.Address"), c.GetString("Redis.Username"), c.GetString("Redis.Password"), db)
-	df, err := datafetcher.NewInfluxDatafetcher(c.GetString("Influx.Org"), c.GetString("Influx.URL"), c.GetString("Influx.Token"))
+	mf, err := metadatafetcher.NewRedisMetadata(opts.RedisOpts)
 	if err != nil {
-		log.Fatalf("error initializing influxdata fetcher: %v", err)
+		return nil, err
+	}
+	df, err := datafetcher.NewInfluxDatafetcher(opts.InfluxOpts)
+	if err != nil {
+		return nil, fmt.Errorf("error init influx: %v", err)
 	}
 	tokenAuth, err := authoriser.NewJwtAuth(os.DirFS("."), c.GetString("PrivateKeyFile"), c.GetString("PublicKeyFile"))
 	if err != nil {

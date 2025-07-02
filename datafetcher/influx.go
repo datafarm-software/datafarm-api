@@ -12,11 +12,6 @@ import (
 	influxApi "github.com/influxdata/influxdb-client-go/v2/api"
 )
 
-type InfluxDatafetcher struct {
-	db       influxdb2.Client
-	queryApi influxApi.QueryAPI
-}
-
 type DataRow struct {
 	DeviceID string
 	Field    string
@@ -24,8 +19,19 @@ type DataRow struct {
 	Value    interface{}
 }
 
-func NewInfluxDatafetcher(org, url, token string) (*InfluxDatafetcher, error) {
-	db := influxdb2.NewClient(url, token)
+type InfluxOpts struct {
+	Org   string `mapstructure:"org" validate:"required"`
+	Url   string `mapstructure:"url" validate:"required"`
+	Token string `mapstructure:"token" validate:"required"`
+}
+
+type InfluxDatafetcher struct {
+	db       influxdb2.Client
+	queryApi influxApi.QueryAPI
+}
+
+func NewInfluxDatafetcher(opts InfluxOpts) (*InfluxDatafetcher, error) {
+	db := influxdb2.NewClient(opts.Url, opts.Token)
 	ok, err := db.Ping(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("influx ping error: %v", err)
@@ -35,7 +41,7 @@ func NewInfluxDatafetcher(org, url, token string) (*InfluxDatafetcher, error) {
 	}
 	return &InfluxDatafetcher{
 		db:       db,
-		queryApi: db.QueryAPI(org),
+		queryApi: db.QueryAPI(opts.Org),
 	}, nil
 }
 
