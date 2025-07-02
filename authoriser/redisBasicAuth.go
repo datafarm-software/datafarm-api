@@ -3,7 +3,6 @@ package authoriser
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/geraud22/aquahaus-api/api"
 	"github.com/redis/go-redis/v9"
@@ -16,7 +15,7 @@ type redisBasicAuth struct {
 	db *redis.Client
 }
 
-func ConnectRedis(addr, username, passw string, db int) *redis.Client {
+func ConnectRedis(addr, username, passw string, db int) (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Username: username,
@@ -24,9 +23,9 @@ func ConnectRedis(addr, username, passw string, db int) *redis.Client {
 		DB:       db,
 	})
 	if _, err := client.Ping(g_ctx).Result(); err != nil {
-		log.Fatalf("Error connecting to Redis client: %v", err)
+		return nil, fmt.Errorf("Error connecting to Redis client: %v", err)
 	}
-	return client
+	return client, nil
 }
 
 func NewRedisBasicAuth(addr, username, password string, db int) *redisBasicAuth {

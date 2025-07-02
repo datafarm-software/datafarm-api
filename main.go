@@ -1,34 +1,24 @@
 package main
 
 import (
+	"bytes"
+	_ "embed"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	apiModule "github.com/geraud22/aquahaus-api/api"
-	"github.com/geraud22/aquahaus-api/authoriser"
-	"github.com/geraud22/aquahaus-api/datafetcher"
-	"github.com/geraud22/aquahaus-api/metadatafetcher"
 	cfy "github.com/geraud22/config-from-yaml"
 )
 
+//go:embed config.yml
+var config []byte
+
 func main() {
-	c := cfy.Get("config")
-	db := c.GetInt("Redis.DB")
-	mf := metadatafetcher.NewRedisMetadata(c.GetString("Redis.Address"), c.GetString("Redis.Username"), c.GetString("Redis.Password"), db)
-	df, err := datafetcher.NewInfluxDatafetcher(c.GetString("Influx.Org"), c.GetString("Influx.URL"), c.GetString("Influx.Token"))
+	opts, err := cfy.LoadConfig[apiModule.ApiOpts](bytes.NewReader(config), "yaml", nil)
 	if err != nil {
-		log.Fatalf("error initializing influxdata fetcher: %v", err)
-	}
-	tokenAuth, err := authoriser.NewJwtAuth(os.DirFS("."), c.GetString("PrivateKeyFile"), c.GetString("PublicKeyFile"))
-	if err != nil {
-		log.Fatalf("error initializing jwt authoriser: %v", err)
-	}
-	basicAuth := authoriser.NewRedisBasicAuth(c.GetString("Redis.Address"), c.GetString("Redis.Username"), c.GetString("Redis.Password"), db)
-	opts, err := apiModule.NewApiOpts(c.GetString("Port"), mf, df, tokenAuth, basicAuth)
-	if err != nil {
-		log.Fatalf("error getting api opts: %v", err)
+		log.Fatalf("error loading config: %v", err)
 	}
 	api, err := apiModule.NewApi(opts)
 	if err != nil {

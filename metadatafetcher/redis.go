@@ -10,14 +10,25 @@ import (
 
 var g_ctx = context.Background()
 
+type RedisMetadataOpts struct {
+	Addr     string `mapstructure:"address" validate:"required"`
+	Username string `mapstructure:"username" validate:"required"`
+	Password string `mapstructure:"password" validate:"required"`
+	Db       int    `mapstructure:"db" validate:"gte=0"`
+}
+
 type RedisMetadata struct {
 	db *redis.Client
 }
 
-func NewRedisMetadata(addr, username, password string, db int) *RedisMetadata {
-	return &RedisMetadata{
-		db: authoriser.ConnectRedis(addr, username, password, db),
+func NewRedisMetadata(opts RedisMetadataOpts) (*RedisMetadata, error) {
+	db, err := authoriser.ConnectRedis(opts.Addr, opts.Username, opts.Password, opts.Db)
+	if err != nil {
+		return nil, err
 	}
+	return &RedisMetadata{
+		db: db,
+	}, nil
 }
 
 func (r *RedisMetadata) Close() error {
