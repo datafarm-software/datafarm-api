@@ -25,7 +25,7 @@ func main() {
 		log.Fatalf("error initializing app: %v", err)
 	}
 	api.StartHttpServer()
-	log.Printf("Started server on %s", c.GetString("Port"))
+	log.Printf("Started server on %s", opts.Port)
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	<-sigChan
