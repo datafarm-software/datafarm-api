@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/geraud22/aquahaus-api/metadatafetcher"
+	"github.com/geraud22/datafarm-api/metadatafetcher"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxApi "github.com/influxdata/influxdb-client-go/v2/api"
 )

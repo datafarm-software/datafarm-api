@@ -15,10 +15,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/geraud22/aquahaus-api/authoriser"
-	"github.com/geraud22/aquahaus-api/datafetcher"
-	"github.com/geraud22/aquahaus-api/metadatafetcher"
-	"github.com/geraud22/aquahaus-api/redis"
+	"github.com/geraud22/datafarm-api/authoriser"
+	"github.com/geraud22/datafarm-api/datafetcher"
+	"github.com/geraud22/datafarm-api/metadatafetcher"
+	"github.com/geraud22/datafarm-api/redis"
 	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/mux"
 )

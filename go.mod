@@ -1,4 +1,4 @@
-module github.com/geraud22/aquahaus-api
+module github.com/geraud22/datafarm-api
 
 go 1.23.0
 

@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	apiModule "github.com/geraud22/aquahaus-api/api"
 	cfy "github.com/geraud22/config-from-yaml"
+	apiModule "github.com/geraud22/datafarm-api/api"
 )
 
 func main() {
