@@ -234,7 +234,7 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 	} else {
 		queryFields = append(queryFields, requestedQueryField)
 	}
-	metadata := Metadata{
+	metadata := metadatafetcher.Metadata{
 		Company:     company,
 		DeviceId:    deviceId,
 		Network:     network,

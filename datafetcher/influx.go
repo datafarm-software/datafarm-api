@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	apiModule "github.com/geraud22/aquahaus-api/api"
 	"github.com/geraud22/aquahaus-api/metadatafetcher"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxApi "github.com/influxdata/influxdb-client-go/v2/api"
@@ -96,8 +95,8 @@ func (i *InfluxDatafetcher) extractValue(result *influxApi.QueryTableResult) ([]
 	return records, nil
 }
 
-func (i *InfluxDatafetcher) dataRows2ConsolidatedDeviceData(data []DataRow) *apiModule.ConsolidatedDeviceData {
-	var deviceDataSlice []apiModule.DeviceData
+func (i *InfluxDatafetcher) dataRows2ConsolidatedDeviceData(data []DataRow) *ConsolidatedDeviceData {
+	var deviceDataSlice []DeviceData
 	for _, row := range data {
 		found := false
 		for i, deviceData := range deviceDataSlice {
@@ -108,7 +107,7 @@ func (i *InfluxDatafetcher) dataRows2ConsolidatedDeviceData(data []DataRow) *api
 			}
 		}
 		if !found {
-			newDeviceData := apiModule.DeviceData{
+			newDeviceData := DeviceData{
 				DeviceID:   row.DeviceID,
 				Timestamp:  row.Time,
 				SensorData: map[string]interface{}{row.Field: row.Value},
@@ -116,7 +115,7 @@ func (i *InfluxDatafetcher) dataRows2ConsolidatedDeviceData(data []DataRow) *api
 			deviceDataSlice = append(deviceDataSlice, newDeviceData)
 		}
 	}
-	return &apiModule.ConsolidatedDeviceData{
+	return &ConsolidatedDeviceData{
 		DeviceData: deviceDataSlice,
 	}
 }
