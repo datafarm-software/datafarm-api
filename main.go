@@ -12,10 +12,11 @@ import (
 	cfy "github.com/geraud22/config-from-yaml"
 )
 
-//go:embed config.yml
-var config []byte
-
 func main() {
+	config, err := os.ReadFile("config.yml")
+	if err != nil {
+		log.Fatalf("error reading config file: %v", err)
+	}
 	opts, err := cfy.LoadConfig[apiModule.ApiOpts](bytes.NewReader(config), "yaml", nil)
 	if err != nil {
 		log.Fatalf("error loading config: %v", err)

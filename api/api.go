@@ -25,7 +25,7 @@ import (
 
 const EmptyPayloadLength int = 16
 
-var g_ctx context.Context
+var ctx context.Context
 var claimsKey string = "jwtClaims"
 var QUERYFIELD_REGEX = regexp.MustCompile(`^[a-zA-Z0-9_\-\s:]*$`)
 var DEVICE_ID_REGEX = regexp.MustCompile(`\w{1,30}`)
@@ -87,8 +87,8 @@ func NewApi(opts ApiOpts) (*Api, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error initializing jwt authoriser: %v", err)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	g_ctx = ctx
+	c, cancel := context.WithCancel(context.Background())
+	ctx = c
 	api := &Api{
 		shutdownCtxFunc: cancel,
 		router:          mux.NewRouter().PathPrefix("/api/v1").Subrouter(),
@@ -111,12 +111,12 @@ func (a *Api) startGoRoutine(routineToBeExecuted func(ctx context.Context)) {
 	a.wg.Add(1)
 	go func() {
 		defer a.wg.Done()
-		routineToBeExecuted(g_ctx)
+		routineToBeExecuted(ctx)
 	}()
 }
 
 func (a *Api) Shutdown() {
-	if err := a.server.Shutdown(g_ctx); err != nil {
+	if err := a.server.Shutdown(ctx); err != nil {
 		log.Fatalf("HTTP shutdown error: %v", err)
 	}
 	if err := a.metadataFetcher.Close(); err != nil {
