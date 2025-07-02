@@ -38,42 +38,28 @@ type metadataFetcher interface {
 }
 
 type dataFetcher interface {
-	GetData(metadata metadataFetcher.Metadata) (*ConsolidatedDeviceData, error)
+	GetData(metadata metadatafetcher.Metadata) (*datafetcher.ConsolidatedDeviceData, error)
 	FormatQueryRange(startTime, stopTime string) (interface{}, error)
 	Close() error
 }
 
 type tokenAuth interface {
 	Close() error
-	GenerateToken(userInfo UserInfo) (string, error)
+	GenerateToken(userInfo authoriser.UserInfo) (string, error)
 	GetPublicKey() *ecdsa.PublicKey
 }
 
 type basicAuth interface {
 	Close() error
-	CheckCredentials(username, passw string) (UserInfo, error)
-}
-
-type ConsolidatedDeviceData struct {
-	DeviceData []DeviceData `json:"payload"`
-}
-
-type DeviceData struct {
-	DeviceID   string    `json:"rtuid"`
-	Timestamp  time.Time `json:"timestamp"`
-	SensorData map[string]interface{}
-}
-
-type UserInfo struct {
-	Username, Company, Network string
+	CheckCredentials(username, passw string) (authoriser.UserInfo, error)
 }
 
 type ApiOpts struct {
-	RedisOpts      metadatafetcher.RedisMetadataOpts `mapstructure:"Redis" validate:"required"`
-	InfluxOpts     datafetcher.InfluxOpts            `mapstructure:"Influx" validate:"required"`
-	Port           string                            `mapstructure:"port" validate:"required"`
-	PrivateKeyFile string                            `mapstructure:"privatekeyfile" validate:"required"`
-	PublicKeyFile  string                            `mapstructure:"publickeyfile" validate:"required"`
+	RedisOpts      redis.RedisOpts        `mapstructure:"Redis" validate:"required"`
+	InfluxOpts     datafetcher.InfluxOpts `mapstructure:"Influx" validate:"required"`
+	Port           string                 `mapstructure:"port" validate:"required"`
+	PrivateKeyFile string                 `mapstructure:"privatekeyfile" validate:"required"`
+	PublicKeyFile  string                 `mapstructure:"publickeyfile" validate:"required"`
 }
 
 type Api struct {

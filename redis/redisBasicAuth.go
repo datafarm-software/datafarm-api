@@ -6,7 +6,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/geraud22/aquahaus-api/api"
+	"github.com/geraud22/aquahaus-api/authoriser"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -50,26 +50,26 @@ func (r *Redis) Close() error {
 	return nil
 }
 
-func (r *Redis) CheckCredentials(username, passw string) (api.UserInfo, error) {
+func (r *Redis) CheckCredentials(username, passw string) (authoriser.UserInfo, error) {
 	uuid, err := r.db.Get(ctx, "unique:"+username).Result()
 	if err != nil {
-		return api.UserInfo{}, fmt.Errorf("error getting uuid for username %s: %v", username, err)
+		return authoriser.UserInfo{}, fmt.Errorf("error getting uuid for username %s: %v", username, err)
 	}
 	userHash, err := r.db.HGetAll(ctx, "user:"+uuid).Result()
 	if err != nil {
-		return api.UserInfo{}, fmt.Errorf("error getting password for username %s: %v", username, err)
+		return authoriser.UserInfo{}, fmt.Errorf("error getting password for username %s: %v", username, err)
 	}
 	passWordHash := userHash["password"]
 	company := userHash["company"]
 	// role := userHash["role"]
 	network, err := r.db.Get(ctx, "network:"+company).Result()
 	if err != nil {
-		return api.UserInfo{}, fmt.Errorf("error getting network: %v", err)
+		return authoriser.UserInfo{}, fmt.Errorf("error getting network: %v", err)
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(passWordHash), []byte(passw)); err != nil {
-		return api.UserInfo{}, fmt.Errorf("passwords did not match: %v", err)
+		return authoriser.UserInfo{}, fmt.Errorf("passwords did not match: %v", err)
 	}
-	return api.UserInfo{
+	return authoriser.UserInfo{
 		Username: username,
 		Company:  company,
 		Network:  network,

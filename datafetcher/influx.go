@@ -8,6 +8,7 @@ import (
 	"time"
 
 	apiModule "github.com/geraud22/aquahaus-api/api"
+	"github.com/geraud22/aquahaus-api/metadatafetcher"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxApi "github.com/influxdata/influxdb-client-go/v2/api"
 )
@@ -50,7 +51,7 @@ func (i *InfluxDatafetcher) Close() error {
 	return nil
 }
 
-func (i *InfluxDatafetcher) GetData(metadata apiModule.Metadata) (*apiModule.ConsolidatedDeviceData, error) {
+func (i *InfluxDatafetcher) GetData(metadata metadatafetcher.Metadata) (*ConsolidatedDeviceData, error) {
 	query := i.generateFluxQuery(metadata)
 	result, err := i.queryApi.Query(context.Background(), query)
 	if err != nil {
@@ -63,7 +64,7 @@ func (i *InfluxDatafetcher) GetData(metadata apiModule.Metadata) (*apiModule.Con
 	return i.dataRows2ConsolidatedDeviceData(dataRows), nil
 }
 
-func (i *InfluxDatafetcher) generateFluxQuery(metadata apiModule.Metadata) string {
+func (i *InfluxDatafetcher) generateFluxQuery(metadata metadatafetcher.Metadata) string {
 	var queryBuilder strings.Builder
 	queryBuilder.WriteString(fmt.Sprintf(`from(bucket: "%s")`, metadata.Network))
 	queryBuilder.WriteString(fmt.Sprintf(` |> range(%s)`, metadata.QueryRange))
