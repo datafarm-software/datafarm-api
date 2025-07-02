@@ -18,6 +18,7 @@ import (
 	"github.com/geraud22/aquahaus-api/authoriser"
 	"github.com/geraud22/aquahaus-api/datafetcher"
 	"github.com/geraud22/aquahaus-api/metadatafetcher"
+	"github.com/geraud22/aquahaus-api/redis"
 	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/mux"
 )
@@ -37,7 +38,7 @@ type metadataFetcher interface {
 }
 
 type dataFetcher interface {
-	GetData(metadata Metadata) (*ConsolidatedDeviceData, error)
+	GetData(metadata metadataFetcher.Metadata) (*ConsolidatedDeviceData, error)
 	FormatQueryRange(startTime, stopTime string) (interface{}, error)
 	Close() error
 }
@@ -61,12 +62,6 @@ type DeviceData struct {
 	DeviceID   string    `json:"rtuid"`
 	Timestamp  time.Time `json:"timestamp"`
 	SensorData map[string]interface{}
-}
-
-type Metadata struct {
-	DeviceId, Company, Network string
-	QueryRange                 interface{}
-	QueryFields                []string
 }
 
 type UserInfo struct {
@@ -94,7 +89,7 @@ type Api struct {
 }
 
 func NewApi(opts ApiOpts) (*Api, error) {
-	redis, err := metadatafetcher.NewRedisMetadata(opts.RedisOpts)
+	redis, err := redis.NewRedis(opts.RedisOpts)
 	if err != nil {
 		return nil, err
 	}
