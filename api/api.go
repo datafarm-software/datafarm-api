@@ -18,7 +18,6 @@ import (
 	"github.com/geraud22/aquahaus-api/authoriser"
 	"github.com/geraud22/aquahaus-api/datafetcher"
 	"github.com/geraud22/aquahaus-api/metadatafetcher"
-	cfy "github.com/geraud22/config-from-yaml"
 	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/mux"
 )
@@ -75,9 +74,11 @@ type UserInfo struct {
 }
 
 type ApiOpts struct {
-	Port       string                            `mapstructure:"port" validate:"required"`
-	RedisOpts  metadatafetcher.RedisMetadataOpts `mapstructure:"Redis" validate:"required"`
-	InfluxOpts datafetcher.InfluxOpts            `mapstructure:"Influx" validate:"required"`
+	RedisOpts      metadatafetcher.RedisMetadataOpts `mapstructure:"Redis" validate:"required"`
+	InfluxOpts     datafetcher.InfluxOpts            `mapstructure:"Influx" validate:"required"`
+	Port           string                            `mapstructure:"port" validate:"required"`
+	PrivateKeyFile string                            `mapstructure:"privatekeyfile" validate:"required"`
+	PublicKeyFile  string                            `mapstructure:"publickeyfile" validate:"required"`
 }
 
 type Api struct {
@@ -93,9 +94,7 @@ type Api struct {
 }
 
 func NewApi(opts ApiOpts) (*Api, error) {
-	c := cfy.Get("config")
-	db := c.GetInt("Redis.DB")
-	mf, err := metadatafetcher.NewRedisMetadata(opts.RedisOpts)
+	redis, err := metadatafetcher.NewRedisMetadata(opts.RedisOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -103,28 +102,23 @@ func NewApi(opts ApiOpts) (*Api, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error init influx: %v", err)
 	}
-	tokenAuth, err := authoriser.NewJwtAuth(os.DirFS("."), c.GetString("PrivateKeyFile"), c.GetString("PublicKeyFile"))
+	tokenAuth, err := authoriser.NewJwtAuth(os.DirFS("."), opts.PrivateKeyFile, opts.PublicKeyFile)
 	if err != nil {
-		log.Fatalf("error initializing jwt authoriser: %v", err)
-	}
-	basicAuth := authoriser.NewRedisBasicAuth(c.GetString("Redis.Address"), c.GetString("Redis.Username"), c.GetString("Redis.Password"), db)
-	opts, err := apiModule.NewApiOpts(c.GetString("Port"), mf, df, tokenAuth, basicAuth)
-	if err != nil {
-		log.Fatalf("error getting api opts: %v", err)
+		return nil, fmt.Errorf("error initializing jwt authoriser: %v", err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	g_ctx = ctx
 	api := &Api{
 		shutdownCtxFunc: cancel,
 		router:          mux.NewRouter().PathPrefix("/api/v1").Subrouter(),
-		port:            opts.port,
-		metadataFetcher: opts.metadataFetcher,
-		dataFetcher:     opts.dataFetcher,
-		tokenAuth:       opts.tokenAuth,
-		basicAuth:       opts.basicAuth,
+		port:            opts.Port,
+		metadataFetcher: redis,
+		dataFetcher:     df,
+		tokenAuth:       tokenAuth,
+		basicAuth:       redis,
 	}
 	api.server = &http.Server{
-		Addr:    opts.port,
+		Addr:    opts.Port,
 		Handler: api.router,
 	}
 	api.registerRoutes()

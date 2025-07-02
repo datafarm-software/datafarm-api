@@ -28,12 +28,6 @@ func ConnectRedis(addr, username, passw string, db int) (*redis.Client, error) {
 	return client, nil
 }
 
-func NewRedisBasicAuth(addr, username, password string, db int) *redisBasicAuth {
-	return &redisBasicAuth{
-		db: ConnectRedis(addr, username, password, db),
-	}
-}
-
 func (r *redisBasicAuth) Close() error {
 	if err := r.db.Close(); err != nil {
 		return fmt.Errorf("error closing redis client: %v", err)
