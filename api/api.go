@@ -43,7 +43,7 @@ type metadataFetcher interface {
 }
 
 type dataFetcher interface {
-	GetData(metadata metadatafetcher.Metadata) (*datafetcher.ConsolidatedDeviceData, error)
+	GetData(userRole string, metadata metadatafetcher.Metadata) (*datafetcher.ConsolidatedDeviceData, error)
 	FormatQueryRange(startTime, stopTime string) (interface{}, error)
 	Close() error
 }
@@ -207,6 +207,12 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
+	userRole, ok := claims["role"].(string)
+	if !ok {
+		log.Println("no role claim")
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
 	formattedQueryRange, err := a.dataFetcher.FormatQueryRange(startTime, stopTime)
 	if err != nil {
 		log.Printf("error formatting query range: %v", err)
@@ -246,7 +252,7 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 		QueryRange:  formattedQueryRange,
 		QueryFields: queryFields,
 	}
-	deviceData, err := a.dataFetcher.GetData(metadata)
+	deviceData, err := a.dataFetcher.GetData(userRole, metadata)
 	if err != nil {
 		log.Printf("error getting data: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
