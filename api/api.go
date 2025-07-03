@@ -346,28 +346,28 @@ func (a *Api) Login(w http.ResponseWriter, r *http.Request) {
 	username := authInfo[0]
 	if ok := USERNAME_REGEX.MatchString(username); !ok {
 		log.Println("username regex failed")
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 	password := authInfo[1]
 	if ok := UPPERCASE_REGEX.MatchString(password); !ok {
-		log.Println("password doesn't contain uppercase character: %v", err)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		log.Println("password doesn't contain uppercase character")
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 	if ok := LOWERCASE_REGEX.MatchString(password); !ok {
-		log.Println("password doesn't contain lowercase character: %v", err)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		log.Println("password doesn't contain lowercase character")
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 	if ok := NUMBER_REGEX.MatchString(password); !ok {
-		log.Println("password doesn't contain number: %v", err)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		log.Println("password doesn't contain number")
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 	if ok := SPECIAL_CHARS_REGEX.MatchString(password); !ok {
-		log.Println("password doesn't contain special character: %v", err)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		log.Println("password doesn't contain special character")
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 	verifiedUserInfo, err := a.basicAuth.CheckCredentials(username, password)
@@ -384,7 +384,7 @@ func (a *Api) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write([]byte(token)); err != nil {
+	if _, err := w.Write([]byte(token + "\n")); err != nil {
 		log.Printf("error writing to response writer: %v", err)
 		return
 	}
