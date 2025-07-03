@@ -252,6 +252,25 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 		QueryRange:  formattedQueryRange,
 		QueryFields: queryFields,
 	}
+	if strings.ToLower(userRole) == "admin" {
+		company, err := a.metadataFetcher.GetCompany(deviceId)
+		if err != nil {
+			log.Printf("error getting company for admin request: %v", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		//NOTE: if deviceId belongs to other company than admin is assigned to by default
+		if company != metadata.Company {
+			network, err := a.metadataFetcher.GetNetwork(company)
+			if err != nil {
+				log.Printf("error getting network for admin request: %v", err)
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
+			metadata.Company = company
+			metadata.Network = network
+		}
+	}
 	deviceData, err := a.dataFetcher.GetData(userRole, metadata)
 	if err != nil {
 		log.Printf("error getting data: %v", err)
