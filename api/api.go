@@ -45,7 +45,7 @@ type metadataFetcher interface {
 }
 
 type dataFetcher interface {
-	GetData(userRole string, metadata metadatafetcher.Metadata) (*datafetcher.ConsolidatedDeviceData, error)
+	GetData(metadata metadatafetcher.Metadata) (*datafetcher.ConsolidatedDeviceData, error)
 	FormatQueryRange(startTime, stopTime string) (interface{}, error)
 	Close() error
 }
@@ -273,7 +273,7 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 			metadata.Network = network
 		}
 	}
-	deviceData, err := a.dataFetcher.GetData(userRole, metadata)
+	deviceData, err := a.dataFetcher.GetData(metadata)
 	if err != nil {
 		log.Printf("error getting data: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
