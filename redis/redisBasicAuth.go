@@ -66,10 +66,6 @@ func (r *Redis) CheckCredentials(username, passw string) (authoriser.UserInfo, e
 	if err := bcrypt.CompareHashAndPassword([]byte(userInfo.Password), []byte(passw)); err != nil {
 		return authoriser.UserInfo{}, fmt.Errorf("passwords did not match: %v", err)
 	}
-	return authoriser.UserInfo{
-		Username: userInfo.Username,
-		Company:  userInfo.Company,
-		Network:  userInfo.Network,
-		Role:     userInfo.Role,
-	}, nil
+	userInfo.Password = ""
+	return userInfo, nil
 }
