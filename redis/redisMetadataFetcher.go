@@ -25,3 +25,19 @@ func (r *Redis) GetQueryFields(attachedSensors []string) ([]string, error) {
 	}
 	return queryfields, nil
 }
+
+func (r *Redis) GetCompany(deviceId string) (string, error) {
+	company, err := r.db.HGet(ctx, "fieldUnit:"+deviceId, "company").Result()
+	if err != nil {
+		return "", err
+	}
+	return company, nil
+}
+
+func (r *Redis) GetNetwork(deviceId string) (string, error) {
+	network, err := r.db.HGet(ctx, "fieldUnit:"+deviceId, "network").Result()
+	if err != nil {
+		return "", err
+	}
+	return network, nil
+}

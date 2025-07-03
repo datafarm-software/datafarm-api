@@ -40,6 +40,8 @@ type metadataFetcher interface {
 	Close() error
 	GetAttachedSensors(deviceId string) ([]string, error)
 	GetQueryFields(attachedSensors []string) ([]string, error)
+	GetCompany(deviceId string) (string, error)
+	GetNetwork(company string) (string, error)
 }
 
 type dataFetcher interface {
