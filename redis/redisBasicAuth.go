@@ -55,23 +55,21 @@ func (r *Redis) CheckCredentials(username, passw string) (authoriser.UserInfo, e
 	if err != nil {
 		return authoriser.UserInfo{}, fmt.Errorf("error getting uuid for username %s: %v", username, err)
 	}
-	userHash, err := r.db.HGetAll(ctx, "user:"+uuid).Result()
-	if err != nil {
+	var userInfo authoriser.UserInfo
+	if err := r.db.HGetAll(ctx, "user:"+uuid).Scan(&userInfo); err != nil {
 		return authoriser.UserInfo{}, fmt.Errorf("error getting password for username %s: %v", username, err)
 	}
-	passWordHash := userHash["password"]
-	company := userHash["company"]
-	// role := userHash["role"]
-	network, err := r.db.Get(ctx, "network:"+company).Result()
+	userInfo.Network, err = r.db.Get(ctx, "network:"+userInfo.Company).Result()
 	if err != nil {
 		return authoriser.UserInfo{}, fmt.Errorf("error getting network: %v", err)
 	}
-	if err := bcrypt.CompareHashAndPassword([]byte(passWordHash), []byte(passw)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(userInfo.Password), []byte(passw)); err != nil {
 		return authoriser.UserInfo{}, fmt.Errorf("passwords did not match: %v", err)
 	}
 	return authoriser.UserInfo{
-		Username: username,
-		Company:  company,
-		Network:  network,
+		Username: userInfo.Username,
+		Company:  userInfo.Company,
+		Network:  userInfo.Network,
+		Role:     userInfo.Role,
 	}, nil
 }
