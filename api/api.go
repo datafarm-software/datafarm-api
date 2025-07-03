@@ -41,7 +41,7 @@ type metadataFetcher interface {
 	GetAttachedSensors(deviceId string) ([]string, error)
 	GetQueryFields(attachedSensors []string) ([]string, error)
 	GetCompany(deviceId string) (string, error)
-	GetNetwork(company string) (string, error)
+	GetNetwork(deviceId string) (string, error)
 }
 
 type dataFetcher interface {
@@ -263,7 +263,7 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 		}
 		//NOTE: if deviceId belongs to other company than admin is assigned to by default
 		if company != metadata.Company {
-			network, err := a.metadataFetcher.GetNetwork(company)
+			network, err := a.metadataFetcher.GetNetwork(deviceId)
 			if err != nil {
 				log.Printf("error getting network for admin request: %v", err)
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
