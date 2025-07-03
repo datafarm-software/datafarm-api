@@ -97,6 +97,7 @@ func (j *jwtAuth) GenerateToken(userInfo UserInfo) (string, error) {
 	claims["company"] = userInfo.Company
 	claims["username"] = userInfo.Username
 	claims["network"] = userInfo.Network
+	claims["role"] = userInfo.Role
 	tokenString, err := token.SignedString(j.privateKey)
 	if err != nil {
 		return "", err

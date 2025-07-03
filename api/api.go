@@ -307,7 +307,11 @@ func (a *Api) verifyJwt(next http.Handler) http.Handler {
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
-
+		if err := claims.Valid(); err != nil {
+			log.Printf("claims validation error: %v", err)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
 		if !token.Valid {
 			log.Println("Invalid token provided")
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
