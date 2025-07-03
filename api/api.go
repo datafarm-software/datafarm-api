@@ -30,6 +30,11 @@ var claimsKey string = "jwtClaims"
 var QUERYFIELD_REGEX = regexp.MustCompile(`^[a-zA-Z0-9_\-\s:]*$`)
 var DEVICE_ID_REGEX = regexp.MustCompile(`\w{1,30}`)
 var RELATIVETIME_REGEX = regexp.MustCompile(`-\d{1,3}(?:[hdwy]|mo?)`)
+var USERNAME_REGEX = regexp.MustCompile(`^[\w .@]{1,75}`)
+var UPPERCASE_REGEX = regexp.MustCompile(`[A-Z]`)
+var LOWERCASE_REGEX = regexp.MustCompile(`[a-z]`)
+var NUMBER_REGEX = regexp.MustCompile(`[0-9]`)
+var SPECIAL_CHARS_REGEX = regexp.MustCompile(`[@$!%*?&]`)
 
 type metadataFetcher interface {
 	Close() error
@@ -339,7 +344,32 @@ func (a *Api) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	username := authInfo[0]
+	if ok := USERNAME_REGEX.MatchString(username); !ok {
+		log.Println("username regex failed")
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
 	password := authInfo[1]
+	if ok := UPPERCASE_REGEX.MatchString(password); !ok {
+		log.Println("password doesn't contain uppercase character: %v", err)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	if ok := LOWERCASE_REGEX.MatchString(password); !ok {
+		log.Println("password doesn't contain lowercase character: %v", err)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	if ok := NUMBER_REGEX.MatchString(password); !ok {
+		log.Println("password doesn't contain number: %v", err)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	if ok := SPECIAL_CHARS_REGEX.MatchString(password); !ok {
+		log.Println("password doesn't contain special character: %v", err)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
 	verifiedUserInfo, err := a.basicAuth.CheckCredentials(username, password)
 	if err != nil {
 		log.Printf("error checking credentials: %v", err)
