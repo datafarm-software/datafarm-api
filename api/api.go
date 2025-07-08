@@ -222,15 +222,16 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//TODO: allow users to ask for multiple queryfields at once
-	requestedQueryField := r.FormValue("queryField")
-	requestedQueryField = strings.TrimSpace(requestedQueryField)
-	if !QUERYFIELD_REGEX.MatchString(requestedQueryField) {
-		log.Println("queryField failed the regex")
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
+	requestedQueryFields := r.URL.Query()["queryField"]
+	for _, qf := range requestedQueryFields {
+		if !QUERYFIELD_REGEX.MatchString(qf) {
+			log.Println("queryField failed the regex")
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
 	}
 	queryFields := make([]string, 0)
-	if requestedQueryField == "" || requestedQueryField == "all" {
+	if len(requestedQueryFields) < 1 || requestedQueryFields[0] == "all" {
 		attachedSensors, err := a.metadataFetcher.GetAttachedSensors(deviceId)
 		if err != nil {
 			log.Printf("error getting attached sensors: %v", err)
@@ -245,7 +246,7 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 		}
 		queryFields = qf
 	} else {
-		queryFields = append(queryFields, requestedQueryField)
+		queryFields = append(queryFields, requestedQueryFields...)
 	}
 	metadata := metadatafetcher.Metadata{
 		Company:     company,
