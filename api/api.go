@@ -34,7 +34,7 @@ var USERNAME_REGEX = regexp.MustCompile(`^[\w .@]{1,75}`)
 var UPPERCASE_REGEX = regexp.MustCompile(`[A-Z]`)
 var LOWERCASE_REGEX = regexp.MustCompile(`[a-z]`)
 var NUMBER_REGEX = regexp.MustCompile(`[0-9]`)
-var SPECIAL_CHARS_REGEX = regexp.MustCompile(`[@$!%*?&]`)
+var SPECIAL_CHARS_REGEX = regexp.MustCompile(`[@$!%*?&#]`)
 
 type metadataFetcher interface {
 	Close() error
