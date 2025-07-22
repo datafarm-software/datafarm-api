@@ -255,7 +255,7 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 		QueryRange:  formattedQueryRange,
 		QueryFields: queryFields,
 	}
-	if strings.ToLower(userRole) == "admin" {
+	if strings.ToLower(userRole) == "2" {
 		company, err := a.metadataFetcher.GetCompany(deviceId)
 		if err != nil {
 			log.Printf("error getting company for admin request: %v", err)
