@@ -64,13 +64,14 @@ type basicAuth interface {
 type ApiOpts struct {
 	RedisOpts      redis.RedisOpts        `mapstructure:"Redis" validate:"required"`
 	InfluxOpts     datafetcher.InfluxOpts `mapstructure:"Influx" validate:"required"`
+	AdminRole      string                 `mapstructure:"adminRole" validate:"required,alphanum"`
 	Port           string                 `mapstructure:"port" validate:"required"`
 	PrivateKeyFile string                 `mapstructure:"privatekeyfile" validate:"required"`
 	PublicKeyFile  string                 `mapstructure:"publickeyfile" validate:"required"`
 }
 
 type Api struct {
-	port            string
+	port, adminRole string
 	wg              sync.WaitGroup
 	server          *http.Server
 	router          *mux.Router
@@ -111,6 +112,7 @@ func NewApi(opts ApiOpts) (*Api, error) {
 	}
 	api.registerRoutes()
 	api.router.Use(api.verifyJwt)
+	api.adminRole = opts.AdminRole
 	return api, nil
 }
 
@@ -194,25 +196,30 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 	claims, ok := r.Context().Value(claimsKey).(jwt.MapClaims)
 	if !ok {
 		log.Println("no jwt claims")
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
+	}
+	username, ok := claims["username"].(string)
+	if !ok {
+		log.Println("no username claim.")
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 	}
 	company, ok := claims["company"].(string)
 	if !ok {
 		log.Println("no company claims")
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 	network, ok := claims["network"].(string)
 	if !ok {
 		log.Println("no network claims")
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 	userRole, ok := claims["role"].(string)
 	if !ok {
 		log.Println("no role claim")
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 	formattedQueryRange, err := a.dataFetcher.FormatQueryRange(startTime, stopTime)
@@ -231,7 +238,11 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	queryFields := make([]string, 0)
-	if len(requestedQueryFields) < 1 || requestedQueryFields[0] == "all" {
+	if len(requestedQueryFields) < 1 {
+		log.Printf("%s: request did not specify a query field.", username)
+		http.Error(w, "No query field specified.", http.StatusBadRequest)
+	}
+	if requestedQueryFields[0] == "all" {
 		attachedSensors, err := a.metadataFetcher.GetAttachedSensors(deviceId)
 		if err != nil {
 			log.Printf("error getting attached sensors: %v", err)
@@ -255,7 +266,7 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 		QueryRange:  formattedQueryRange,
 		QueryFields: queryFields,
 	}
-	if strings.ToLower(userRole) == "2" {
+	if strings.ToLower(userRole) == a.adminRole {
 		company, err := a.metadataFetcher.GetCompany(deviceId)
 		if err != nil {
 			log.Printf("error getting company for admin request: %v", err)
@@ -319,7 +330,6 @@ func (a *Api) verifyJwt(next http.Handler) http.Handler {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
-
 		tokenString := parts[1]
 		claims := jwt.MapClaims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {

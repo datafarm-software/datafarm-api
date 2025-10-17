@@ -16,8 +16,8 @@ var once sync.Once
 
 type RedisOpts struct {
 	Addr     string `mapstructure:"address" validate:"required"`
-	Username string `mapstructure:"username" validate:"required"`
-	Password string `mapstructure:"password" validate:"required"`
+	Username string `mapstructure:"username" validate:"omitempty,alphanum"`
+	Password string `mapstructure:"password" validate:"omitempty"`
 	Db       int    `mapstructure:"db" validate:"gte=0"`
 }
 
