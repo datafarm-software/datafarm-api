@@ -12,6 +12,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+const THREE_HOURS = 3 * time.Hour
+const TWELVE_HOURS = 12 * time.Hour
+const DemoViewer = "4"
+
 type jwtAuth struct {
 	publicKey  *ecdsa.PublicKey
 	privateKey *ecdsa.PrivateKey
@@ -92,7 +96,13 @@ func (j *jwtAuth) GetPublicKey() *ecdsa.PublicKey {
 func (j *jwtAuth) GenerateToken(userInfo UserInfo) (string, error) {
 	token := jwt.New(jwt.SigningMethodES256)
 	claims := token.Claims.(jwt.MapClaims)
-	claims["exp"] = jwt.NewNumericDate(time.Now().UTC().Add(3 * time.Hour))
+	var exp time.Time
+	if userInfo.Role == DemoViewer {
+		exp = time.Now().UTC().Add(THREE_HOURS)
+	} else {
+		exp = time.Now().UTC().Add(TWELVE_HOURS)
+	}
+	claims["exp"] = jwt.NewNumericDate(exp)
 	claims["authorized"] = true
 	claims["company"] = userInfo.Company
 	claims["username"] = userInfo.Username
