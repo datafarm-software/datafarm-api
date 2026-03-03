@@ -457,74 +457,55 @@ func (a *Api) verifyJwt(next http.Handler) http.Handler {
 	})
 }
 
-func (a *Api) Login(w http.ResponseWriter, r *http.Request) {
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		log.Println("no auth header provided")
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-	parts := strings.Split(authHeader, " ")
+type LoginRequest struct {
+	Auth string `header:"Authorization" required:"true"`
+}
+
+func (a *Api) Login(ctx context.Context,
+	lr *LoginRequest) (*struct{ Token string }, error) {
+	parts := strings.Split(lr.Auth, " ")
 	if len(parts) != 2 || parts[0] != "Basic" {
-		log.Println("Invalid Authorization header format")
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
+		return nil, huma.Error400BadRequest(
+			"Authorization header must follow the basic format: 'Basic base64(username:password)'")
 	}
 	authBytes, err := base64.StdEncoding.DecodeString(parts[1])
 	if err != nil {
-		log.Printf("error decoding given base64: %v", err)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
+		return nil, huma.Error500InternalServerError(
+			"Internal error decoding given base64.")
 	}
 	authInfo := strings.Split(string(authBytes), ":")
 	if len(authInfo) != 2 {
-		log.Println("Invalid Basic format provided")
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
+		return nil, huma.Error400BadRequest("Invalid Basic format provided.")
 	}
 	username := authInfo[0]
 	if ok := USERNAME_REGEX.MatchString(username); !ok {
-		log.Println("username regex failed")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
+		return nil, huma.Error400BadRequest("Username failed the regex.")
 	}
 	password := authInfo[1]
 	if ok := UPPERCASE_REGEX.MatchString(password); !ok {
-		log.Println("password doesn't contain uppercase character")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
+		return nil, huma.Error400BadRequest(
+			"Password failed the regex.")
 	}
 	if ok := LOWERCASE_REGEX.MatchString(password); !ok {
-		log.Println("password doesn't contain lowercase character")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
+		return nil, huma.Error400BadRequest(
+			"Password failed the regex.")
 	}
 	if ok := NUMBER_REGEX.MatchString(password); !ok {
-		log.Println("password doesn't contain number")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
+		return nil, huma.Error400BadRequest(
+			"Password failed the regex.")
 	}
 	if ok := SPECIAL_CHARS_REGEX.MatchString(password); !ok {
-		log.Println("password doesn't contain special character")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
+		return nil, huma.Error400BadRequest(
+			"Password failed the regex.")
 	}
 	verifiedUserInfo, err := a.basicAuth.CheckCredentials(username, password)
 	if err != nil {
-		log.Printf("error checking credentials: %v", err)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
+		return nil, huma.Error401Unauthorized("Bad credentials provided.")
 	}
 	token, err := a.tokenAuth.GenerateToken(verifiedUserInfo)
 	if err != nil {
-		log.Printf("error generating jwt: %v", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
+		return nil, huma.Error500InternalServerError(
+			"Internal error generating the jwt.")
 	}
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write([]byte(token + "\n")); err != nil {
-		log.Printf("error writing to response writer: %v", err)
-		return
-	}
+	return &struct{ Token string }{token}, nil
 }
