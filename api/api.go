@@ -12,9 +12,11 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humago"
+	"github.com/danielgtaylor/huma/v2/humacli"
 	"github.com/geraud22/datafarm-api/authoriser"
 	"github.com/geraud22/datafarm-api/datafetcher"
 	"github.com/geraud22/datafarm-api/metadatafetcher"
@@ -72,62 +74,60 @@ type ApiOpts struct {
 
 type Api struct {
 	port, adminRole string
-	wg              sync.WaitGroup
-	server          *http.Server
-	router          *mux.Router
 	metadataFetcher metadataFetcher
 	dataFetcher     dataFetcher
 	tokenAuth       tokenAuth
 	basicAuth       basicAuth
-	shutdownCtxFunc context.CancelFunc
 }
 
-func NewApi(opts ApiOpts) (*Api, error) {
+func Start(opts ApiOpts) error {
 	redis, err := redis.NewRedis(opts.RedisOpts)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	df, err := datafetcher.NewInfluxDatafetcher(opts.InfluxOpts)
 	if err != nil {
-		return nil, fmt.Errorf("error init influx: %v", err)
+		return fmt.Errorf("error init influx: %v", err)
 	}
 	tokenAuth, err := authoriser.NewJwtAuth(os.DirFS("."), opts.PrivateKeyFile, opts.PublicKeyFile)
 	if err != nil {
-		return nil, fmt.Errorf("error initializing jwt authoriser: %v", err)
+		return fmt.Errorf("error initializing jwt authoriser: %v", err)
 	}
-	c, cancel := context.WithCancel(context.Background())
-	ctx = c
 	api := &Api{
-		shutdownCtxFunc: cancel,
-		router:          mux.NewRouter().PathPrefix("/api/v1").Subrouter(),
 		port:            opts.Port,
-		metadataFetcher: redis,
-		dataFetcher:     df,
-		tokenAuth:       tokenAuth,
-		basicAuth:       redis,
+		metadataFetcher: redis, dataFetcher: df,
+		tokenAuth: tokenAuth,
+		basicAuth: redis,
 	}
-	api.server = &http.Server{
-		Addr:    opts.Port,
-		Handler: api.router,
-	}
-	api.registerRoutes()
-	api.router.Use(api.verifyJwt)
 	api.adminRole = opts.AdminRole
-	return api, nil
+	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
+		router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
+		router.Use(api.verifyJwt)
+		config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
+		humaApi := humago.New(router, config)
+		api.RegisterHumaOperations(humaApi)
+		server := &http.Server{
+			Addr:    fmt.Sprintf(":%d", options.Port),
+			Handler: router,
+		}
+		hooks.OnStart(func() {
+			log.Println("Server started on ", server.Addr)
+			if err := server.ListenAndServe(); err != nil {
+				if !errors.Is(err, http.ErrServerClosed) {
+					log.Fatalf("HTTP server error: %v", err)
+				}
+			}
+		})
+		hooks.OnStop(func() {
+			api.Close()
+			server.Shutdown(context.Background())
+		})
+	})
+	cli.Run()
+	return nil
 }
 
-func (a *Api) startGoRoutine(routineToBeExecuted func(ctx context.Context)) {
-	a.wg.Add(1)
-	go func() {
-		defer a.wg.Done()
-		routineToBeExecuted(ctx)
-	}()
-}
-
-func (a *Api) Shutdown() {
-	if err := a.server.Shutdown(ctx); err != nil {
-		log.Fatalf("HTTP shutdown error: %v", err)
-	}
+func (a *Api) Close() {
 	if err := a.metadataFetcher.Close(); err != nil {
 		log.Fatalf("error closing metadatafetcher: %v", err)
 	}
@@ -140,21 +140,10 @@ func (a *Api) Shutdown() {
 	if err := a.basicAuth.Close(); err != nil {
 		log.Fatalf("error closing basic auth: %v", err)
 	}
-	a.shutdownCtxFunc()
-	a.wg.Wait()
-	log.Println("All goroutines have finished.")
+	log.Println("Api shutdown.")
 }
 
-func (a *Api) StartHttpServer() {
-	a.startGoRoutine(func(ctx context.Context) {
-		if err := a.server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("HTTP server error: %v", err)
-		}
-		log.Println("Stopped serving new connections.")
-	})
-}
-
-func (a *Api) registerRoutes() {
+func (a *Api) RegisterHumaOperations() {
 	a.router.Handle("/device/{deviceId}", http.HandlerFunc(a.GetDeviceData)).Methods("GET")
 	a.router.Handle("/login", http.HandlerFunc(a.Login)).Methods("GET", "POST")
 }
