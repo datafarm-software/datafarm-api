@@ -156,7 +156,7 @@ func (a *Api) RegisterHumaOperations(api huma.API) {
 	registry := huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
 	operation := huma.Operation{
 		Method: "GET",
-		Path:   "/device/{deviceId}",
+		Path:   "/api/v1/device/{deviceId}",
 		Parameters: []*huma.Param{
 			{
 				Name:            "deviceId",
@@ -206,7 +206,7 @@ func (a *Api) RegisterHumaOperations(api huma.API) {
 	huma.Register(api, operation, a.GetDeviceData)
 	operation = huma.Operation{
 		Method:      "POST",
-		Path:        "/login",
+		Path:        "/api/v1/login",
 		Tags:        []string{"POST"},
 		Summary:     "Login.",
 		Description: "Clients can use this route to login and receive an active session token.",
@@ -265,31 +265,31 @@ type DeviceDataRequest struct {
 }
 
 func (a *Api) GetDeviceData(ctx context.Context,
-	in *struct{ Body DeviceDataRequest }) (*struct {
+	in *DeviceDataRequest) (*struct {
 	Body *datafetcher.ConsolidatedDeviceData
 }, error) {
 	var relativeTime bool
-	in.Body.Start = strings.TrimSpace(in.Body.Start)
-	if RELATIVETIME_REGEX.MatchString(in.Body.Start) {
+	in.Start = strings.TrimSpace(in.Start)
+	if RELATIVETIME_REGEX.MatchString(in.Start) {
 		relativeTime = true
 	} else {
-		if _, err := time.Parse(time.RFC3339Nano, in.Body.Start); err != nil {
+		if _, err := time.Parse(time.RFC3339Nano, in.Start); err != nil {
 			return nil, huma.Error400BadRequest("Start time is invalid rfc.")
 		}
 	}
 	if relativeTime {
-		in.Body.Stop = ""
+		in.Stop = ""
 	} else {
-		if in.Body.Stop == "" {
+		if in.Stop == "" {
 			return nil, huma.Error400BadRequest(
 				"Stop time is empty, when start is valid rfc format.")
 		}
-		in.Body.Stop = strings.TrimSpace(in.Body.Stop)
-		if _, err := time.Parse(time.RFC3339Nano, in.Body.Stop); err != nil {
+		in.Stop = strings.TrimSpace(in.Stop)
+		if _, err := time.Parse(time.RFC3339Nano, in.Stop); err != nil {
 			return nil, huma.Error400BadRequest("Stop time is invalid rfc.")
 		}
 	}
-	formattedQueryRange, err := a.dataFetcher.FormatQueryRange(in.Body.Start, in.Body.Stop)
+	formattedQueryRange, err := a.dataFetcher.FormatQueryRange(in.Start, in.Stop)
 	if err != nil {
 		return nil, huma.Error500InternalServerError(
 			"Internal error formatting query range.")
@@ -311,42 +311,42 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		return nil, huma.Error400BadRequest("Incomplete jwt claims.")
 	}
 	//TODO: allow users to ask for multiple queryfields at once
-	if in.Body.QueryFields[0] == "all" {
-		attachedSensors, err := a.metadataFetcher.GetAttachedSensors(in.Body.DeviceId)
+	if in.QueryFields[0] == "all" {
+		attachedSensors, err := a.metadataFetcher.GetAttachedSensors(in.DeviceId)
 		if err != nil {
-			log.Printf("error getting attached sensors for: %s: %v", in.Body.DeviceId, err)
+			log.Printf("error getting attached sensors for: %s: %v", in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting attached sensors for deviceId.")
 		}
 		qf, err := a.metadataFetcher.GetQueryFields(attachedSensors)
 		if err != nil {
-			log.Printf("error getting query fields for: %s: %v", in.Body.DeviceId, err)
+			log.Printf("error getting query fields for: %s: %v", in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting query fields for deviceId.")
 		}
-		in.Body.QueryFields = qf
+		in.QueryFields = qf
 	}
 	metadata := metadatafetcher.Metadata{
 		Company:     company,
-		DeviceId:    in.Body.DeviceId,
+		DeviceId:    in.DeviceId,
 		Network:     network,
 		QueryRange:  formattedQueryRange,
-		QueryFields: in.Body.QueryFields,
+		QueryFields: in.QueryFields,
 	}
 	if strings.ToLower(userRole) == a.adminRole {
-		company, err := a.metadataFetcher.GetCompany(in.Body.DeviceId)
+		company, err := a.metadataFetcher.GetCompany(in.DeviceId)
 		if err != nil {
 			log.Printf("error getting company for admin request on device: %s: %v",
-				in.Body.DeviceId, err)
+				in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting associated company for deviceId.")
 		}
 		//NOTE: if deviceId belongs to other company than admin is assigned to:
 		if company != metadata.Company {
-			network, err := a.metadataFetcher.GetNetwork(in.Body.DeviceId)
+			network, err := a.metadataFetcher.GetNetwork(in.DeviceId)
 			if err != nil {
 				log.Printf("error getting network for admin request on deviceId: %s: %v",
-					in.Body.DeviceId, err)
+					in.DeviceId, err)
 				return nil, huma.Error500InternalServerError(
 					"Internal error getting associated network for deviceId.")
 			}
@@ -422,7 +422,7 @@ type TokenResponse struct {
 }
 
 func (a *Api) Login(ctx context.Context,
-	lr *LoginRequest) (*TokenResponse, error) {
+	lr *LoginRequest) (*struct{ Body TokenResponse }, error) {
 	parts := strings.Split(lr.Auth, " ")
 	if len(parts) != 2 || parts[0] != "Basic" {
 		return nil, huma.Error400BadRequest(
@@ -467,5 +467,5 @@ func (a *Api) Login(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error generating the jwt.")
 	}
-	return &TokenResponse{token}, nil
+	return &struct{ Body TokenResponse }{TokenResponse{token}}, nil
 }
