@@ -9,5 +9,5 @@ type ConsolidatedDeviceData struct {
 type DeviceData struct {
 	DeviceID   string    `json:"rtuid"`
 	Timestamp  time.Time `json:"timestamp"`
-	SensorData map[string]interface{}
+	SensorData map[string]any
 }

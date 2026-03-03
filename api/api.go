@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -31,7 +30,8 @@ const EmptyPayloadLength int = 16
 var ctx context.Context
 var claimsKey string = "jwtClaims"
 var QUERYFIELD_REGEX = regexp.MustCompile(`^[a-zA-Z0-9_\-\s:]*$`)
-var DEVICE_ID_REGEX = regexp.MustCompile(`\w{1,30}`)
+
+// var DEVICE_ID_REGEX = regexp.MustCompile(`\w{1,30}`)
 var RELATIVETIME_REGEX = regexp.MustCompile(`-\d{1,3}(?:[hdwy]|mo?)`)
 var USERNAME_REGEX = regexp.MustCompile(`^[\w .@]{1,75}`)
 var UPPERCASE_REGEX = regexp.MustCompile(`[A-Z]`)
@@ -165,7 +165,7 @@ func (a *Api) RegisterHumaOperations(api huma.API) {
 				AllowEmptyValue: false,
 				Schema: &huma.Schema{
 					Type:    "string",
-					Pattern: "^[a-zA-Z0-9]+$",
+					Pattern: `^\w{1,30}$`,
 				},
 			},
 		},
@@ -256,127 +256,98 @@ func (a *Api) RegisterHumaOperations(api huma.API) {
 	huma.Register(api, operation, a.Login)
 }
 
-func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		log.Println("error parsing form while loading dashboard: %v", err)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-	routeVars := mux.Vars(r)
-	deviceId := routeVars["deviceId"]
-	deviceId = strings.TrimSpace(deviceId)
-	if !DEVICE_ID_REGEX.MatchString(deviceId) {
-		log.Printf("deviceid failed the regex")
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-	startTime := r.FormValue("start")
-	startTime = strings.TrimSpace(startTime)
-	if !RELATIVETIME_REGEX.MatchString(startTime) {
-		if _, err := time.Parse(time.RFC3339Nano, startTime); err != nil {
-			log.Println("start time is invalid rfc")
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
+type DeviceDataRequest struct {
+	DeviceId    string   `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$"`
+	QueryFields []string `query:"queryFields" minItems:"1"`
+	Start       string   `query:"start"`
+	Stop        string   `query:"stop" required:"false"`
+}
+
+func (a *Api) GetDeviceData(ctx context.Context,
+	in *struct{ Body DeviceDataRequest }) (*struct {
+	Body *datafetcher.ConsolidatedDeviceData
+}, error) {
+	var relativeTime bool
+	in.Body.Start = strings.TrimSpace(in.Body.Start)
+	if RELATIVETIME_REGEX.MatchString(in.Body.Start) {
+		relativeTime = true
+	} else {
+		if _, err := time.Parse(time.RFC3339Nano, in.Body.Start); err != nil {
+			return nil, huma.Error400BadRequest("Start time is invalid rfc.")
 		}
 	}
-	stopTime := r.FormValue("stop")
-	stopTime = strings.TrimSpace(stopTime)
-	if stopTime != "" {
-		if !RELATIVETIME_REGEX.MatchString(stopTime) {
-			if _, err := time.Parse(time.RFC3339Nano, stopTime); err != nil {
-				log.Println("stop time is invalid rfc")
-				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-				return
-			}
+	if relativeTime {
+		in.Body.Stop = ""
+	} else {
+		if in.Body.Stop == "" {
+			return nil, huma.Error400BadRequest(
+				"Stop time is empty, when start is valid rfc format.")
+		}
+		in.Body.Stop = strings.TrimSpace(in.Body.Stop)
+		if _, err := time.Parse(time.RFC3339Nano, in.Body.Stop); err != nil {
+			return nil, huma.Error400BadRequest("Stop time is invalid rfc.")
 		}
 	}
-	claims, ok := r.Context().Value(claimsKey).(jwt.MapClaims)
-	if !ok {
-		log.Println("no jwt claims")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
+	formattedQueryRange, err := a.dataFetcher.FormatQueryRange(in.Body.Start, in.Body.Stop)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"Internal error formatting query range.")
 	}
-	username, ok := claims["username"].(string)
+	claims, ok := ctx.Value(claimsKey).(jwt.MapClaims)
 	if !ok {
-		log.Println("no username claim.")
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return nil, huma.Error400BadRequest("Incomplete jwt claims.")
 	}
 	company, ok := claims["company"].(string)
 	if !ok {
-		log.Println("no company claims")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
+		return nil, huma.Error400BadRequest("Incomplete jwt claims.")
 	}
 	network, ok := claims["network"].(string)
 	if !ok {
-		log.Println("no network claims")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
+		return nil, huma.Error400BadRequest("Incomplete jwt claims.")
 	}
 	userRole, ok := claims["role"].(string)
 	if !ok {
-		log.Println("no role claim")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
-	}
-	formattedQueryRange, err := a.dataFetcher.FormatQueryRange(startTime, stopTime)
-	if err != nil {
-		log.Printf("error formatting query range: %v", err)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
+		return nil, huma.Error400BadRequest("Incomplete jwt claims.")
 	}
 	//TODO: allow users to ask for multiple queryfields at once
-	requestedQueryFields := r.URL.Query()["queryField"]
-	for _, qf := range requestedQueryFields {
-		if !QUERYFIELD_REGEX.MatchString(qf) {
-			log.Println("queryField failed the regex")
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-	}
-	queryFields := make([]string, 0)
-	if len(requestedQueryFields) < 1 {
-		log.Printf("%s: request did not specify a query field.", username)
-		http.Error(w, "No query field specified.", http.StatusBadRequest)
-	}
-	if requestedQueryFields[0] == "all" {
-		attachedSensors, err := a.metadataFetcher.GetAttachedSensors(deviceId)
+	if in.Body.QueryFields[0] == "all" {
+		attachedSensors, err := a.metadataFetcher.GetAttachedSensors(in.Body.DeviceId)
 		if err != nil {
-			log.Printf("error getting attached sensors: %v", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
+			log.Printf("error getting attached sensors for: %s: %v", in.Body.DeviceId, err)
+			return nil, huma.Error500InternalServerError(
+				"Internal error getting attached sensors for deviceId.")
 		}
 		qf, err := a.metadataFetcher.GetQueryFields(attachedSensors)
 		if err != nil {
-			log.Printf("error getting query fields: %v", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
+			log.Printf("error getting query fields for: %s: %v", in.Body.DeviceId, err)
+			return nil, huma.Error500InternalServerError(
+				"Internal error getting query fields for deviceId.")
 		}
-		queryFields = qf
-	} else {
-		queryFields = append(queryFields, requestedQueryFields...)
+		in.Body.QueryFields = qf
 	}
 	metadata := metadatafetcher.Metadata{
 		Company:     company,
-		DeviceId:    deviceId,
+		DeviceId:    in.Body.DeviceId,
 		Network:     network,
 		QueryRange:  formattedQueryRange,
-		QueryFields: queryFields,
+		QueryFields: in.Body.QueryFields,
 	}
 	if strings.ToLower(userRole) == a.adminRole {
-		company, err := a.metadataFetcher.GetCompany(deviceId)
+		company, err := a.metadataFetcher.GetCompany(in.Body.DeviceId)
 		if err != nil {
-			log.Printf("error getting company for admin request: %v", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
+			log.Printf("error getting company for admin request on device: %s: %v",
+				in.Body.DeviceId, err)
+			return nil, huma.Error500InternalServerError(
+				"Internal error getting associated company for deviceId.")
 		}
-		//NOTE: if deviceId belongs to other company than admin is assigned to by default
+		//NOTE: if deviceId belongs to other company than admin is assigned to:
 		if company != metadata.Company {
-			network, err := a.metadataFetcher.GetNetwork(deviceId)
+			network, err := a.metadataFetcher.GetNetwork(in.Body.DeviceId)
 			if err != nil {
-				log.Printf("error getting network for admin request: %v", err)
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
+				log.Printf("error getting network for admin request on deviceId: %s: %v",
+					in.Body.DeviceId, err)
+				return nil, huma.Error500InternalServerError(
+					"Internal error getting associated network for deviceId.")
 			}
 			metadata.Company = company
 			metadata.Network = network
@@ -385,28 +356,12 @@ func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
 	deviceData, err := a.dataFetcher.GetData(metadata)
 	if err != nil {
 		log.Printf("error getting data: %v", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
+		return nil, huma.Error500InternalServerError(
+			"Internal error fetching data.")
 	}
-	jsonData, err := json.Marshal(deviceData)
-	if err != nil {
-		log.Printf("error marshalling deviceData to json: %v", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	var bytesToReturn []byte
-	if len(jsonData) > EmptyPayloadLength {
-		bytesToReturn = jsonData
-	} else {
-		bytesToReturn = []byte(`{"payload": []}`)
-	}
-	if _, err := w.Write(bytesToReturn); err != nil {
-		log.Printf("Error writing response: %v", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
+	return &struct {
+		Body *datafetcher.ConsolidatedDeviceData
+	}{deviceData}, nil
 }
 
 func (a *Api) verifyJwt(next http.Handler) http.Handler {
