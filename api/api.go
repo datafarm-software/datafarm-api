@@ -102,13 +102,14 @@ func Start(opts ApiOpts) error {
 	}
 	api.adminRole = opts.AdminRole
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
-		router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
-		router.Use(api.verifyJwt)
+		router := mux.NewRouter()
 		config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
 		humaApi := humamux.New(router, config)
+		secured := router.PathPrefix("/api/v1").Subrouter()
+		secured.Use(api.verifyJwt)
 		api.RegisterHumaOperations(humaApi)
 		server := &http.Server{
-			Addr:    fmt.Sprintf(":%d", options.Port),
+			Addr:    fmt.Sprintf("%s", opts.Port),
 			Handler: router,
 		}
 		hooks.OnStart(func() {
@@ -413,11 +414,15 @@ func (a *Api) verifyJwt(next http.Handler) http.Handler {
 }
 
 type LoginRequest struct {
-	Auth string `header:"Authorization" required:"true"`
+	Auth string `header:"Authorization" doc:"Required in the format: Bearer base64(username:password)" required:"true"`
+}
+
+type TokenResponse struct {
+	Token string `doc:"Access token for API resources."`
 }
 
 func (a *Api) Login(ctx context.Context,
-	lr *LoginRequest) (*struct{ Token string }, error) {
+	lr *LoginRequest) (*TokenResponse, error) {
 	parts := strings.Split(lr.Auth, " ")
 	if len(parts) != 2 || parts[0] != "Basic" {
 		return nil, huma.Error400BadRequest(
@@ -462,5 +467,5 @@ func (a *Api) Login(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error generating the jwt.")
 	}
-	return &struct{ Token string }{token}, nil
+	return &TokenResponse{token}, nil
 }
