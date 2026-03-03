@@ -10,12 +10,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/danielgtaylor/huma/v2/adapters/humago"
+	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/danielgtaylor/huma/v2/humacli"
 	"github.com/geraud22/datafarm-api/authoriser"
 	"github.com/geraud22/datafarm-api/datafetcher"
@@ -104,7 +105,7 @@ func Start(opts ApiOpts) error {
 		router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
 		router.Use(api.verifyJwt)
 		config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
-		humaApi := humago.New(router, config)
+		humaApi := humamux.New(router, config)
 		api.RegisterHumaOperations(humaApi)
 		server := &http.Server{
 			Addr:    fmt.Sprintf(":%d", options.Port),
@@ -143,9 +144,116 @@ func (a *Api) Close() {
 	log.Println("Api shutdown.")
 }
 
-func (a *Api) RegisterHumaOperations() {
-	a.router.Handle("/device/{deviceId}", http.HandlerFunc(a.GetDeviceData)).Methods("GET")
-	a.router.Handle("/login", http.HandlerFunc(a.Login)).Methods("GET", "POST")
+type HumaError struct {
+	Schema string `json:"$schema" doc:"Link to Object Model."`
+	Title  string `json:"title" doc:"Name associated with error code."`
+	Status int    `json:"status" doc:"Http Status Code."`
+	Detail string `json:"detail" doc:"Human Readable explanation of what went wrong."`
+}
+
+func (a *Api) RegisterHumaOperations(api huma.API) {
+	registry := huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
+	operation := huma.Operation{
+		Method: "GET",
+		Path:   "/device/{deviceId}",
+		Parameters: []*huma.Param{
+			{
+				Name:            "deviceId",
+				In:              "path",
+				Description:     "Device Id to get data for.",
+				Required:        true,
+				AllowEmptyValue: false,
+				Schema: &huma.Schema{
+					Type:    "string",
+					Pattern: "^[a-zA-Z0-9]+$",
+				},
+			},
+		},
+		Tags:        []string{"GET"},
+		Summary:     "Get Sensor Data.",
+		Description: "Clients can use this route to request data from a specific sensor using its device id.",
+		RequestBody: &huma.RequestBody{},
+		Responses: map[string]*huma.Response{
+			"500": {
+				Description: "Internal Server Error",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Internal Server Error",
+							Status: 500,
+							Detail: "Internal error while getting data for the device.",
+						},
+					}}},
+			"400": {
+				Description: "Bad Request",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Bad Request",
+							Status: 400,
+							Detail: "Invalid start time.",
+						},
+					},
+				},
+			},
+		},
+	}
+	huma.Register(api, operation, a.GetDeviceData)
+	operation = huma.Operation{
+		Method:      "POST",
+		Path:        "/login",
+		Tags:        []string{"POST"},
+		Summary:     "Login.",
+		Description: "Clients can use this route to login and receive an active session token.",
+		RequestBody: &huma.RequestBody{},
+		Responses: map[string]*huma.Response{
+			"500": {
+				Description: "Internal Server Error",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Internal Server Error",
+							Status: http.StatusInternalServerError,
+							Detail: "Internal error logging in.",
+						},
+					}}},
+			"400": {
+				Description: "Bad Request",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Bad Request",
+							Status: http.StatusBadRequest,
+							Detail: "No auth header provided.",
+						},
+					},
+				},
+			},
+			"401": {
+				Description: "Unauthorized",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Unauthorized",
+							Status: http.StatusUnauthorized,
+							Detail: "Unknown username.",
+						},
+					},
+				},
+			},
+		},
+	}
+	huma.Register(api, operation, a.Login)
 }
 
 func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
