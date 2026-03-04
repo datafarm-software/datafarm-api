@@ -391,6 +391,7 @@ func (a *Api) Login(ctx context.Context,
 			"Password failed the regex.")
 	}
 	if err = a.BasicAuth.VerifyCredentials(username, password); err != nil {
+		log.Printf("error: %v", err)
 		return nil, huma.Error401Unauthorized("Bad credentials provided.")
 	}
 	token, expiry, err := a.TokenAuth.GenerateToken()

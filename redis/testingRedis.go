@@ -9,6 +9,7 @@ import (
 	"github.com/geraud22/datafarm-api/authoriser"
 	mdf "github.com/geraud22/datafarm-api/metadatafetcher"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var testingRedisOpts RedisOpts
@@ -83,13 +84,22 @@ RetryLoop:
 }
 
 func (t *TestingRedis) PrepareBasicAuth(db map[string]authoriser.UserInfo) error {
+	var hashedPassword []byte
+	var err error
 	pfn := func(pipe redis.Pipeliner) error {
 		for k, v := range db {
-			pipe.HSet(ctx, "userInfo:"+k, v)
+			hashedPassword, err = bcrypt.GenerateFromPassword(
+				[]byte(v.Password), bcrypt.DefaultCost)
+			if err != nil {
+				break
+			}
+			v.Password = string(hashedPassword)
+			pipe.Set(ctx, "unique:"+k, k, 0)
+			pipe.HSet(ctx, "user:"+k, v)
 		}
 		return nil
 	}
-	err := t.redis.pipeline(pfn)
+	err = t.redis.pipeline(pfn)
 	if err != nil {
 		return fmt.Errorf("pipe: %v", err)
 	}
