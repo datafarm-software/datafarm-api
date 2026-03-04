@@ -10,12 +10,16 @@ import (
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/geraud22/datafarm-api/api"
 	"github.com/geraud22/datafarm-api/authoriser"
+	"github.com/stretchr/testify/require"
 )
 
 const RegisteredUsername = "user1"
 const UnregisteredUsername = "user2"
-const RegisteredPassword = "pass1"
-const UnregisteredPassword = "pass2"
+const RegisteredPassword = "@Password1"
+const UnregisteredPassword = "@Password2"
+const RegisteredCompany = "company"
+const RegisteredNetwork = "network"
+const UserRole = "1"
 
 var a = &api.Api{}
 
@@ -24,12 +28,22 @@ func TestLogin(t *testing.T) {
 		wantErr            bool
 		wantStatus         int
 		username, password string
+		mockBasicAuth      map[string]authoriser.UserInfo
 	}{
 		"successfully login": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			username:   RegisteredUsername,
 			password:   RegisteredPassword,
+			mockBasicAuth: map[string]authoriser.UserInfo{
+				RegisteredUsername: {
+					Username: RegisteredUsername,
+					Company:  RegisteredCompany,
+					Role:     UserRole,
+					Password: RegisteredPassword,
+					Network:  RegisteredNetwork,
+				},
+			},
 		},
 
 		"deny access": {
@@ -37,9 +51,19 @@ func TestLogin(t *testing.T) {
 			wantStatus: http.StatusUnauthorized,
 			username:   UnregisteredUsername,
 			password:   UnregisteredPassword,
+			mockBasicAuth: map[string]authoriser.UserInfo{
+				RegisteredUsername: {
+					Username: RegisteredUsername,
+					Company:  RegisteredCompany,
+					Role:     UserRole,
+					Password: RegisteredPassword,
+					Network:  RegisteredNetwork,
+				},
+			},
 		},
 	}
 
+	var err error
 	_, humaApi := humatest.New(t)
 	a.RegisterHumaOperations(humaApi)
 	for name, tc := range tests {
@@ -48,6 +72,8 @@ func TestLogin(t *testing.T) {
 			defer a.TokenAuth.Close()
 			a.BasicAuth = &authoriser.MockBasicAuth{}
 			defer a.BasicAuth.Close()
+			err = a.BasicAuth.PrepareDb(tc.mockBasicAuth)
+			require.Nil(t, err)
 			byteDetails := bytes.NewBuffer(nil)
 			fmt.Fprintf(byteDetails, "%s:%s", tc.username, tc.password)
 			encodedDetails := base64.StdEncoding.EncodeToString(byteDetails.Bytes())

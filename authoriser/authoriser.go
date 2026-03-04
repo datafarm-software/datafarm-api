@@ -16,7 +16,12 @@ type TokenAuth interface {
 	GetPublicKey() *ecdsa.PublicKey
 }
 
+type TestBasicAuth interface {
+	PrepareDb(map[string]UserInfo) error
+}
+
 type BasicAuth interface {
+	TestBasicAuth
 	Close() error
 	CheckCredentials(username, passw string) (UserInfo, error)
 }

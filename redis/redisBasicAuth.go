@@ -50,6 +50,10 @@ func (r *Redis) Close() error {
 	return nil
 }
 
+func (r *Redis) PrepareDb(map[string]authoriser.UserInfo) error {
+	return nil
+}
+
 func (r *Redis) CheckCredentials(username, passw string) (authoriser.UserInfo, error) {
 	uuid, err := r.db.Get(ctx, "unique:"+username).Result()
 	if err != nil {
