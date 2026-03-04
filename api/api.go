@@ -258,10 +258,10 @@ func (a *Api) RegisterHumaOperations(api huma.API) {
 }
 
 type DeviceDataRequest struct {
-	DeviceId    string   `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$"`
-	QueryFields []string `query:"queryFields" minItems:"1"`
-	Start       string   `query:"start"`
-	Stop        string   `query:"stop" required:"false"`
+	DeviceId   string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+	QueryField string `query:"queryField" required:"true"`
+	Start      string `query:"start" required:"true"`
+	Stop       string `query:"stop" required:"false"`
 }
 
 func (a *Api) GetDeviceData(ctx context.Context,
@@ -311,27 +311,27 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		return nil, huma.Error400BadRequest("Incomplete jwt claims.")
 	}
 	//TODO: allow users to ask for multiple queryfields at once
-	if in.QueryFields[0] == "all" {
+	queryFields := []string{in.QueryField}
+	if in.QueryField == "all" {
 		attachedSensors, err := a.metadataFetcher.GetAttachedSensors(in.DeviceId)
 		if err != nil {
 			log.Printf("error getting attached sensors for: %s: %v", in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting attached sensors for deviceId.")
 		}
-		qf, err := a.metadataFetcher.GetQueryFields(attachedSensors)
+		queryFields, err = a.metadataFetcher.GetQueryFields(attachedSensors)
 		if err != nil {
 			log.Printf("error getting query fields for: %s: %v", in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting query fields for deviceId.")
 		}
-		in.QueryFields = qf
 	}
 	metadata := metadatafetcher.Metadata{
 		Company:     company,
 		DeviceId:    in.DeviceId,
 		Network:     network,
 		QueryRange:  formattedQueryRange,
-		QueryFields: in.QueryFields,
+		QueryFields: queryFields,
 	}
 	if strings.ToLower(userRole) == a.adminRole {
 		company, err := a.metadataFetcher.GetCompany(in.DeviceId)
