@@ -2,8 +2,6 @@ package authoriser
 
 import (
 	"time"
-
-	"github.com/geraud22/datafarm-api/authoriser"
 )
 
 type UserInfo struct {
@@ -27,7 +25,7 @@ type TokenResponse struct {
 type TokenAuth interface {
 	Close() error
 	GenerateToken() (string, time.Duration, error)
-	IsValidToken(authoriser.TokenResponse) bool
+	IsValidToken(TokenResponse) bool
 }
 
 type TestBasicAuth interface {

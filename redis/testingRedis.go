@@ -96,7 +96,7 @@ func (t *TestingRedis) PrepareBasicAuth(db map[string]authoriser.UserInfo) error
 	return nil
 }
 
-func (t *TestingRedis) PrepareMetadataFetcher(md mdf.Metadata) error {
+func (t *TestingRedis) PrepareMetadataFetcher(schema mdf.Schema) error {
 	return fmt.Errorf("not implemented")
 }
 
@@ -114,6 +114,10 @@ func (t *TestingRedis) GetNetwork(deviceId string) (string, error) {
 }
 func (t *TestingRedis) StoreToken(ut authoriser.UserToken) error {
 	return t.redis.StoreToken(ut)
+}
+
+func (t *TestingRedis) DeleteToken(tr authoriser.TokenResponse) error {
+	return t.redis.DeleteToken(tr)
 }
 
 func (t *TestingRedis) VerifyCredentials(username, passw string) error {

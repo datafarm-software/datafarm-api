@@ -32,7 +32,7 @@ func TestLogin(t *testing.T) {
 		wantStatus         int
 		username, password string
 		mockBasicAuth      map[string]authoriser.UserInfo
-		mockDf             mdf.Schema
+		mdfSchema          mdf.Schema
 	}{
 		"successfully login": {
 			wantErr:    false,
@@ -81,7 +81,7 @@ func TestLogin(t *testing.T) {
 			defer testingRedis.Close()
 			a.MetadataFetcher = testingRedis
 			a.BasicAuth = testingRedis
-			err = testingRedis.PrepareMetadataFetcher(tc.mockMdf)
+			err = testingRedis.PrepareMetadataFetcher(tc.mdfSchema)
 			require.Nil(t, err)
 			err = testingRedis.PrepareBasicAuth(tc.mockBasicAuth)
 			require.Nil(t, err)

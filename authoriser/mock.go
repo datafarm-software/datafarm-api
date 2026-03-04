@@ -1,8 +1,8 @@
 package authoriser
 
 import (
-	"crypto/ecdsa"
 	"fmt"
+	"time"
 )
 
 type MockTokenAuth struct{}
@@ -11,12 +11,12 @@ func (m *MockTokenAuth) Close() error {
 	return nil
 }
 
-func (m *MockTokenAuth) GenerateToken() (string, error) {
-	return "", fmt.Errorf("not implemented")
+func (m *MockTokenAuth) GenerateToken() (string, time.Duration, error) {
+	return "someToken", THREE_HOURS, nil
 }
 
-func (m *MockTokenAuth) GetPublicKey() *ecdsa.PublicKey {
-	return nil
+func (m *MockTokenAuth) IsValidToken(TokenResponse) bool {
+	return false
 }
 
 type MockBasicAuth struct {
