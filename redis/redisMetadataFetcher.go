@@ -97,6 +97,39 @@ func (t *TestingRedis) Close() error {
 	return t.redis.Close()
 }
 
+type PipelineFunc func(pipe redis.Pipeliner) error
+
+const MaxRetries = 10
+
+func (r *Redis) pipeline(pipeFunc PipelineFunc, keysToWatch ...string) error {
+	var watchErr, pipeErr error
+	for range MaxRetries {
+		watchErr = r.db.Watch(ctx, func(tx *redis.Tx) error {
+			_, pipeErr = tx.TxPipelined(ctx, pipeFunc)
+			return pipeErr
+		}, keysToWatch...)
+		switch watchErr {
+		case nil:
+			break
+		case redis.TxFailedErr:
+			continue
+		default:
+			return watchErr
+		}
+	}
+	return nil
+}
+
 func (t *TestingRedis) PrepareDb(db map[string]authoriser.UserInfo) error {
-	return fmt.Errorf("not implemented")
+	pfn := func(pipe redis.Pipeliner) error {
+		for k, v := range db {
+			pipe.HSet(ctx, "userInfo:"+k, v)
+		}
+		return nil
+	}
+	err := t.redis.pipeline(pfn)
+	if err != nil {
+		return fmt.Errorf("pipe: %v", err)
+	}
+	return nil
 }
