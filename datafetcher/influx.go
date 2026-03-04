@@ -51,7 +51,11 @@ func (i *InfluxDatafetcher) Close() error {
 }
 
 func (i *InfluxDatafetcher) GetData(metadata metadatafetcher.Metadata) (*ConsolidatedDeviceData, error) {
-	query := i.generateFluxQuery(metadata)
+	formattedQueryRange, err := i.formatQueryRange(metadata.Start, metadata.Stop)
+	if err != nil {
+		return nil, err
+	}
+	query := i.generateFluxQuery(metadata, formattedQueryRange)
 	result, err := i.queryApi.Query(context.Background(), query)
 	if err != nil {
 		return nil, fmt.Errorf("error querying influxdb: %v", err)
@@ -63,10 +67,10 @@ func (i *InfluxDatafetcher) GetData(metadata metadatafetcher.Metadata) (*Consoli
 	return i.dataRows2ConsolidatedDeviceData(dataRows), nil
 }
 
-func (i *InfluxDatafetcher) generateFluxQuery(metadata metadatafetcher.Metadata) string {
+func (i *InfluxDatafetcher) generateFluxQuery(metadata metadatafetcher.Metadata, queryRange string) string {
 	var queryBuilder strings.Builder
 	queryBuilder.WriteString(fmt.Sprintf(`from(bucket: "%s")`, metadata.Network))
-	queryBuilder.WriteString(fmt.Sprintf(` |> range(%s)`, metadata.QueryRange))
+	queryBuilder.WriteString(fmt.Sprintf(` |> range(%s)`, queryRange))
 	queryBuilder.WriteString(fmt.Sprintf(` |> filter(fn: (r) => r["_measurement"] == "%s")`, metadata.Company))
 	queryBuilder.WriteString(fmt.Sprintf(` |> filter(fn: (r) => r["deviceID"] == "%s")`, metadata.DeviceId))
 	queryBuilder.WriteString(` |> filter(fn: (r) => `)
@@ -120,21 +124,21 @@ func (i *InfluxDatafetcher) dataRows2ConsolidatedDeviceData(data []DataRow) *Con
 	}
 }
 
-func (i *InfluxDatafetcher) FormatQueryRange(startTime, stopTime string) (interface{}, error) {
+func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string, error) {
 	relativeRange := false
 	if startTime == "" {
-		return nil, fmt.Errorf("no start time provided")
+		return "", fmt.Errorf("no start time provided")
 	}
 	if _, err := time.Parse(time.RFC3339, startTime); err != nil {
 		relativeRange = true
 	} else {
 		if stopTime == "" {
-			return nil, fmt.Errorf("start time is rfc3339, but stop time is empty. cannot proceed.")
+			return "", fmt.Errorf("start time is rfc3339, but stop time is empty. cannot proceed.")
 		}
 	}
 	if !relativeRange {
 		if _, err := time.Parse(time.RFC3339, stopTime); err != nil {
-			return nil, fmt.Errorf("Invalid RFC3339 stop timestamp: %v", err)
+			return "", fmt.Errorf("Invalid RFC3339 stop timestamp: %v", err)
 		}
 		return fmt.Sprintf("start: %s, stop: %s", startTime, stopTime), nil
 	}

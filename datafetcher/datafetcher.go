@@ -18,6 +18,5 @@ type DeviceData struct {
 
 type DataFetcher interface {
 	GetData(metadata metadatafetcher.Metadata) (*ConsolidatedDeviceData, error)
-	FormatQueryRange(startTime, stopTime string) (any, error)
 	Close() error
 }

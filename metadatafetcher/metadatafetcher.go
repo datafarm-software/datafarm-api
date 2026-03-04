@@ -3,9 +3,9 @@ package metadatafetcher
 import "github.com/geraud22/datafarm-api/authoriser"
 
 type Metadata struct {
-	DeviceId, Company, Network string
-	QueryRange                 any
-	QueryFields                []string
+	DeviceId, Company, Network   string
+	Start, Stop                  string
+	QueryFields, AttachedSensors []string
 }
 
 type TestingMetadataFetcher interface {

@@ -31,6 +31,7 @@ func TestLogin(t *testing.T) {
 		wantStatus         int
 		username, password string
 		mockBasicAuth      map[string]authoriser.UserInfo
+		mockDf
 	}{
 		"successfully login": {
 			wantErr:    false,

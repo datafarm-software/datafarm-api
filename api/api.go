@@ -265,11 +265,6 @@ func (a *Api) GetDeviceData(ctx context.Context,
 			return nil, huma.Error400BadRequest("Stop time is invalid rfc.")
 		}
 	}
-	formattedQueryRange, err := a.DataFetcher.FormatQueryRange(in.Start, in.Stop)
-	if err != nil {
-		return nil, huma.Error500InternalServerError(
-			"Internal error formatting query range.")
-	}
 	claims, ok := ctx.Value(claimsKey).(jwt.MapClaims)
 	if !ok {
 		return nil, huma.Error400BadRequest("Incomplete jwt claims.")
@@ -306,8 +301,9 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		Company:     company,
 		DeviceId:    in.DeviceId,
 		Network:     network,
-		QueryRange:  formattedQueryRange,
 		QueryFields: queryFields,
+		Start:       in.Start,
+		Stop:        in.Stop,
 	}
 	if strings.ToLower(userRole) == a.AdminRole {
 		company, err := a.MetadataFetcher.GetCompany(in.DeviceId)
