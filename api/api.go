@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -102,14 +103,12 @@ func Start(opts ApiOpts) error {
 	}
 	api.adminRole = opts.AdminRole
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
-		router := mux.NewRouter()
+		router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
 		config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
 		humaApi := humamux.New(router, config)
-		secured := router.PathPrefix("/api/v1").Subrouter()
-		secured.Use(api.verifyJwt)
 		api.RegisterHumaOperations(humaApi)
 		server := &http.Server{
-			Addr:    fmt.Sprintf("%s", opts.Port),
+			Addr:    opts.Port,
 			Handler: router,
 		}
 		hooks.OnStart(func() {
@@ -155,8 +154,9 @@ type HumaError struct {
 func (a *Api) RegisterHumaOperations(api huma.API) {
 	registry := huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
 	operation := huma.Operation{
-		Method: "GET",
-		Path:   "/api/v1/device/{deviceId}",
+		Method:      "GET",
+		Path:        "/device/{deviceId}",
+		Middlewares: huma.Middlewares{a.verifyJwt},
 		Parameters: []*huma.Param{
 			{
 				Name:            "deviceId",
@@ -206,7 +206,7 @@ func (a *Api) RegisterHumaOperations(api huma.API) {
 	huma.Register(api, operation, a.GetDeviceData)
 	operation = huma.Operation{
 		Method:      "POST",
-		Path:        "/api/v1/login",
+		Path:        "/login",
 		Tags:        []string{"POST"},
 		Summary:     "Login.",
 		Description: "Clients can use this route to login and receive an active session token.",
@@ -365,52 +365,52 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	}{deviceData}, nil
 }
 
-func (a *Api) verifyJwt(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/v1/login" {
-			next.ServeHTTP(w, r)
-			return
-		}
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			log.Println("no auth header provided")
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			log.Println("Invalid Authorization header format")
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-		tokenString := parts[1]
-		claims := jwt.MapClaims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+func (a *Api) verifyJwt(ctx huma.Context, next func(huma.Context)) {
+	r, w := humamux.Unwrap(ctx)
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		log.Println("no auth header provided")
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	parts := strings.Split(authHeader, "Bearer")
+	if len(parts) != 2 {
+		log.Println("Invalid Authorization header format")
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	var tr TokenResponse
+	if err := json.Unmarshal([]byte(parts[1]), &tr); err != nil {
+		log.Printf("marshalling into token response: %v", err)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+	}
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(tr.Token, claims,
+		func(token *jwt.Token) (any, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
-				log.Println("wrong signing method used")
-				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				http.Error(w,
+					http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				return nil, nil
 			}
 			return a.tokenAuth.GetPublicKey(), nil
 		})
-		if err != nil {
-			log.Printf("token parsing error: %v", err)
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		}
-		if err := claims.Valid(); err != nil {
-			log.Printf("claims validation error: %v", err)
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		}
-		if !token.Valid {
-			log.Println("Invalid token provided")
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		}
-		ctx := context.WithValue(r.Context(), claimsKey, claims)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+	if err != nil {
+		log.Printf("token parsing error: %v", err)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+	if err := claims.Valid(); err != nil {
+		log.Printf("claims validation error: %v", err)
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+	if !token.Valid {
+		log.Println("Invalid token provided")
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+	ctx = huma.WithValue(ctx, claimsKey, claims)
+	next(ctx)
 }
 
 type LoginRequest struct {
