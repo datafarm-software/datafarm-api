@@ -16,6 +16,10 @@ type UserToken struct {
 	Expiration time.Duration
 }
 
+type TokenResponse struct {
+	Token string `doc:"Access token for API resources."`
+}
+
 type TokenAuth interface {
 	Close() error
 	GenerateToken() (string, time.Duration, error)

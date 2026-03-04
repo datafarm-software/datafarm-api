@@ -8,8 +8,11 @@ type Metadata struct {
 	QueryFields, AttachedSensors []string
 }
 
+type Schema struct {
+}
+
 type TestingMetadataFetcher interface {
-	PrepareMetadataFetcher(Metadata) error
+	PrepareMetadataFetcher(Schema) error
 }
 
 type MetadataFetcher interface {

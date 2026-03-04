@@ -132,7 +132,7 @@ func (a *Api) RegisterHumaOperations(api huma.API) {
 	operation := huma.Operation{
 		Method:      "GET",
 		Path:        "/device/{deviceId}",
-		Middlewares: huma.Middlewares{a.verifyJwt},
+		Middlewares: huma.Middlewares{a.verifyToken},
 		Parameters: []*huma.Param{
 			{
 				Name:            "deviceId",
@@ -337,7 +337,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	}{deviceData}, nil
 }
 
-func (a *Api) verify(ctx huma.Context, next func(huma.Context)) {
+func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
 	r, w := humamux.Unwrap(ctx)
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
@@ -351,37 +351,20 @@ func (a *Api) verify(ctx huma.Context, next func(huma.Context)) {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	var tr TokenResponse
+	var tr authoriser.TokenResponse
 	if err := json.Unmarshal([]byte(parts[1]), &tr); err != nil {
 		log.Printf("marshalling into token response: %v", err)
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 	}
-	claims := jwt.MapClaims{}
-	token, err := jwt.ParseWithClaims(tr.Token, claims,
-		func(token *jwt.Token) (any, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
-				http.Error(w,
-					http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-				return nil, nil
-			}
-			return a.TokenAuth.GetPublicKey(), nil
-		})
-	if err != nil {
-		log.Printf("token parsing error: %v", err)
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+	if !a.TokenAuth.IsValidToken(tr) {
+		if err := a.MetadataFetcher.DeleteToken(tr); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError),
+				http.StatusInternalServerError)
+		}
+		http.Error(w, http.StatusText(http.StatusUnauthorized),
+			http.StatusUnauthorized)
 		return
 	}
-	if err := claims.Valid(); err != nil {
-		log.Printf("claims validation error: %v", err)
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
-	}
-	if !token.Valid {
-		log.Println("Invalid token provided")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
-	}
-	ctx = huma.WithValue(ctx, claimsKey, claims)
 	next(ctx)
 }
 
@@ -389,12 +372,8 @@ type LoginRequest struct {
 	Auth string `header:"Authorization" doc:"Required in the format: Bearer base64(username:password)" required:"true"`
 }
 
-type TokenResponse struct {
-	Token string `doc:"Access token for API resources."`
-}
-
 func (a *Api) Login(ctx context.Context,
-	lr *LoginRequest) (*struct{ Body TokenResponse }, error) {
+	lr *LoginRequest) (*struct{ Body authoriser.TokenResponse }, error) {
 	parts := strings.Split(lr.Auth, " ")
 	if len(parts) != 2 || parts[0] != "Basic" {
 		return nil, huma.Error400BadRequest(
@@ -436,7 +415,7 @@ func (a *Api) Login(ctx context.Context,
 	token, expiry, err := a.TokenAuth.GenerateToken()
 	if err != nil {
 		return nil, huma.Error500InternalServerError(
-			"Internal error generating the jwt.")
+			"Internal error generating an access token.")
 	}
 	ut := authoriser.UserToken{
 		Username:   username,
@@ -447,5 +426,6 @@ func (a *Api) Login(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error linking the token to the user.")
 	}
-	return &struct{ Body TokenResponse }{TokenResponse{token}}, nil
+	return &struct{ Body authoriser.TokenResponse }{
+		authoriser.TokenResponse{Token: token}}, nil
 }

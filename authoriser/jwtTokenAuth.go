@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -89,7 +90,7 @@ func (j *jwtAuth) loadECDSAPrivateKey(fs fs.FS, filePath string) (*ecdsa.Private
 	return privKey, nil
 }
 
-func (j *jwtAuth) GetPublicKey() *ecdsa.PublicKey {
+func (j *jwtAuth) getPublicKey() *ecdsa.PublicKey {
 	return j.publicKey
 }
 
@@ -104,4 +105,24 @@ func (j *jwtAuth) GenerateToken() (string, time.Duration, error) {
 		return "", 0, err
 	}
 	return tokenString, THREE_HOURS, nil
+}
+
+func (j *jwtAuth) IsValidToken(tr TokenResponse) bool {
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(tr.Token, claims,
+		func(token *jwt.Token) (any, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
+				return nil, nil
+			}
+			return j.getPublicKey(), nil
+		})
+	if err != nil {
+		log.Printf("token parsing error: %v", err)
+		return false
+	}
+	if !token.Valid {
+		log.Println("Invalid token provided")
+		return false
+	}
+	return true
 }

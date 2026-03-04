@@ -11,6 +11,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/geraud22/datafarm-api/api"
 	"github.com/geraud22/datafarm-api/authoriser"
+	mdf "github.com/geraud22/datafarm-api/metadatafetcher"
 	"github.com/geraud22/datafarm-api/redis"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +32,7 @@ func TestLogin(t *testing.T) {
 		wantStatus         int
 		username, password string
 		mockBasicAuth      map[string]authoriser.UserInfo
-		mockDf
+		mockDf             mdf.Schema
 	}{
 		"successfully login": {
 			wantErr:    false,
