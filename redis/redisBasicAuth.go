@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/geraud22/datafarm-api/authoriser"
+	mdf "github.com/geraud22/datafarm-api/metadatafetcher"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -51,6 +52,10 @@ func (r *Redis) Close() error {
 }
 
 func (r *Redis) PrepareBasicAuth(map[string]authoriser.UserInfo) error {
+	return nil
+}
+
+func (r *Redis) PrepareMetadataFetcher(mdf.Schema) error {
 	return nil
 }
 

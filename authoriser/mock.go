@@ -11,8 +11,12 @@ func (m *MockTokenAuth) Close() error {
 	return nil
 }
 
+var increment int
+
 func (m *MockTokenAuth) GenerateToken() (string, time.Duration, error) {
-	return "someToken", THREE_HOURS, nil
+	token := fmt.Sprintf("someToken%d", increment)
+	increment++
+	return token, THREE_HOURS, nil
 }
 
 func (m *MockTokenAuth) IsValidToken(TokenResponse) bool {

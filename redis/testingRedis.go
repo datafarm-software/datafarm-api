@@ -97,7 +97,25 @@ func (t *TestingRedis) PrepareBasicAuth(db map[string]authoriser.UserInfo) error
 }
 
 func (t *TestingRedis) PrepareMetadataFetcher(schema mdf.Schema) error {
-	return fmt.Errorf("not implemented")
+	pfn := func(pipe redis.Pipeliner) error {
+		for _, d := range schema.DeviceCompanies {
+			pipe.HSet(ctx, "fieldUnit:"+d.DeviceId, "company", d.Company)
+		}
+		for _, d := range schema.DeviceNetworks {
+			pipe.HSet(ctx, "fieldUnit:"+d.DeviceId, "network", d.Network)
+		}
+		for _, d := range schema.DeviceToSensors {
+			pipe.SAdd(ctx, "attachedSensors:"+d.DeviceId, d.AttachedSensors)
+		}
+		for _, d := range schema.SensorToQF {
+			pipe.SAdd(ctx, "queryFields:"+d.Sensor, d.QueryFields)
+		}
+		return nil
+	}
+	if err := t.redis.pipeline(pfn); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (t *TestingRedis) GetAttachedSensors(deviceId string) ([]string, error) {

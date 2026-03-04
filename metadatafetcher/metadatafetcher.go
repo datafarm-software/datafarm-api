@@ -8,7 +8,31 @@ type Metadata struct {
 	QueryFields, AttachedSensors []string
 }
 
+type DeviceToCompany struct {
+	DeviceId string
+	Company  string
+}
+
+type DeviceToNetwork struct {
+	DeviceId string
+	Network  string
+}
+
+type DeviceToSensor struct {
+	DeviceId        string
+	AttachedSensors []string
+}
+
+type SensorToQueryFields struct {
+	Sensor      string
+	QueryFields []string
+}
+
 type Schema struct {
+	DeviceCompanies []DeviceToCompany
+	DeviceNetworks  []DeviceToNetwork
+	DeviceToSensors []DeviceToSensor
+	SensorToQF      []SensorToQueryFields
 }
 
 type TestingMetadataFetcher interface {
