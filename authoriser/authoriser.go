@@ -1,7 +1,5 @@
 package authoriser
 
-import "crypto/ecdsa"
-
 type UserInfo struct {
 	Username string `redis:"username"`
 	Company  string `redis:"company"`
@@ -12,8 +10,8 @@ type UserInfo struct {
 
 type TokenAuth interface {
 	Close() error
-	GenerateToken(userInfo UserInfo) (string, error)
-	GetPublicKey() *ecdsa.PublicKey
+	GenerateToken() (string, error)
+	// GetPublicKey() *ecdsa.PublicKey
 }
 
 type TestBasicAuth interface {
@@ -23,5 +21,5 @@ type TestBasicAuth interface {
 type BasicAuth interface {
 	TestBasicAuth
 	Close() error
-	CheckCredentials(username, passw string) (UserInfo, error)
+	VerifyCredentials(username, passw string) error
 }

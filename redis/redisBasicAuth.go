@@ -63,13 +63,13 @@ func (r *Redis) CheckCredentials(username, passw string) (authoriser.UserInfo, e
 	if err := r.db.HGetAll(ctx, "user:"+uuid).Scan(&userInfo); err != nil {
 		return authoriser.UserInfo{}, fmt.Errorf("error getting password for username %s: %v", username, err)
 	}
-	userInfo.Network, err = r.db.Get(ctx, "network:"+userInfo.Company).Result()
-	if err != nil {
-		return authoriser.UserInfo{}, fmt.Errorf("error getting network: %v", err)
-	}
 	if err := bcrypt.CompareHashAndPassword([]byte(userInfo.Password), []byte(passw)); err != nil {
 		return authoriser.UserInfo{}, fmt.Errorf("passwords did not match: %v", err)
 	}
 	userInfo.Password = ""
+	userInfo.Network, err = r.db.Get(ctx, "network:"+userInfo.Company).Result()
+	if err != nil {
+		return authoriser.UserInfo{}, fmt.Errorf("error getting network: %v", err)
+	}
 	return userInfo, nil
 }

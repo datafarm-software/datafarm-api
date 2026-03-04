@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/geraud22/datafarm-api/api"
 	"github.com/geraud22/datafarm-api/authoriser"
+	"github.com/geraud22/datafarm-api/redis"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,14 +30,14 @@ func TestLogin(t *testing.T) {
 		wantErr            bool
 		wantStatus         int
 		username, password string
-		mockBasicAuth      map[string]authoriser.UserInfo
+		mockAuth           map[string]authoriser.UserInfo
 	}{
 		"successfully login": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			username:   RegisteredUsername,
 			password:   RegisteredPassword,
-			mockBasicAuth: map[string]authoriser.UserInfo{
+			mockAuth: map[string]authoriser.UserInfo{
 				RegisteredUsername: {
 					Username: RegisteredUsername,
 					Company:  RegisteredCompany,
@@ -51,7 +53,7 @@ func TestLogin(t *testing.T) {
 			wantStatus: http.StatusUnauthorized,
 			username:   UnregisteredUsername,
 			password:   UnregisteredPassword,
-			mockBasicAuth: map[string]authoriser.UserInfo{
+			mockAuth: map[string]authoriser.UserInfo{
 				RegisteredUsername: {
 					Username: RegisteredUsername,
 					Company:  RegisteredCompany,
@@ -66,14 +68,18 @@ func TestLogin(t *testing.T) {
 	var err error
 	_, humaApi := humatest.New(t)
 	a.RegisterHumaOperations(humaApi)
+	db, err := miniredis.Run()
+	require.Nil(t, err)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			a.TokenAuth = &authoriser.MockTokenAuth{}
 			defer a.TokenAuth.Close()
-			a.BasicAuth = &authoriser.MockBasicAuth{}
-			defer a.BasicAuth.Close()
-			err = a.BasicAuth.PrepareDb(tc.mockBasicAuth)
+			testingRedis, err := redis.NewTestingRedis(db.Addr())
+			defer testingRedis.Close()
+			err = testingRedis.PrepareDb(tc.mockAuth)
 			require.Nil(t, err)
+			a.MetadataFetcher = testingRedis
+			a.BasicAuth = testingRedis
 			byteDetails := bytes.NewBuffer(nil)
 			fmt.Fprintf(byteDetails, "%s:%s", tc.username, tc.password)
 			encodedDetails := base64.StdEncoding.EncodeToString(byteDetails.Bytes())

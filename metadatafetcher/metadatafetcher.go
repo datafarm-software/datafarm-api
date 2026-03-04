@@ -12,4 +12,5 @@ type MetadataFetcher interface {
 	GetQueryFields(attachedSensors []string) ([]string, error)
 	GetCompany(deviceId string) (string, error)
 	GetNetwork(deviceId string) (string, error)
+	LinkTokenToUser(username, token string) error
 }

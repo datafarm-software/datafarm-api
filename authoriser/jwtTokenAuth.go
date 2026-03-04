@@ -93,21 +93,12 @@ func (j *jwtAuth) GetPublicKey() *ecdsa.PublicKey {
 	return j.publicKey
 }
 
-func (j *jwtAuth) GenerateToken(userInfo UserInfo) (string, error) {
+func (j *jwtAuth) GenerateToken() (string, error) {
 	token := jwt.New(jwt.SigningMethodES256)
 	claims := token.Claims.(jwt.MapClaims)
-	var exp time.Time
-	if userInfo.Role == DemoViewer {
-		exp = time.Now().UTC().Add(THREE_HOURS)
-	} else {
-		exp = time.Now().UTC().Add(TWELVE_HOURS)
-	}
+	exp := time.Now().UTC().Add(THREE_HOURS)
 	claims["exp"] = jwt.NewNumericDate(exp)
 	claims["authorized"] = true
-	claims["company"] = userInfo.Company
-	claims["username"] = userInfo.Username
-	claims["network"] = userInfo.Network
-	claims["role"] = userInfo.Role
 	tokenString, err := token.SignedString(j.privateKey)
 	if err != nil {
 		return "", err

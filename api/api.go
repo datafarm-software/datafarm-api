@@ -341,7 +341,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	}{deviceData}, nil
 }
 
-func (a *Api) verifyJwt(ctx huma.Context, next func(huma.Context)) {
+func (a *Api) verify(ctx huma.Context, next func(huma.Context)) {
 	r, w := humamux.Unwrap(ctx)
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
@@ -434,14 +434,17 @@ func (a *Api) Login(ctx context.Context,
 		return nil, huma.Error400BadRequest(
 			"Password failed the regex.")
 	}
-	verifiedUserInfo, err := a.BasicAuth.CheckCredentials(username, password)
-	if err != nil {
+	if err = a.BasicAuth.VerifyCredentials(username, password); err != nil {
 		return nil, huma.Error401Unauthorized("Bad credentials provided.")
 	}
-	token, err := a.TokenAuth.GenerateToken(verifiedUserInfo)
+	token, err := a.TokenAuth.GenerateToken()
 	if err != nil {
 		return nil, huma.Error500InternalServerError(
 			"Internal error generating the jwt.")
+	}
+	if err = a.MetadataFetcher.LinkTokenToUser(username, token); err != nil {
+		return nil, huma.Error500InternalServerError(
+			"Internal error linking the token to the user.")
 	}
 	return &struct{ Body TokenResponse }{TokenResponse{token}}, nil
 }

@@ -11,7 +11,7 @@ func (m *MockTokenAuth) Close() error {
 	return nil
 }
 
-func (m *MockTokenAuth) GenerateToken(userInfo UserInfo) (string, error) {
+func (m *MockTokenAuth) GenerateToken() (string, error) {
 	return "", fmt.Errorf("not implemented")
 }
 
@@ -32,10 +32,10 @@ func (m *MockBasicAuth) Close() error {
 	return nil
 }
 
-func (m *MockBasicAuth) CheckCredentials(username, passw string) (UserInfo, error) {
-	userInfo, ok := m.db[username]
-	if !ok {
-		return UserInfo{}, fmt.Errorf("no user info")
+func (m *MockBasicAuth) VerifyCredentials(username, passw string) error {
+	var err error
+	if _, ok := m.db[username]; !ok {
+		err = fmt.Errorf("no user info")
 	}
-	return userInfo, nil
+	return err
 }
