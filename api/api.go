@@ -23,14 +23,12 @@ import (
 	"github.com/geraud22/datafarm-api/metadatafetcher"
 	mdf "github.com/geraud22/datafarm-api/metadatafetcher"
 	"github.com/geraud22/datafarm-api/redis"
-	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/mux"
 )
 
 const EmptyPayloadLength int = 16
 
 var ctx context.Context
-var claimsKey string = "jwtClaims"
 var QUERYFIELD_REGEX = regexp.MustCompile(`^[a-zA-Z0-9_\-\s:]*$`)
 
 // var DEVICE_ID_REGEX = regexp.MustCompile(`\w{1,30}`)
@@ -264,22 +262,6 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		if _, err := time.Parse(time.RFC3339Nano, in.Stop); err != nil {
 			return nil, huma.Error400BadRequest("Stop time is invalid rfc.")
 		}
-	}
-	claims, ok := ctx.Value(claimsKey).(jwt.MapClaims)
-	if !ok {
-		return nil, huma.Error400BadRequest("Incomplete jwt claims.")
-	}
-	company, ok := claims["company"].(string)
-	if !ok {
-		return nil, huma.Error400BadRequest("Incomplete jwt claims.")
-	}
-	network, ok := claims["network"].(string)
-	if !ok {
-		return nil, huma.Error400BadRequest("Incomplete jwt claims.")
-	}
-	userRole, ok := claims["role"].(string)
-	if !ok {
-		return nil, huma.Error400BadRequest("Incomplete jwt claims.")
 	}
 	//TODO: allow users to ask for multiple queryfields at once
 	queryFields := []string{in.QueryField}
