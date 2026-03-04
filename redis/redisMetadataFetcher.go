@@ -48,5 +48,20 @@ func (r *Redis) GetNetwork(deviceId string) (string, error) {
 
 func (r *Redis) StoreToken(ut authoriser.UserToken) error {
 	err := r.db.Set(ctx, "userToken:"+ut.Username, ut.Token, ut.Expiration).Err()
-	return err
+	if err != nil {
+		return err
+	}
+	err = r.db.Set(ctx, "tokenUser:"+ut.Token, ut.Username, ut.Expiration).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Redis) DeleteToken(tr authoriser.TokenResponse) error {
+	username, err := r.db.Get(ctx, "tokenUser:"+tr.Token).Result()
+	if err != nil {
+		return err
+	}
+	return r.db.Del(ctx, "userToken:"+username).Err()
 }

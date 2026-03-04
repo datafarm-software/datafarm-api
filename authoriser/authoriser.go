@@ -1,6 +1,10 @@
 package authoriser
 
-import "time"
+import (
+	"time"
+
+	"github.com/geraud22/datafarm-api/authoriser"
+)
 
 type UserInfo struct {
 	Username string `redis:"username"`
@@ -23,7 +27,7 @@ type TokenResponse struct {
 type TokenAuth interface {
 	Close() error
 	GenerateToken() (string, time.Duration, error)
-	// GetPublicKey() *ecdsa.PublicKey
+	IsValidToken(authoriser.TokenResponse) bool
 }
 
 type TestBasicAuth interface {

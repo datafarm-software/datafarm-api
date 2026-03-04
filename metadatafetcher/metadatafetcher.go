@@ -23,4 +23,5 @@ type MetadataFetcher interface {
 	GetCompany(deviceId string) (string, error)
 	GetNetwork(deviceId string) (string, error)
 	StoreToken(authoriser.UserToken) error
+	DeleteToken(authoriser.TokenResponse) error
 }
