@@ -30,14 +30,14 @@ func TestLogin(t *testing.T) {
 		wantErr            bool
 		wantStatus         int
 		username, password string
-		mockAuth           map[string]authoriser.UserInfo
+		mockBasicAuth      map[string]authoriser.UserInfo
 	}{
 		"successfully login": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			username:   RegisteredUsername,
 			password:   RegisteredPassword,
-			mockAuth: map[string]authoriser.UserInfo{
+			mockBasicAuth: map[string]authoriser.UserInfo{
 				RegisteredUsername: {
 					Username: RegisteredUsername,
 					Company:  RegisteredCompany,
@@ -53,7 +53,7 @@ func TestLogin(t *testing.T) {
 			wantStatus: http.StatusUnauthorized,
 			username:   UnregisteredUsername,
 			password:   UnregisteredPassword,
-			mockAuth: map[string]authoriser.UserInfo{
+			mockBasicAuth: map[string]authoriser.UserInfo{
 				RegisteredUsername: {
 					Username: RegisteredUsername,
 					Company:  RegisteredCompany,
@@ -79,6 +79,10 @@ func TestLogin(t *testing.T) {
 			defer testingRedis.Close()
 			a.MetadataFetcher = testingRedis
 			a.BasicAuth = testingRedis
+			err = testingRedis.PrepareMetadataFetcher(tc.mockMdf)
+			require.Nil(t, err)
+			err = testingRedis.PrepareBasicAuth(tc.mockBasicAuth)
+			require.Nil(t, err)
 			byteDetails := bytes.NewBuffer(nil)
 			fmt.Fprintf(byteDetails, "%s:%s", tc.username, tc.password)
 			encodedDetails := base64.StdEncoding.EncodeToString(byteDetails.Bytes())
