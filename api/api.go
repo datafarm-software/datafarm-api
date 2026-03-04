@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -20,7 +19,9 @@ import (
 	"github.com/danielgtaylor/huma/v2/humacli"
 	"github.com/geraud22/datafarm-api/authoriser"
 	"github.com/geraud22/datafarm-api/datafetcher"
+	df "github.com/geraud22/datafarm-api/datafetcher"
 	"github.com/geraud22/datafarm-api/metadatafetcher"
+	mdf "github.com/geraud22/datafarm-api/metadatafetcher"
 	"github.com/geraud22/datafarm-api/redis"
 	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/mux"
@@ -40,31 +41,6 @@ var LOWERCASE_REGEX = regexp.MustCompile(`[a-z]`)
 var NUMBER_REGEX = regexp.MustCompile(`[0-9]`)
 var SPECIAL_CHARS_REGEX = regexp.MustCompile(`[@$!%*?&#]`)
 
-type metadataFetcher interface {
-	Close() error
-	GetAttachedSensors(deviceId string) ([]string, error)
-	GetQueryFields(attachedSensors []string) ([]string, error)
-	GetCompany(deviceId string) (string, error)
-	GetNetwork(deviceId string) (string, error)
-}
-
-type dataFetcher interface {
-	GetData(metadata metadatafetcher.Metadata) (*datafetcher.ConsolidatedDeviceData, error)
-	FormatQueryRange(startTime, stopTime string) (interface{}, error)
-	Close() error
-}
-
-type tokenAuth interface {
-	Close() error
-	GenerateToken(userInfo authoriser.UserInfo) (string, error)
-	GetPublicKey() *ecdsa.PublicKey
-}
-
-type basicAuth interface {
-	Close() error
-	CheckCredentials(username, passw string) (authoriser.UserInfo, error)
-}
-
 type ApiOpts struct {
 	RedisOpts      redis.RedisOpts        `mapstructure:"Redis" validate:"required"`
 	InfluxOpts     datafetcher.InfluxOpts `mapstructure:"Influx" validate:"required"`
@@ -75,11 +51,11 @@ type ApiOpts struct {
 }
 
 type Api struct {
-	port, adminRole string
-	metadataFetcher metadataFetcher
-	dataFetcher     dataFetcher
-	tokenAuth       tokenAuth
-	basicAuth       basicAuth
+	Port, AdminRole string
+	MetadataFetcher mdf.MetadataFetcher
+	DataFetcher     df.DataFetcher
+	TokenAuth       authoriser.TokenAuth
+	BasicAuth       authoriser.BasicAuth
 }
 
 func Start(opts ApiOpts) error {
@@ -96,12 +72,12 @@ func Start(opts ApiOpts) error {
 		return fmt.Errorf("error initializing jwt authoriser: %v", err)
 	}
 	api := &Api{
-		port:            opts.Port,
-		metadataFetcher: redis, dataFetcher: df,
-		tokenAuth: tokenAuth,
-		basicAuth: redis,
+		Port:            opts.Port,
+		MetadataFetcher: redis, DataFetcher: df,
+		TokenAuth: tokenAuth,
+		BasicAuth: redis,
 	}
-	api.adminRole = opts.AdminRole
+	api.AdminRole = opts.AdminRole
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
 		router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
 		config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
@@ -129,16 +105,16 @@ func Start(opts ApiOpts) error {
 }
 
 func (a *Api) Close() {
-	if err := a.metadataFetcher.Close(); err != nil {
+	if err := a.MetadataFetcher.Close(); err != nil {
 		log.Fatalf("error closing metadatafetcher: %v", err)
 	}
-	if err := a.dataFetcher.Close(); err != nil {
+	if err := a.DataFetcher.Close(); err != nil {
 		log.Fatalf("error closing datafetcher: %v", err)
 	}
-	if err := a.tokenAuth.Close(); err != nil {
+	if err := a.TokenAuth.Close(); err != nil {
 		log.Fatalf("error closing token auth: %v", err)
 	}
-	if err := a.basicAuth.Close(); err != nil {
+	if err := a.BasicAuth.Close(); err != nil {
 		log.Fatalf("error closing basic auth: %v", err)
 	}
 	log.Println("Api shutdown.")
@@ -289,7 +265,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 			return nil, huma.Error400BadRequest("Stop time is invalid rfc.")
 		}
 	}
-	formattedQueryRange, err := a.dataFetcher.FormatQueryRange(in.Start, in.Stop)
+	formattedQueryRange, err := a.DataFetcher.FormatQueryRange(in.Start, in.Stop)
 	if err != nil {
 		return nil, huma.Error500InternalServerError(
 			"Internal error formatting query range.")
@@ -313,13 +289,13 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	//TODO: allow users to ask for multiple queryfields at once
 	queryFields := []string{in.QueryField}
 	if in.QueryField == "all" {
-		attachedSensors, err := a.metadataFetcher.GetAttachedSensors(in.DeviceId)
+		attachedSensors, err := a.MetadataFetcher.GetAttachedSensors(in.DeviceId)
 		if err != nil {
 			log.Printf("error getting attached sensors for: %s: %v", in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting attached sensors for deviceId.")
 		}
-		queryFields, err = a.metadataFetcher.GetQueryFields(attachedSensors)
+		queryFields, err = a.MetadataFetcher.GetQueryFields(attachedSensors)
 		if err != nil {
 			log.Printf("error getting query fields for: %s: %v", in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
@@ -333,8 +309,8 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		QueryRange:  formattedQueryRange,
 		QueryFields: queryFields,
 	}
-	if strings.ToLower(userRole) == a.adminRole {
-		company, err := a.metadataFetcher.GetCompany(in.DeviceId)
+	if strings.ToLower(userRole) == a.AdminRole {
+		company, err := a.MetadataFetcher.GetCompany(in.DeviceId)
 		if err != nil {
 			log.Printf("error getting company for admin request on device: %s: %v",
 				in.DeviceId, err)
@@ -343,7 +319,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		}
 		//NOTE: if deviceId belongs to other company than admin is assigned to:
 		if company != metadata.Company {
-			network, err := a.metadataFetcher.GetNetwork(in.DeviceId)
+			network, err := a.MetadataFetcher.GetNetwork(in.DeviceId)
 			if err != nil {
 				log.Printf("error getting network for admin request on deviceId: %s: %v",
 					in.DeviceId, err)
@@ -354,7 +330,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 			metadata.Network = network
 		}
 	}
-	deviceData, err := a.dataFetcher.GetData(metadata)
+	deviceData, err := a.DataFetcher.GetData(metadata)
 	if err != nil {
 		log.Printf("error getting data: %v", err)
 		return nil, huma.Error500InternalServerError(
@@ -392,7 +368,7 @@ func (a *Api) verifyJwt(ctx huma.Context, next func(huma.Context)) {
 					http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				return nil, nil
 			}
-			return a.tokenAuth.GetPublicKey(), nil
+			return a.TokenAuth.GetPublicKey(), nil
 		})
 	if err != nil {
 		log.Printf("token parsing error: %v", err)
@@ -458,11 +434,11 @@ func (a *Api) Login(ctx context.Context,
 		return nil, huma.Error400BadRequest(
 			"Password failed the regex.")
 	}
-	verifiedUserInfo, err := a.basicAuth.CheckCredentials(username, password)
+	verifiedUserInfo, err := a.BasicAuth.CheckCredentials(username, password)
 	if err != nil {
 		return nil, huma.Error401Unauthorized("Bad credentials provided.")
 	}
-	token, err := a.tokenAuth.GenerateToken(verifiedUserInfo)
+	token, err := a.TokenAuth.GenerateToken(verifiedUserInfo)
 	if err != nil {
 		return nil, huma.Error500InternalServerError(
 			"Internal error generating the jwt.")

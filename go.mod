@@ -10,6 +10,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
 	github.com/redis/go-redis/v9 v9.7.0
+	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.48.0
 	gomodules.xyz/memfs v0.0.1
 )
@@ -17,6 +18,7 @@ require (
 require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
@@ -29,6 +31,7 @@ require (
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/oapi-codegen/runtime v1.0.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sagikazarmark/locafero v0.9.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.14.0 // indirect
