@@ -10,7 +10,6 @@ import (
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/geraud22/datafarm-api/api"
 	"github.com/geraud22/datafarm-api/authoriser"
-	"github.com/stretchr/testify/require"
 )
 
 const RegisteredUsername = "user1"
@@ -41,21 +40,18 @@ func TestLogin(t *testing.T) {
 		},
 	}
 
-	var err error
 	_, humaApi := humatest.New(t)
 	a.RegisterHumaOperations(humaApi)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			a.TokenAuth, err = authoriser.MockTokenAuth()
-			require.Nil(t, err)
+			a.TokenAuth = &authoriser.MockTokenAuth{}
 			defer a.TokenAuth.Close()
-			a.BasicAuth, err = authoriser.MockBasicAuth()
-			require.Nil(t, err)
-			defer a.TokenAuth.Close()
+			a.BasicAuth = &authoriser.MockBasicAuth{}
+			defer a.BasicAuth.Close()
 			byteDetails := bytes.NewBuffer(nil)
 			fmt.Fprintf(byteDetails, "%s:%s", tc.username, tc.password)
 			encodedDetails := base64.StdEncoding.EncodeToString(byteDetails.Bytes())
-			resp := humaApi.Post("/api/v1/login",
+			resp := humaApi.Post("/login",
 				fmt.Sprintf("Authorization: Basic %s", encodedDetails))
 			if resp.Code != tc.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
