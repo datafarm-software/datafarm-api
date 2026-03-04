@@ -2,6 +2,8 @@ package redis
 
 import (
 	"fmt"
+
+	"github.com/geraud22/datafarm-api/authoriser"
 )
 
 const TestingDb = 13
@@ -42,4 +44,9 @@ func (r *Redis) GetNetwork(deviceId string) (string, error) {
 		return "", err
 	}
 	return network, nil
+}
+
+func (r *Redis) StoreToken(ut authoriser.UserToken) error {
+	err := r.db.Set(ctx, "userToken:"+ut.Username, ut.Token, ut.Expiration).Err()
+	return err
 }

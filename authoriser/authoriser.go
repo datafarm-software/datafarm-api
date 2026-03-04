@@ -1,5 +1,7 @@
 package authoriser
 
+import "time"
+
 type UserInfo struct {
 	Username string `redis:"username"`
 	Company  string `redis:"company"`
@@ -8,9 +10,15 @@ type UserInfo struct {
 	Network  string
 }
 
+type UserToken struct {
+	Username   string
+	Token      string
+	Expiration time.Duration
+}
+
 type TokenAuth interface {
 	Close() error
-	GenerateToken() (string, error)
+	GenerateToken() (string, time.Duration, error)
 	// GetPublicKey() *ecdsa.PublicKey
 }
 

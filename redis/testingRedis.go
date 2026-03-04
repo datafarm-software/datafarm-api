@@ -112,8 +112,8 @@ func (t *TestingRedis) GetCompany(deviceId string) (string, error) {
 func (t *TestingRedis) GetNetwork(deviceId string) (string, error) {
 	return t.redis.GetNetwork(deviceId)
 }
-func (t *TestingRedis) LinkTokenToUser(username, token string) error {
-	return t.redis.LinkTokenToUser(username, token)
+func (t *TestingRedis) StoreToken(ut authoriser.UserToken) error {
+	return t.redis.StoreToken(ut)
 }
 
 func (t *TestingRedis) VerifyCredentials(username, passw string) error {

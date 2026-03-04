@@ -437,12 +437,17 @@ func (a *Api) Login(ctx context.Context,
 	if err = a.BasicAuth.VerifyCredentials(username, password); err != nil {
 		return nil, huma.Error401Unauthorized("Bad credentials provided.")
 	}
-	token, err := a.TokenAuth.GenerateToken()
+	token, expiry, err := a.TokenAuth.GenerateToken()
 	if err != nil {
 		return nil, huma.Error500InternalServerError(
 			"Internal error generating the jwt.")
 	}
-	if err = a.MetadataFetcher.LinkTokenToUser(username, token); err != nil {
+	ut := authoriser.UserToken{
+		Username:   username,
+		Token:      token,
+		Expiration: expiry,
+	}
+	if err = a.MetadataFetcher.StoreToken(ut); err != nil {
 		return nil, huma.Error500InternalServerError(
 			"Internal error linking the token to the user.")
 	}
