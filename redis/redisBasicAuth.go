@@ -50,26 +50,21 @@ func (r *Redis) Close() error {
 	return nil
 }
 
-func (r *Redis) PrepareDb(map[string]authoriser.UserInfo) error {
+func (r *Redis) PrepareBasicAuth(map[string]authoriser.UserInfo) error {
 	return nil
 }
 
-func (r *Redis) CheckCredentials(username, passw string) (authoriser.UserInfo, error) {
+func (r *Redis) VerifyCredentials(username, passw string) error {
 	uuid, err := r.db.Get(ctx, "unique:"+username).Result()
 	if err != nil {
-		return authoriser.UserInfo{}, fmt.Errorf("error getting uuid for username %s: %v", username, err)
+		return fmt.Errorf("error getting uuid for username %s: %v", username, err)
 	}
-	var userInfo authoriser.UserInfo
-	if err := r.db.HGetAll(ctx, "user:"+uuid).Scan(&userInfo); err != nil {
-		return authoriser.UserInfo{}, fmt.Errorf("error getting password for username %s: %v", username, err)
-	}
-	if err := bcrypt.CompareHashAndPassword([]byte(userInfo.Password), []byte(passw)); err != nil {
-		return authoriser.UserInfo{}, fmt.Errorf("passwords did not match: %v", err)
-	}
-	userInfo.Password = ""
-	userInfo.Network, err = r.db.Get(ctx, "network:"+userInfo.Company).Result()
+	passwordHash, err := r.db.HGet(ctx, "user:"+uuid, "password").Result()
 	if err != nil {
-		return authoriser.UserInfo{}, fmt.Errorf("error getting network: %v", err)
+		return fmt.Errorf("error getting password for username %s: %v", username, err)
 	}
-	return userInfo, nil
+	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(passw)); err != nil {
+		return fmt.Errorf("passwords did not match: %v", err)
+	}
+	return nil
 }

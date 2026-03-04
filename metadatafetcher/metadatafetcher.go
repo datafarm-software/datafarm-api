@@ -6,7 +6,12 @@ type Metadata struct {
 	QueryFields                []string
 }
 
+type TestingMetadataFetcher interface {
+	PrepareMetadataFetcher(Metadata) error
+}
+
 type MetadataFetcher interface {
+	TestingMetadataFetcher
 	Close() error
 	GetAttachedSensors(deviceId string) ([]string, error)
 	GetQueryFields(attachedSensors []string) ([]string, error)

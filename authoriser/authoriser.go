@@ -15,7 +15,7 @@ type TokenAuth interface {
 }
 
 type TestBasicAuth interface {
-	PrepareDb(map[string]UserInfo) error
+	PrepareBasicAuth(map[string]UserInfo) error
 }
 
 type BasicAuth interface {

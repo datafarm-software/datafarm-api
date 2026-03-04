@@ -75,9 +75,8 @@ func TestLogin(t *testing.T) {
 			a.TokenAuth = &authoriser.MockTokenAuth{}
 			defer a.TokenAuth.Close()
 			testingRedis, err := redis.NewTestingRedis(db.Addr())
-			defer testingRedis.Close()
-			err = testingRedis.PrepareDb(tc.mockAuth)
 			require.Nil(t, err)
+			defer testingRedis.Close()
 			a.MetadataFetcher = testingRedis
 			a.BasicAuth = testingRedis
 			byteDetails := bytes.NewBuffer(nil)
