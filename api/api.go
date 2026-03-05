@@ -17,10 +17,11 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/danielgtaylor/huma/v2/humacli"
-	"github.com/geraud22/datafarm-api/authoriser"
+	"github.com/geraud22/datafarm-api/authstore"
 	"github.com/geraud22/datafarm-api/datafetcher"
 	df "github.com/geraud22/datafarm-api/datafetcher"
 	deviceinfo "github.com/geraud22/datafarm-api/device-info"
+	"github.com/geraud22/datafarm-api/tokenprovider"
 
 	"github.com/geraud22/datafarm-api/redis"
 	"github.com/gorilla/mux"
@@ -52,8 +53,8 @@ type Api struct {
 	Port, AdminRole string
 	DeviceInfo      deviceinfo.DeviceInfoFetcher
 	DataFetcher     df.DataFetcher
-	TokenProvider   authoriser.TokenProvider
-	AuthStore       authoriser.AuthStore
+	TokenProvider   tokenprovider.TokenProvider
+	AuthStore       authstore.AuthStore
 }
 
 func Start(opts ApiOpts) error {
@@ -65,9 +66,9 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("error init influx: %v", err)
 	}
-	tokenAuth, err := authoriser.NewJwtAuth(os.DirFS("."), opts.PrivateKeyFile, opts.PublicKeyFile)
+	tokenAuth, err := tokenprovider.NewJwtAuth(os.DirFS("."), opts.PrivateKeyFile, opts.PublicKeyFile)
 	if err != nil {
-		return fmt.Errorf("error initializing jwt authoriser: %v", err)
+		return fmt.Errorf("error initializing jwt authstore: %v", err)
 	}
 	api := &Api{
 		Port:       opts.Port,
@@ -284,7 +285,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting device network.")
 	}
-	metadata := metadatafetcher.Metadata{
+	metadata := deviceinfo.DeviceInfo{
 		Company:     company,
 		DeviceId:    in.DeviceId,
 		Network:     network,
@@ -344,7 +345,7 @@ func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	var tr authoriser.TokenResponse
+	var tr tokenprovider.TokenResponse
 	if err := json.Unmarshal([]byte(parts[1]), &tr); err != nil {
 		log.Printf("marshalling into token response: %v", err)
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -372,7 +373,7 @@ type LoginRequest struct {
 }
 
 func (a *Api) Login(ctx context.Context,
-	lr *LoginRequest) (*struct{ Body authoriser.TokenResponse }, error) {
+	lr *LoginRequest) (*struct{ Body tokenprovider.TokenResponse }, error) {
 	parts := strings.Split(lr.Auth, " ")
 	if len(parts) != 2 || parts[0] != "Basic" {
 		return nil, huma.Error400BadRequest(
@@ -417,7 +418,7 @@ func (a *Api) Login(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error generating an access token.")
 	}
-	ut := authoriser.UserToken{
+	ut := authstore.UserToken{
 		Username:   username,
 		Token:      token,
 		Expiration: expiry,
@@ -426,6 +427,6 @@ func (a *Api) Login(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error linking the token to the user.")
 	}
-	return &struct{ Body authoriser.TokenResponse }{
-		authoriser.TokenResponse{Token: token}}, nil
+	return &struct{ Body tokenprovider.TokenResponse }{
+		tokenprovider.TokenResponse{Token: token}}, nil
 }

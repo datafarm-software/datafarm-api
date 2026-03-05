@@ -6,7 +6,8 @@ import (
 	"log"
 	"sync"
 
-	"github.com/geraud22/datafarm-api/authoriser"
+	"github.com/geraud22/datafarm-api/authstore"
+	"github.com/geraud22/datafarm-api/tokenprovider"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -50,7 +51,11 @@ func (r *Redis) Close() error {
 	return nil
 }
 
-func (r *Redis) PrepareBasicAuth(map[string]authoriser.UserInfo) error {
+func (r *Redis) PrepareBasicAuth(map[string]authstore.UserInfo) error {
+	return nil
+}
+
+func (r *Redis) GetActiveTokens() []authstore.UserInfo {
 	return nil
 }
 
@@ -69,7 +74,7 @@ func (r *Redis) VerifyCredentials(username, passw string) error {
 	return nil
 }
 
-func (r *Redis) StoreToken(ut authoriser.UserToken) error {
+func (r *Redis) StoreToken(ut authstore.UserToken) error {
 	err := r.db.Set(ctx, "userToken:"+ut.Username, ut.Token, ut.Expiration).Err()
 	if err != nil {
 		return err
@@ -81,7 +86,7 @@ func (r *Redis) StoreToken(ut authoriser.UserToken) error {
 	return nil
 }
 
-func (r *Redis) DeleteToken(tr authoriser.TokenResponse) error {
+func (r *Redis) DeleteToken(tr tokenprovider.TokenResponse) error {
 	username, err := r.db.Get(ctx, "tokenUser:"+tr.Token).Result()
 	if err != nil {
 		return err
@@ -97,6 +102,6 @@ func (r *Redis) DeleteToken(tr authoriser.TokenResponse) error {
 	return nil
 }
 
-func (r *Redis) GetUser(token string) (authoriser.UserInfo, error) {
+func (r *Redis) GetUser(token string) (authstore.UserInfo, error) {
 	return r.db.Get(ctx, "tokenUser:"+token).Result()
 }

@@ -1,4 +1,4 @@
-package authoriser
+package tokenprovider
 
 import (
 	"fmt"

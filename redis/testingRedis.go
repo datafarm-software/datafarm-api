@@ -8,8 +8,9 @@ import (
 	"slices"
 
 	cfy "github.com/geraud22/config-from-yaml"
-	"github.com/geraud22/datafarm-api/authoriser"
+	"github.com/geraud22/datafarm-api/authstore"
 	deviceinfo "github.com/geraud22/datafarm-api/device-info"
+	"github.com/geraud22/datafarm-api/tokenprovider"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -85,16 +86,16 @@ RetryLoop:
 	return nil
 }
 
-func (t *TestingRedis) PrepareAuthStore(mockDb authoriser.Schema) error {
+func (t *TestingRedis) PrepareAuthStore(mockDb authstore.Schema) error {
 	var hashedPassword []byte
 	var err error
 	pfn := func(pipe redis.Pipeliner) error {
-		for _, u := range userTokens {
+		for _, u := range mockDb.UserTokens {
 			pipe.SAdd(ctx, "usersWithToken", u.Username)
-			pipe.Set(ctx, "userToken:"+u.Username, u.Token, 0)
-			pipe.Set(ctx, "tokenUser:"+u.Token, u.Username, 0)
+			pipe.Set(ctx, "userToken:"+u.Username, u.Token, u.Expiration)
+			pipe.Set(ctx, "tokenUser:"+u.Token, u.Username, u.Expiration)
 		}
-		for k, v := range db {
+		for k, v := range mockDb.UserInfo {
 			hashedPassword, err = bcrypt.GenerateFromPassword(
 				[]byte(v.Password), bcrypt.DefaultCost)
 			if err != nil {
@@ -224,16 +225,16 @@ func (t *TestingRedis) GetNetwork(deviceId string) (string, error) {
 	return t.redis.GetNetwork(deviceId)
 }
 
-func (t *TestingRedis) GetUser(token string) (authoriser.UserInfo, error) {
+func (t *TestingRedis) GetUser(token string) (authstore.UserInfo, error) {
 	return t.redis.GetUser(token)
 }
 
-func (t *TestingRedis) StoreToken(ut authoriser.UserToken) error {
+func (t *TestingRedis) StoreToken(ut authstore.UserToken) error {
 	t.redis.db.SAdd(ctx, "usersWithToken", ut.Username)
 	return t.redis.StoreToken(ut)
 }
 
-func (t *TestingRedis) DeleteToken(tr authoriser.TokenResponse) error {
+func (t *TestingRedis) DeleteToken(tr tokenprovider.TokenResponse) error {
 	username, _ := t.redis.db.Get(ctx, "tokenUser:"+tr.Token).Result()
 	t.redis.db.SRem(ctx, "usersWithToken", username)
 	return t.redis.DeleteToken(tr)
@@ -243,12 +244,14 @@ func (t *TestingRedis) VerifyCredentials(username, passw string) error {
 	return t.redis.VerifyCredentials(username, passw)
 }
 
-func (t *TestingRedis) GetActiveTokens() []authoriser.UserToken {
+func (t *TestingRedis) GetActiveTokens() []authstore.UserToken {
 	usersWithToken, _ := t.redis.db.SMembers(ctx, "usersWithToken").Result()
-	userTokens := make([]authoriser.UserToken, 0, len(usersWithToken))
+	userTokens := make([]authstore.UserToken, 0, len(usersWithToken))
 	for _, u := range usersWithToken {
+		ttl, _ := t.redis.db.TTL(ctx, "userToken:"+u).Result()
 		token, _ := t.redis.db.Get(ctx, "userToken:"+u).Result()
-		userTokens = append(userTokens, authoriser.UserToken{Username: u, Token: token})
+		userTokens = append(userTokens, authstore.UserToken{
+			Username: u, Token: token, Expiration: ttl})
 	}
 	return userTokens
 }

@@ -12,10 +12,11 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/geraud22/datafarm-api/api"
-	"github.com/geraud22/datafarm-api/authoriser"
+	"github.com/geraud22/datafarm-api/authstore"
 	"github.com/geraud22/datafarm-api/datafetcher"
 	deviceinfo "github.com/geraud22/datafarm-api/device-info"
 	"github.com/geraud22/datafarm-api/redis"
+	"github.com/geraud22/datafarm-api/tokenprovider"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 )
@@ -45,7 +46,7 @@ func TestLogin(t *testing.T) {
 		wantErr                        bool
 		wantStatus                     int
 		username, password             string
-		mockAuthStore                  authoriser.Schema
+		mockAuthStore                  authstore.Schema
 		mockDeviceInfo, wantDeviceInfo deviceinfo.Schema
 	}{
 
@@ -54,8 +55,8 @@ func TestLogin(t *testing.T) {
 			wantStatus: http.StatusOK,
 			username:   RegisteredUsername,
 			password:   RegisteredPassword,
-			mockAuthStore: authoriser.Schema{
-				UserInfo: map[string]authoriser.UserInfo{
+			mockAuthStore: authstore.Schema{
+				UserInfo: map[string]authstore.UserInfo{
 					RegisteredUsername: {
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
@@ -72,8 +73,8 @@ func TestLogin(t *testing.T) {
 			wantStatus: http.StatusUnauthorized,
 			username:   UnregisteredUsername,
 			password:   UnregisteredPassword,
-			mockAuthStore: authoriser.Schema{
-				UserInfo: map[string]authoriser.UserInfo{
+			mockAuthStore: authstore.Schema{
+				UserInfo: map[string]authstore.UserInfo{
 					RegisteredUsername: {
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
@@ -94,7 +95,7 @@ func TestLogin(t *testing.T) {
 	defer db.Close()
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			a.TokenProvider = &authoriser.MockTokenProvider{}
+			a.TokenProvider = &tokenprovider.MockTokenProvider{}
 			defer a.TokenProvider.Close()
 			testingRedis, err := redis.NewTestingRedis(db.Addr())
 			require.Nil(t, err)
@@ -127,7 +128,7 @@ func TestGetDeviceData(t *testing.T) {
 		wantErr               bool
 		wantStatus            int
 		mockDataFetcher, want *datafetcher.ConsolidatedDeviceData
-		mockAuthStore         authoriser.Schema
+		mockAuthStore         authstore.Schema
 		mockDeviceInfo        deviceinfo.Schema
 		token                 string
 		deviceRequest         datafetcher.DeviceDataRequest
@@ -137,8 +138,8 @@ func TestGetDeviceData(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want:       &datafetcher.ConsolidatedDeviceData{},
-			mockAuthStore: authoriser.Schema{
-				UserInfo: map[string]authoriser.UserInfo{
+			mockAuthStore: authstore.Schema{
+				UserInfo: map[string]authstore.UserInfo{
 					RegisteredUsername: {
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
@@ -147,7 +148,7 @@ func TestGetDeviceData(t *testing.T) {
 						Network:  RegisteredNetwork,
 					},
 				},
-				UserTokens: []authoriser.UserToken{
+				UserTokens: []authstore.UserToken{
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
@@ -208,7 +209,7 @@ func TestGetDeviceData(t *testing.T) {
 	defer db.Close()
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			a.TokenProvider = &authoriser.MockTokenProvider{}
+			a.TokenProvider = &tokenprovider.MockTokenProvider{}
 			defer a.TokenProvider.Close()
 			testingRedis, err := redis.NewTestingRedis(db.Addr())
 			require.Nil(t, err)
