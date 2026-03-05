@@ -13,7 +13,6 @@ import (
 	cfy "github.com/geraud22/config-from-yaml"
 	"github.com/geraud22/datafarm-api/metadatafetcher"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
-	"github.com/influxdata/influxdb-client-go/v2/api"
 	influxApi "github.com/influxdata/influxdb-client-go/v2/api"
 )
 
@@ -158,8 +157,9 @@ var testingInfluxOpts InfluxOpts
 var once sync.Once
 
 type TestingInflux struct {
-	influx   *InfluxDatafetcher
-	writeApi api.WriteAPI
+	//NOTE: testMeasurement set during prepareDb
+	testMeasurement string
+	influx          *InfluxDatafetcher
 }
 
 func NewTestingInflux(configPath string) (DataFetcher, error) {
@@ -186,18 +186,30 @@ func NewTestingInflux(configPath string) (DataFetcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	writeApi := db.db.WriteAPI(testingInfluxOpts.Org, testingInfluxOpts.Org)
 	return &TestingInflux{
-		influx:   db,
-		writeApi: writeApi,
+		influx: db,
 	}, nil
 }
 
 func (t *TestingInflux) Close() error {
-	return fmt.Errorf("close not implemented")
+	deleteApi := t.influx.db.DeleteAPI()
+	start := time.Now().Add(-168 * time.Hour)
+	stop := time.Now()
+	predicate := fmt.Sprintf(`_measurement="%s"`, t.testMeasurement)
+	err := deleteApi.DeleteWithName(context.Background(), testingInfluxOpts.Org,
+		testingInfluxOpts.Org, start, stop, predicate)
+	if err != nil {
+		return err
+	}
+	return t.influx.Close()
 }
 
-func (t *TestingInflux) PrepareDb(mockDb *ConsolidatedDeviceData) error {
+func (t *TestingInflux) PrepareDb(measurement string, mockDb *ConsolidatedDeviceData) error {
+	if measurement == "" {
+		return fmt.Errorf("measurement is empty")
+	}
+	t.testMeasurement = measurement
+	writeApi := t.influx.db.WriteAPI(testingInfluxOpts.Org, testingInfluxOpts.Org)
 	fields := make(map[string]any)
 	for _, dd := range mockDb.DeviceData {
 		for key, value := range dd.SensorData {
@@ -208,17 +220,16 @@ func (t *TestingInflux) PrepareDb(mockDb *ConsolidatedDeviceData) error {
 			fields[key] = value
 		}
 		p := influxdb2.NewPoint(
-			//NOTE: company string literal matches tests.RegisteredCompany
-			"company",
+			measurement,
 			map[string]string{
 				"deviceID": dd.DeviceID,
 			},
 			fields,
 			dd.Timestamp,
 		)
-		t.writeApi.WritePoint(p)
+		writeApi.WritePoint(p)
 	}
-	t.writeApi.Flush()
+	writeApi.Flush()
 	return nil
 }
 

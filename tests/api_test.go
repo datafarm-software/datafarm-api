@@ -27,6 +27,7 @@ const RegisteredCompany = "company"
 const RegisteredNetwork = "network"
 const UserRole = "1"
 const AdminUserRole = "3"
+const TestInfluxMeasurement = "mock-data"
 
 var a = &api.Api{}
 
@@ -161,7 +162,7 @@ func TestGetDeviceData(t *testing.T) {
 			a.DataFetcher, err = datafetcher.NewTestingInflux("../config.yml")
 			require.Nil(t, err)
 			defer a.DataFetcher.Close()
-			err = a.DataFetcher.PrepareDb(tc.mockDataFetcher)
+			err = a.DataFetcher.PrepareDb(TestInfluxMeasurement, tc.mockDataFetcher)
 			require.Nil(t, err)
 			err = testingRedis.PrepareMetadataFetcher(tc.mdfSchema)
 			require.Nil(t, err)
