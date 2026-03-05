@@ -351,7 +351,7 @@ func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 	}
 	if !a.TokenProvider.IsValidToken(tr) {
-		if err := a.AuthStore.DeleteToken(tr); err != nil {
+		if err := a.AuthStore.DeleteToken(authstore.UserToken{Token: tr.Token}); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError),
 				http.StatusInternalServerError)
 		}

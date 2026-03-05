@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/geraud22/datafarm-api/api"
 	"github.com/geraud22/datafarm-api/authstore"
@@ -18,6 +20,7 @@ import (
 	"github.com/geraud22/datafarm-api/redis"
 	"github.com/geraud22/datafarm-api/tokenprovider"
 	"github.com/google/go-cmp/cmp"
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 )
 
@@ -192,18 +195,21 @@ func TestGetDeviceData(t *testing.T) {
 			},
 		},
 
-		"unknown token": {},
-
-		"expired token": {},
-
-		"get multiple data points within time range": {},
-
-		"get only a few data points in the time range": {},
+		// "unknown token": {},
+		//
+		// "expired token": {},
+		//
+		// "get multiple data points within time range": {},
+		//
+		// "get only a few data points in the time range": {},
 	}
 
 	var err error
-	_, humaApi := humatest.New(t)
-	a.RegisterHumaOperations(humaApi)
+	router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
+	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
+	humaApiMux := humamux.New(router, config)
+	humaTest := humatest.Wrap(t, humaApiMux)
+	a.RegisterHumaOperations(humaTest)
 	db, err := miniredis.Run()
 	require.Nil(t, err)
 	defer db.Close()
@@ -225,8 +231,8 @@ func TestGetDeviceData(t *testing.T) {
 			require.Nil(t, err)
 			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
-			route := "/device/" + tc.deviceRequest.DeviceId
-			resp := humaApi.Post(route,
+			route := "/api/v1/device/" + tc.deviceRequest.DeviceId
+			resp := humaTest.Get(route,
 				fmt.Sprintf("Authorization: Bearer %s", tc.token), tc.deviceRequest)
 			if resp.Code != tc.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)

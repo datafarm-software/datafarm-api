@@ -208,6 +208,9 @@ func (t *TestingInflux) PrepareDb(measurement string, mockDb *ConsolidatedDevice
 	if measurement == "" {
 		return fmt.Errorf("measurement is empty")
 	}
+	if mockDb == nil {
+		return nil
+	}
 	t.testMeasurement = measurement
 	writeApi := t.influx.db.WriteAPI(testingInfluxOpts.Org, testingInfluxOpts.Org)
 	fields := make(map[string]any)
@@ -233,7 +236,7 @@ func (t *TestingInflux) PrepareDb(measurement string, mockDb *ConsolidatedDevice
 	return nil
 }
 
-func (t *TestingInflux) GetData(metadata metadatafetcher.Metadata) (
+func (t *TestingInflux) GetData(metadata deviceinfo.DeviceInfo) (
 	*ConsolidatedDeviceData, error) {
 	return t.influx.GetData(metadata)
 }

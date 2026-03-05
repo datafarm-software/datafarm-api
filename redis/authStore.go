@@ -50,11 +50,11 @@ func (r *Redis) Close() error {
 	return nil
 }
 
-func (r *Redis) PrepareBasicAuth(map[string]authstore.UserInfo) error {
+func (r *Redis) PrepareAuthStore(authstore.Schema) error {
 	return nil
 }
 
-func (r *Redis) GetActiveTokens() []authstore.UserInfo {
+func (r *Redis) GetActiveTokens() []authstore.UserToken {
 	return nil
 }
 
