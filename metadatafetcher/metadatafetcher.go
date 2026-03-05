@@ -28,15 +28,21 @@ type SensorToQueryFields struct {
 	QueryFields []string
 }
 
+type UserToken struct {
+	username, token string
+}
+
 type Schema struct {
 	DeviceCompanies []DeviceToCompany
 	DeviceNetworks  []DeviceToNetwork
 	DeviceToSensors []DeviceToSensor
 	SensorToQF      []SensorToQueryFields
+	UserTokens      []UserToken
 }
 
 type TestingMetadataFetcher interface {
 	PrepareMetadataFetcher(Schema) error
+	GetSnapshot() Schema
 }
 
 type MetadataFetcher interface {

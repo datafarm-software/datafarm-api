@@ -35,7 +35,7 @@ func TestLogin(t *testing.T) {
 		wantStatus         int
 		username, password string
 		mockBasicAuth      map[string]authoriser.UserInfo
-		mdfSchema          mdf.Schema
+		mdfSchema, wantMdf mdf.Schema
 	}{
 
 		"successfully login": {
@@ -96,6 +96,12 @@ func TestLogin(t *testing.T) {
 				fmt.Sprintf("Authorization: Basic %s", encodedDetails))
 			if resp.Code != tc.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
+			}
+			if !tc.wantErr {
+				schema := a.MetadataFetcher.GetSnapshot()
+				if len(schema.UserTokens) != 1 {
+					t.Fatalf("expected a stored user token, got len: %d", len(schema.UserTokens))
+				}
 			}
 		})
 	}

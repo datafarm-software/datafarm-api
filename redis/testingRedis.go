@@ -3,7 +3,9 @@ package redis
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
+	"slices"
 
 	cfy "github.com/geraud22/config-from-yaml"
 	"github.com/geraud22/datafarm-api/authoriser"
@@ -109,12 +111,15 @@ func (t *TestingRedis) PrepareBasicAuth(db map[string]authoriser.UserInfo) error
 func (t *TestingRedis) PrepareMetadataFetcher(schema mdf.Schema) error {
 	pfn := func(pipe redis.Pipeliner) error {
 		for _, d := range schema.DeviceCompanies {
+			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
 			pipe.HSet(ctx, "fieldUnit:"+d.DeviceId, "company", d.Company)
 		}
 		for _, d := range schema.DeviceNetworks {
+			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
 			pipe.HSet(ctx, "fieldUnit:"+d.DeviceId, "network", d.Network)
 		}
 		for _, d := range schema.DeviceToSensors {
+			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
 			pipe.SAdd(ctx, "attachedSensors:"+d.DeviceId, d.AttachedSensors)
 		}
 		for _, d := range schema.SensorToQF {
@@ -126,6 +131,75 @@ func (t *TestingRedis) PrepareMetadataFetcher(schema mdf.Schema) error {
 		return err
 	}
 	return nil
+}
+
+func (t *TestingRedis) GetSnapshot() *mdf.Schema {
+	schema := &mdf.Schema{}
+	deviceIds, err := t.redis.db.SMembers(ctx, "deviceIds").Result()
+	if err != nil {
+		log.Printf("getting deviceIds: %v", err)
+		return schema
+	}
+	cmdVec := make(map[string]map[string]any)
+	pfn := func(pipe redis.Pipeliner) error {
+		for _, id := range deviceIds {
+			cmdVec[id]["company"] = pipe.HGet(ctx, "fieldUnit:"+id, "company")
+			cmdVec[id]["network"] = pipe.HGet(ctx, "fieldUnit:"+id, "network")
+			cmdVec[id]["attachedSensors"] = pipe.SMembers(ctx, "attachedSensors:"+id)
+		}
+		return nil
+	}
+	if err := t.redis.pipeline(pfn); err != nil {
+		log.Printf("pipeline: %v", err)
+		return schema
+	}
+	var company, network string
+	var deviceSensors []string
+	var uniqueSensors []string
+	for _, id := range deviceIds {
+		company = getStringCmd(cmdVec[id]["company"])
+		schema.DeviceCompanies = append(schema.DeviceCompanies,
+			mdf.DeviceToCompany{DeviceId: id, Company: company})
+		network = getStringCmd(cmdVec[id]["network"])
+		schema.DeviceNetworks = append(schema.DeviceNetworks,
+			mdf.DeviceToNetwork{DeviceId: id, Network: network})
+		deviceSensors = getStringSliceCmd(cmdVec[id]["attachedSensors"])
+		schema.DeviceToSensors = append(schema.DeviceToSensors,
+			mdf.DeviceToSensor{DeviceId: id, AttachedSensors: deviceSensors})
+		for _, s := range deviceSensors {
+			if !slices.Contains(uniqueSensors, s) {
+				uniqueSensors = append(uniqueSensors, s)
+			}
+		}
+	}
+
+	var qf []string
+	for _, s := range uniqueSensors {
+		qf, _ = t.redis.db.SMembers(ctx, "attachedSensors:"+s).Result()
+		schema.SensorToQF = append(schema.SensorToQF,
+			mdf.SensorToQueryFields{Sensor: s, QueryFields: qf})
+	}
+	return schema
+}
+
+func getStringCmd(cmd any) string {
+	c, ok := cmd.(*redis.StringCmd)
+	if !ok {
+		log.Printf("not a string cmd")
+		return ""
+	}
+	company, _ := c.Result()
+	return company
+}
+
+func getStringSliceCmd(cmd any) []string {
+	c, ok := cmd.(*redis.StringSliceCmd)
+	if !ok {
+		log.Printf("not a string slice cmd")
+		return nil
+	}
+	slice, _ := c.Result()
+	return slice
 }
 
 func (t *TestingRedis) GetAttachedSensors(deviceId string) ([]string, error) {
