@@ -45,7 +45,7 @@ func TestLogin(t *testing.T) {
 		wantErr            bool
 		wantStatus         int
 		username, password string
-		mockBasicAuth      map[string]authoriser.UserInfo
+		mockAuthStore      map[string]authoriser.UserInfo
 		mdfSchema, wantMdf mdf.Schema
 	}{
 
@@ -54,7 +54,7 @@ func TestLogin(t *testing.T) {
 			wantStatus: http.StatusOK,
 			username:   RegisteredUsername,
 			password:   RegisteredPassword,
-			mockBasicAuth: map[string]authoriser.UserInfo{
+			mockAuthStore: map[string]authoriser.UserInfo{
 				RegisteredUsername: {
 					Username: RegisteredUsername,
 					Company:  RegisteredCompany,
@@ -70,7 +70,7 @@ func TestLogin(t *testing.T) {
 			wantStatus: http.StatusUnauthorized,
 			username:   UnregisteredUsername,
 			password:   UnregisteredPassword,
-			mockBasicAuth: map[string]authoriser.UserInfo{
+			mockAuthStore: map[string]authoriser.UserInfo{
 				RegisteredUsername: {
 					Username: RegisteredUsername,
 					Company:  RegisteredCompany,
@@ -90,16 +90,16 @@ func TestLogin(t *testing.T) {
 	defer db.Close()
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			a.TokenAuth = &authoriser.MockTokenAuth{}
-			defer a.TokenAuth.Close()
+			a.TokenProvider = &authoriser.MockTokenProvider{}
+			defer a.TokenProvider.Close()
 			testingRedis, err := redis.NewTestingRedis(db.Addr())
 			require.Nil(t, err)
 			defer testingRedis.Close()
-			a.MetadataFetcher = testingRedis
-			a.BasicAuth = testingRedis
-			err = testingRedis.PrepareMetadataFetcher(tc.mdfSchema)
+			a.DeviceInfo = testingRedis
+			a.AuthStore = testingRedis
+			err = testingRedis.PrepareDeviceInfo(tc.mdfSchema)
 			require.Nil(t, err)
-			err = testingRedis.PrepareBasicAuth(tc.mockBasicAuth)
+			err = testingRedis.PrepareAuthStore(tc.mockAuthStore, nil)
 			require.Nil(t, err)
 			encodedDetails := base64.StdEncoding.EncodeToString(
 				[]byte(tc.username + ":" + tc.password))
@@ -109,9 +109,9 @@ func TestLogin(t *testing.T) {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
 			}
 			if !tc.wantErr {
-				schema := a.MetadataFetcher.GetSnapshot()
-				if len(schema.UserTokens) != 1 {
-					t.Fatalf("expected a stored user token, got len: %d", len(schema.UserTokens))
+				tokens := a.AuthStore.GetActiveTokens()
+				if len(tokens) != 1 {
+					t.Fatalf("expected a stored user token, got len: %d", len(tokens))
 				}
 			}
 		})
@@ -123,7 +123,7 @@ func TestGetDeviceData(t *testing.T) {
 		wantErr               bool
 		wantStatus            int
 		mockDataFetcher, want *datafetcher.ConsolidatedDeviceData
-		mockBasicAuth         map[string]authoriser.UserInfo
+		mockAuthStore         map[string]authoriser.UserInfo
 		mdfSchema             mdf.Schema
 		token                 string
 		deviceRequest         datafetcher.DeviceDataRequest
@@ -133,7 +133,7 @@ func TestGetDeviceData(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want:       &datafetcher.ConsolidatedDeviceData{},
-			mockBasicAuth: map[string]authoriser.UserInfo{
+			mockAuthStore: map[string]authoriser.UserInfo{
 				RegisteredUsername: {
 					Username: RegisteredUsername,
 					Company:  RegisteredCompany,
@@ -202,21 +202,21 @@ func TestGetDeviceData(t *testing.T) {
 	defer db.Close()
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			a.TokenAuth = &authoriser.MockTokenAuth{}
-			defer a.TokenAuth.Close()
+			a.TokenProvider = &authoriser.MockTokenProvider{}
+			defer a.TokenProvider.Close()
 			testingRedis, err := redis.NewTestingRedis(db.Addr())
 			require.Nil(t, err)
 			defer testingRedis.Close()
-			a.MetadataFetcher = testingRedis
-			a.BasicAuth = testingRedis
+			a.DeviceInfo = testingRedis
+			a.AuthStore = testingRedis
 			a.DataFetcher, err = datafetcher.NewTestingInflux("../config.yml")
 			require.Nil(t, err)
 			defer a.DataFetcher.Close()
 			err = a.DataFetcher.PrepareDb(TestInfluxMeasurement, tc.mockDataFetcher)
 			require.Nil(t, err)
-			err = testingRedis.PrepareMetadataFetcher(tc.mdfSchema)
+			err = testingRedis.PrepareDeviceInfo(tc.mdfSchema)
 			require.Nil(t, err)
-			err = testingRedis.PrepareBasicAuth(tc.mockBasicAuth)
+			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
 			route := "/device/" + tc.deviceRequest.DeviceId
 			resp := humaApi.Post(route,

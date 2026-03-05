@@ -85,10 +85,16 @@ RetryLoop:
 	return nil
 }
 
-func (t *TestingRedis) PrepareBasicAuth(db map[string]authoriser.UserInfo) error {
+func (t *TestingRedis) PrepareAuthStore(db map[string]authoriser.UserInfo,
+	userTokens []authoriser.UserToken) error {
 	var hashedPassword []byte
 	var err error
 	pfn := func(pipe redis.Pipeliner) error {
+		for _, u := range userTokens {
+			pipe.SAdd(ctx, "usersWithToken", u.Username)
+			pipe.Set(ctx, "userToken:"+u.Username, u.Token, 0)
+			pipe.Set(ctx, "tokenUser:"+u.Token, u.Username, 0)
+		}
 		for k, v := range db {
 			hashedPassword, err = bcrypt.GenerateFromPassword(
 				[]byte(v.Password), bcrypt.DefaultCost)
@@ -108,7 +114,7 @@ func (t *TestingRedis) PrepareBasicAuth(db map[string]authoriser.UserInfo) error
 	return nil
 }
 
-func (t *TestingRedis) PrepareMetadataFetcher(schema mdf.Schema) error {
+func (t *TestingRedis) PrepareDeviceInfo(schema mdf.Schema) error {
 	pfn := func(pipe redis.Pipeliner) error {
 		for _, d := range schema.DeviceCompanies {
 			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
@@ -124,11 +130,6 @@ func (t *TestingRedis) PrepareMetadataFetcher(schema mdf.Schema) error {
 		}
 		for _, d := range schema.SensorToQF {
 			pipe.SAdd(ctx, "queryFields:"+d.Sensor, d.QueryFields)
-		}
-		for _, u := range schema.UserTokens {
-			pipe.SAdd(ctx, "usersWithToken", u.Username)
-			pipe.Set(ctx, "userToken:"+u.Username, u.Token, 0)
-			pipe.Set(ctx, "tokenUser:"+u.Token, u.Username, 0)
 		}
 		return nil
 	}
@@ -185,12 +186,6 @@ func (t *TestingRedis) GetSnapshot() *mdf.Schema {
 			mdf.SensorToQueryFields{Sensor: s, QueryFields: qf})
 	}
 
-	usersWithToken, _ := t.redis.db.SMembers(ctx, "usersWithToken").Result()
-	for _, u := range usersWithToken {
-		token, _ := t.redis.db.Get(ctx, "userToken:"+u).Result()
-		schema.UserTokens = append(schema.UserTokens,
-			mdf.UserToken{Username: u, Token: token})
-	}
 	return schema
 }
 
@@ -230,7 +225,7 @@ func (t *TestingRedis) GetNetwork(deviceId string) (string, error) {
 	return t.redis.GetNetwork(deviceId)
 }
 
-func (t *TestingRedis) GetUser(token string) (string, error) {
+func (t *TestingRedis) GetUser(token string) (authoriser.UserInfo, error) {
 	return t.redis.GetUser(token)
 }
 
@@ -247,4 +242,14 @@ func (t *TestingRedis) DeleteToken(tr authoriser.TokenResponse) error {
 
 func (t *TestingRedis) VerifyCredentials(username, passw string) error {
 	return t.redis.VerifyCredentials(username, passw)
+}
+
+func (t *TestingRedis) GetActiveTokens() []authoriser.UserToken {
+	usersWithToken, _ := t.redis.db.SMembers(ctx, "usersWithToken").Result()
+	userTokens := make([]authoriser.UserToken, 0, len(usersWithToken))
+	for _, u := range usersWithToken {
+		token, _ := t.redis.db.Get(ctx, "userToken:"+u).Result()
+		userTokens = append(userTokens, authoriser.UserToken{Username: u, Token: token})
+	}
+	return userTokens
 }

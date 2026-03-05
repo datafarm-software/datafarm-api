@@ -50,10 +50,10 @@ type ApiOpts struct {
 
 type Api struct {
 	Port, AdminRole string
-	MetadataFetcher mdf.MetadataFetcher
+	DeviceInfo      mdf.DeviceMetadataFetcher
 	DataFetcher     df.DataFetcher
-	TokenAuth       authoriser.TokenAuth
-	BasicAuth       authoriser.BasicAuth
+	TokenProvider   authoriser.TokenProvider
+	AuthStore       authoriser.AuthStore
 }
 
 func Start(opts ApiOpts) error {
@@ -70,10 +70,10 @@ func Start(opts ApiOpts) error {
 		return fmt.Errorf("error initializing jwt authoriser: %v", err)
 	}
 	api := &Api{
-		Port:            opts.Port,
-		MetadataFetcher: redis, DataFetcher: df,
-		TokenAuth: tokenAuth,
-		BasicAuth: redis,
+		Port:       opts.Port,
+		DeviceInfo: redis, DataFetcher: df,
+		TokenProvider: tokenAuth,
+		AuthStore:     redis,
 	}
 	api.AdminRole = opts.AdminRole
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
@@ -103,16 +103,16 @@ func Start(opts ApiOpts) error {
 }
 
 func (a *Api) Close() {
-	if err := a.MetadataFetcher.Close(); err != nil {
+	if err := a.DeviceInfo.Close(); err != nil {
 		log.Fatalf("error closing metadatafetcher: %v", err)
 	}
 	if err := a.DataFetcher.Close(); err != nil {
 		log.Fatalf("error closing datafetcher: %v", err)
 	}
-	if err := a.TokenAuth.Close(); err != nil {
+	if err := a.TokenProvider.Close(); err != nil {
 		log.Fatalf("error closing token auth: %v", err)
 	}
-	if err := a.BasicAuth.Close(); err != nil {
+	if err := a.AuthStore.Close(); err != nil {
 		log.Fatalf("error closing basic auth: %v", err)
 	}
 	log.Println("Api shutdown.")
@@ -259,18 +259,30 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	//TODO: allow users to ask for multiple queryfields at once
 	queryFields := []string{in.QueryField}
 	if in.QueryField == "all" {
-		attachedSensors, err := a.MetadataFetcher.GetAttachedSensors(in.DeviceId)
+		attachedSensors, err := a.DeviceInfo.GetAttachedSensors(in.DeviceId)
 		if err != nil {
 			log.Printf("error getting attached sensors for: %s: %v", in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting attached sensors for deviceId.")
 		}
-		queryFields, err = a.MetadataFetcher.GetQueryFields(attachedSensors)
+		queryFields, err = a.DeviceInfo.GetQueryFields(attachedSensors)
 		if err != nil {
 			log.Printf("error getting query fields for: %s: %v", in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting query fields for deviceId.")
 		}
+	}
+	company, err := a.DeviceInfo.GetCompany(in.DeviceId)
+	if err != nil {
+		log.Printf("getting company: %s, error: %v", in.DeviceId, err)
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting device company.")
+	}
+	network, err := a.DeviceInfo.GetNetwork(in.DeviceId)
+	if err != nil {
+		log.Printf("getting network: %s, error: %v", in.DeviceId, err)
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting device network.")
 	}
 	metadata := metadatafetcher.Metadata{
 		Company:     company,
@@ -280,8 +292,14 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		Start:       in.Start,
 		Stop:        in.Stop,
 	}
+	userRole, ok := ctx.Value("user-role").(string)
+	if !ok {
+		log.Printf("user role is not a string")
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting user role.")
+	}
 	if strings.ToLower(userRole) == a.AdminRole {
-		company, err := a.MetadataFetcher.GetCompany(in.DeviceId)
+		company, err := a.DeviceInfo.GetCompany(in.DeviceId)
 		if err != nil {
 			log.Printf("error getting company for admin request on device: %s: %v",
 				in.DeviceId, err)
@@ -290,7 +308,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		}
 		//NOTE: if deviceId belongs to other company than admin is assigned to:
 		if company != metadata.Company {
-			network, err := a.MetadataFetcher.GetNetwork(in.DeviceId)
+			network, err := a.DeviceInfo.GetNetwork(in.DeviceId)
 			if err != nil {
 				log.Printf("error getting network for admin request on deviceId: %s: %v",
 					in.DeviceId, err)
@@ -331,8 +349,8 @@ func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
 		log.Printf("marshalling into token response: %v", err)
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 	}
-	if !a.TokenAuth.IsValidToken(tr) {
-		if err := a.MetadataFetcher.DeleteToken(tr); err != nil {
+	if !a.TokenProvider.IsValidToken(tr) {
+		if err := a.AuthStore.DeleteToken(tr); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError),
 				http.StatusInternalServerError)
 		}
@@ -340,12 +358,12 @@ func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
 			http.StatusUnauthorized)
 		return
 	}
-	username, err := a.MetadataFetcher.GetUser(tr.Token)
+	user, err := a.AuthStore.GetUser(tr.Token)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError),
 			http.StatusInternalServerError)
 	}
-	ctx = huma.WithValue(ctx, "username", username)
+	ctx = huma.WithValue(ctx, "user", user)
 	next(ctx)
 }
 
@@ -390,11 +408,11 @@ func (a *Api) Login(ctx context.Context,
 		return nil, huma.Error400BadRequest(
 			"Password failed the regex.")
 	}
-	if err = a.BasicAuth.VerifyCredentials(username, password); err != nil {
+	if err = a.AuthStore.VerifyCredentials(username, password); err != nil {
 		log.Printf("error: %v", err)
 		return nil, huma.Error401Unauthorized("Bad credentials provided.")
 	}
-	token, expiry, err := a.TokenAuth.GenerateToken()
+	token, expiry, err := a.TokenProvider.GenerateToken()
 	if err != nil {
 		return nil, huma.Error500InternalServerError(
 			"Internal error generating an access token.")
@@ -404,7 +422,7 @@ func (a *Api) Login(ctx context.Context,
 		Token:      token,
 		Expiration: expiry,
 	}
-	if err = a.MetadataFetcher.StoreToken(ut); err != nil {
+	if err = a.AuthStore.StoreToken(ut); err != nil {
 		return nil, huma.Error500InternalServerError(
 			"Internal error linking the token to the user.")
 	}

@@ -79,6 +79,6 @@ func (r *Redis) DeleteToken(tr authoriser.TokenResponse) error {
 	return nil
 }
 
-func (r *Redis) GetUser(token string) (string, error) {
+func (r *Redis) GetUser(token string) (authoriser.UserInfo, error) {
 	return r.db.Get(ctx, "tokenUser:"+token).Result()
 }

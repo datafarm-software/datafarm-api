@@ -22,18 +22,22 @@ type TokenResponse struct {
 	Token string `doc:"Access token for API resources."`
 }
 
-type TokenAuth interface {
+type TokenProvider interface {
 	Close() error
 	GenerateToken() (string, time.Duration, error)
 	IsValidToken(TokenResponse) bool
 }
 
-type TestBasicAuth interface {
-	PrepareBasicAuth(map[string]UserInfo) error
+type TestAuthStore interface {
+	PrepareAuthStore(map[string]UserInfo, []UserToken) error
+	GetActiveTokens() []UserToken
 }
 
-type BasicAuth interface {
-	TestBasicAuth
+type AuthStore interface {
+	TestAuthStore
 	Close() error
 	VerifyCredentials(username, passw string) error
+	GetUser(token string) (UserInfo, error)
+	StoreToken(UserToken) error
+	DeleteToken(TokenResponse) error
 }

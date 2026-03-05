@@ -149,7 +149,7 @@ func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string
 	return fmt.Sprintf("start: %s", startTime), nil
 }
 
-func (i *InfluxDatafetcher) PrepareDb(*ConsolidatedDeviceData) error {
+func (i *InfluxDatafetcher) PrepareDb(string, *ConsolidatedDeviceData) error {
 	return nil
 }
 

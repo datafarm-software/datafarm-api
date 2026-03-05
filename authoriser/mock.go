@@ -5,21 +5,21 @@ import (
 	"time"
 )
 
-type MockTokenAuth struct{}
+type MockTokenProvider struct{}
 
-func (m *MockTokenAuth) Close() error {
+func (m *MockTokenProvider) Close() error {
 	return nil
 }
 
 var increment int
 
-func (m *MockTokenAuth) GenerateToken() (string, time.Duration, error) {
+func (m *MockTokenProvider) GenerateToken() (string, time.Duration, error) {
 	token := fmt.Sprintf("someToken%d", increment)
 	increment++
 	return token, THREE_HOURS, nil
 }
 
-func (m *MockTokenAuth) IsValidToken(TokenResponse) bool {
+func (m *MockTokenProvider) IsValidToken(TokenResponse) bool {
 	return false
 }
 
