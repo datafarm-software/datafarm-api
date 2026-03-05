@@ -125,6 +125,11 @@ func (t *TestingRedis) PrepareMetadataFetcher(schema mdf.Schema) error {
 		for _, d := range schema.SensorToQF {
 			pipe.SAdd(ctx, "queryFields:"+d.Sensor, d.QueryFields)
 		}
+		for _, u := range schema.UserTokens {
+			pipe.SAdd(ctx, "usersWithToken", u.Username)
+			pipe.Set(ctx, "userToken:"+u.Username, u.Token, 0)
+			pipe.Set(ctx, "tokenUser:"+u.Token, u.Username, 0)
+		}
 		return nil
 	}
 	if err := t.redis.pipeline(pfn); err != nil {
@@ -178,6 +183,13 @@ func (t *TestingRedis) GetSnapshot() *mdf.Schema {
 		qf, _ = t.redis.db.SMembers(ctx, "attachedSensors:"+s).Result()
 		schema.SensorToQF = append(schema.SensorToQF,
 			mdf.SensorToQueryFields{Sensor: s, QueryFields: qf})
+	}
+
+	usersWithToken, _ := t.redis.db.SMembers(ctx, "usersWithToken").Result()
+	for _, u := range usersWithToken {
+		token, _ := t.redis.db.Get(ctx, "userToken:"+u).Result()
+		schema.UserTokens = append(schema.UserTokens,
+			mdf.UserToken{Username: u, Token: token})
 	}
 	return schema
 }

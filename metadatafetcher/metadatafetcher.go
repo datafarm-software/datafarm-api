@@ -29,7 +29,7 @@ type SensorToQueryFields struct {
 }
 
 type UserToken struct {
-	username, token string
+	Username, Token string
 }
 
 type Schema struct {
@@ -42,7 +42,7 @@ type Schema struct {
 
 type TestingMetadataFetcher interface {
 	PrepareMetadataFetcher(Schema) error
-	GetSnapshot() Schema
+	GetSnapshot() *Schema
 }
 
 type MetadataFetcher interface {
