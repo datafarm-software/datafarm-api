@@ -10,7 +10,6 @@ import (
 	cfy "github.com/geraud22/config-from-yaml"
 	"github.com/geraud22/datafarm-api/authstore"
 	deviceinfo "github.com/geraud22/datafarm-api/device-info"
-	"github.com/geraud22/datafarm-api/tokenprovider"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -234,10 +233,10 @@ func (t *TestingRedis) StoreToken(ut authstore.UserToken) error {
 	return t.redis.StoreToken(ut)
 }
 
-func (t *TestingRedis) DeleteToken(tr tokenprovider.TokenResponse) error {
-	username, _ := t.redis.db.Get(ctx, "tokenUser:"+tr.Token).Result()
+func (t *TestingRedis) DeleteToken(ut authstore.UserToken) error {
+	username, _ := t.redis.db.Get(ctx, "tokenUser:"+ut.Token).Result()
 	t.redis.db.SRem(ctx, "usersWithToken", username)
-	return t.redis.DeleteToken(tr)
+	return t.redis.DeleteToken(ut)
 }
 
 func (t *TestingRedis) VerifyCredentials(username, passw string) error {

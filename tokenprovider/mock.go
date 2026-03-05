@@ -3,6 +3,8 @@ package tokenprovider
 import (
 	"fmt"
 	"time"
+
+	"github.com/geraud22/datafarm-api/authstore"
 )
 
 type MockTokenProvider struct{}
@@ -24,10 +26,10 @@ func (m *MockTokenProvider) IsValidToken(TokenResponse) bool {
 }
 
 type MockBasicAuth struct {
-	db map[string]UserInfo
+	db map[string]authstore.UserInfo
 }
 
-func (m *MockBasicAuth) PrepareDb(db map[string]UserInfo) error {
+func (m *MockBasicAuth) PrepareDb(db map[string]authstore.UserInfo) error {
 	m.db = db
 	return nil
 }

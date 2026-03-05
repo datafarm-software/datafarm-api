@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/geraud22/datafarm-api/authstore"
-	"github.com/geraud22/datafarm-api/tokenprovider"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -86,8 +85,8 @@ func (r *Redis) StoreToken(ut authstore.UserToken) error {
 	return nil
 }
 
-func (r *Redis) DeleteToken(tr tokenprovider.TokenResponse) error {
-	username, err := r.db.Get(ctx, "tokenUser:"+tr.Token).Result()
+func (r *Redis) DeleteToken(ut authstore.UserToken) error {
+	username, err := r.db.Get(ctx, "tokenUser:"+ut.Token).Result()
 	if err != nil {
 		return err
 	}
@@ -95,7 +94,7 @@ func (r *Redis) DeleteToken(tr tokenprovider.TokenResponse) error {
 	if err != nil {
 		return err
 	}
-	err = r.db.Del(ctx, "tokenUser:"+tr.Token).Err()
+	err = r.db.Del(ctx, "tokenUser:"+ut.Token).Err()
 	if err != nil {
 		return err
 	}

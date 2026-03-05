@@ -12,7 +12,6 @@ import (
 
 	cfy "github.com/geraud22/config-from-yaml"
 	deviceinfo "github.com/geraud22/datafarm-api/device-info"
-	"github.com/geraud22/datafarm-api/metadatafetcher"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxApi "github.com/influxdata/influxdb-client-go/v2/api"
 )
@@ -72,7 +71,7 @@ func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (*Consolidat
 	return i.dataRows2ConsolidatedDeviceData(dataRows), nil
 }
 
-func (i *InfluxDatafetcher) generateFluxQuery(metadata metadatafetcher.Metadata, queryRange string) string {
+func (i *InfluxDatafetcher) generateFluxQuery(metadata deviceinfo.DeviceInfo, queryRange string) string {
 	var queryBuilder strings.Builder
 	queryBuilder.WriteString(fmt.Sprintf(`from(bucket: "%s")`, metadata.Network))
 	queryBuilder.WriteString(fmt.Sprintf(` |> range(%s)`, queryRange))

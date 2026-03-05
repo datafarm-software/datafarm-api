@@ -2,8 +2,6 @@ package authstore
 
 import (
 	"time"
-
-	"github.com/geraud22/datafarm-api/tokenprovider"
 )
 
 type Schema struct {
@@ -36,5 +34,5 @@ type AuthStore interface {
 	VerifyCredentials(username, passw string) error
 	GetUser(token string) (UserInfo, error)
 	StoreToken(UserToken) error
-	DeleteToken(tokenprovider.TokenResponse) error
+	DeleteToken(UserToken) error
 }
