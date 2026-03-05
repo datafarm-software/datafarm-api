@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
@@ -19,6 +20,7 @@ import (
 	"github.com/geraud22/datafarm-api/authoriser"
 	"github.com/geraud22/datafarm-api/datafetcher"
 	df "github.com/geraud22/datafarm-api/datafetcher"
+	"github.com/geraud22/datafarm-api/metadatafetcher"
 	mdf "github.com/geraud22/datafarm-api/metadatafetcher"
 	"github.com/geraud22/datafarm-api/redis"
 	"github.com/gorilla/mux"
@@ -233,82 +235,81 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	in *datafetcher.DeviceDataRequest) (*struct {
 	Body *datafetcher.ConsolidatedDeviceData
 }, error) {
-	// var relativeTime bool
-	// in.Start = strings.TrimSpace(in.Start)
-	// if RELATIVETIME_REGEX.MatchString(in.Start) {
-	// 	relativeTime = true
-	// } else {
-	// 	if _, err := time.Parse(time.RFC3339Nano, in.Start); err != nil {
-	// 		return nil, huma.Error400BadRequest("Start time is invalid rfc.")
-	// 	}
-	// }
-	// if relativeTime {
-	// 	in.Stop = ""
-	// } else {
-	// 	if in.Stop == "" {
-	// 		return nil, huma.Error400BadRequest(
-	// 			"Stop time is empty, when start is valid rfc format.")
-	// 	}
-	// 	in.Stop = strings.TrimSpace(in.Stop)
-	// 	if _, err := time.Parse(time.RFC3339Nano, in.Stop); err != nil {
-	// 		return nil, huma.Error400BadRequest("Stop time is invalid rfc.")
-	// 	}
-	// }
-	// //TODO: allow users to ask for multiple queryfields at once
-	// queryFields := []string{in.QueryField}
-	// if in.QueryField == "all" {
-	// 	attachedSensors, err := a.MetadataFetcher.GetAttachedSensors(in.DeviceId)
-	// 	if err != nil {
-	// 		log.Printf("error getting attached sensors for: %s: %v", in.DeviceId, err)
-	// 		return nil, huma.Error500InternalServerError(
-	// 			"Internal error getting attached sensors for deviceId.")
-	// 	}
-	// 	queryFields, err = a.MetadataFetcher.GetQueryFields(attachedSensors)
-	// 	if err != nil {
-	// 		log.Printf("error getting query fields for: %s: %v", in.DeviceId, err)
-	// 		return nil, huma.Error500InternalServerError(
-	// 			"Internal error getting query fields for deviceId.")
-	// 	}
-	// }
-	// metadata := metadatafetcher.Metadata{
-	// 	Company:     company,
-	// 	DeviceId:    in.DeviceId,
-	// 	Network:     network,
-	// 	QueryFields: queryFields,
-	// 	Start:       in.Start,
-	// 	Stop:        in.Stop,
-	// }
-	// if strings.ToLower(userRole) == a.AdminRole {
-	// 	company, err := a.MetadataFetcher.GetCompany(in.DeviceId)
-	// 	if err != nil {
-	// 		log.Printf("error getting company for admin request on device: %s: %v",
-	// 			in.DeviceId, err)
-	// 		return nil, huma.Error500InternalServerError(
-	// 			"Internal error getting associated company for deviceId.")
-	// 	}
-	// 	//NOTE: if deviceId belongs to other company than admin is assigned to:
-	// 	if company != metadata.Company {
-	// 		network, err := a.MetadataFetcher.GetNetwork(in.DeviceId)
-	// 		if err != nil {
-	// 			log.Printf("error getting network for admin request on deviceId: %s: %v",
-	// 				in.DeviceId, err)
-	// 			return nil, huma.Error500InternalServerError(
-	// 				"Internal error getting associated network for deviceId.")
-	// 		}
-	// 		metadata.Company = company
-	// 		metadata.Network = network
-	// 	}
-	// }
-	// deviceData, err := a.DataFetcher.GetData(metadata)
-	// if err != nil {
-	// 	log.Printf("error getting data: %v", err)
-	// 	return nil, huma.Error500InternalServerError(
-	// 		"Internal error fetching data.")
-	// }
-	// return &struct {
-	// 	Body *datafetcher.ConsolidatedDeviceData
-	// }{deviceData}, nil
-	return nil, nil
+	var relativeTime bool
+	in.Start = strings.TrimSpace(in.Start)
+	if RELATIVETIME_REGEX.MatchString(in.Start) {
+		relativeTime = true
+	} else {
+		if _, err := time.Parse(time.RFC3339Nano, in.Start); err != nil {
+			return nil, huma.Error400BadRequest("Start time is invalid rfc.")
+		}
+	}
+	if relativeTime {
+		in.Stop = ""
+	} else {
+		if in.Stop == "" {
+			return nil, huma.Error400BadRequest(
+				"Stop time is empty, when start is valid rfc format.")
+		}
+		in.Stop = strings.TrimSpace(in.Stop)
+		if _, err := time.Parse(time.RFC3339Nano, in.Stop); err != nil {
+			return nil, huma.Error400BadRequest("Stop time is invalid rfc.")
+		}
+	}
+	//TODO: allow users to ask for multiple queryfields at once
+	queryFields := []string{in.QueryField}
+	if in.QueryField == "all" {
+		attachedSensors, err := a.MetadataFetcher.GetAttachedSensors(in.DeviceId)
+		if err != nil {
+			log.Printf("error getting attached sensors for: %s: %v", in.DeviceId, err)
+			return nil, huma.Error500InternalServerError(
+				"Internal error getting attached sensors for deviceId.")
+		}
+		queryFields, err = a.MetadataFetcher.GetQueryFields(attachedSensors)
+		if err != nil {
+			log.Printf("error getting query fields for: %s: %v", in.DeviceId, err)
+			return nil, huma.Error500InternalServerError(
+				"Internal error getting query fields for deviceId.")
+		}
+	}
+	metadata := metadatafetcher.Metadata{
+		Company:     company,
+		DeviceId:    in.DeviceId,
+		Network:     network,
+		QueryFields: queryFields,
+		Start:       in.Start,
+		Stop:        in.Stop,
+	}
+	if strings.ToLower(userRole) == a.AdminRole {
+		company, err := a.MetadataFetcher.GetCompany(in.DeviceId)
+		if err != nil {
+			log.Printf("error getting company for admin request on device: %s: %v",
+				in.DeviceId, err)
+			return nil, huma.Error500InternalServerError(
+				"Internal error getting associated company for deviceId.")
+		}
+		//NOTE: if deviceId belongs to other company than admin is assigned to:
+		if company != metadata.Company {
+			network, err := a.MetadataFetcher.GetNetwork(in.DeviceId)
+			if err != nil {
+				log.Printf("error getting network for admin request on deviceId: %s: %v",
+					in.DeviceId, err)
+				return nil, huma.Error500InternalServerError(
+					"Internal error getting associated network for deviceId.")
+			}
+			metadata.Company = company
+			metadata.Network = network
+		}
+	}
+	deviceData, err := a.DataFetcher.GetData(metadata)
+	if err != nil {
+		log.Printf("error getting data: %v", err)
+		return nil, huma.Error500InternalServerError(
+			"Internal error fetching data.")
+	}
+	return &struct {
+		Body *datafetcher.ConsolidatedDeviceData
+	}{deviceData}, nil
 }
 
 func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
@@ -339,6 +340,12 @@ func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
 			http.StatusUnauthorized)
 		return
 	}
+	username, err := a.MetadataFetcher.GetUser(tr.Token)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError),
+			http.StatusInternalServerError)
+	}
+	ctx = huma.WithValue(ctx, "username", username)
 	next(ctx)
 }
 

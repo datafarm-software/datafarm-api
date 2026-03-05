@@ -52,6 +52,7 @@ type MetadataFetcher interface {
 	GetQueryFields(attachedSensors []string) ([]string, error)
 	GetCompany(deviceId string) (string, error)
 	GetNetwork(deviceId string) (string, error)
+	GetUser(token string) (string, error)
 	StoreToken(authoriser.UserToken) error
 	DeleteToken(authoriser.TokenResponse) error
 }

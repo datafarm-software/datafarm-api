@@ -217,15 +217,23 @@ func getStringSliceCmd(cmd any) []string {
 func (t *TestingRedis) GetAttachedSensors(deviceId string) ([]string, error) {
 	return t.redis.GetAttachedSensors(deviceId)
 }
+
 func (t *TestingRedis) GetQueryFields(attachedSensors []string) ([]string, error) {
 	return t.redis.GetQueryFields(attachedSensors)
 }
+
 func (t *TestingRedis) GetCompany(deviceId string) (string, error) {
 	return t.redis.GetCompany(deviceId)
 }
+
 func (t *TestingRedis) GetNetwork(deviceId string) (string, error) {
 	return t.redis.GetNetwork(deviceId)
 }
+
+func (t *TestingRedis) GetUser(token string) (string, error) {
+	return t.redis.GetUser(token)
+}
+
 func (t *TestingRedis) StoreToken(ut authoriser.UserToken) error {
 	t.redis.db.SAdd(ctx, "usersWithToken", ut.Username)
 	return t.redis.StoreToken(ut)
