@@ -102,5 +102,15 @@ func (r *Redis) DeleteToken(ut authstore.UserToken) error {
 }
 
 func (r *Redis) GetUser(token string) (authstore.UserInfo, error) {
-	return r.db.Get(ctx, "tokenUser:"+token).Result()
+	username, err := r.db.Get(ctx, "tokenUser:"+token).Result()
+	if err != nil {
+		return authstore.UserInfo{}, err
+	}
+	userId, err := r.db.Get(ctx, "unique:"+username).Result()
+	if err != nil {
+		return authstore.UserInfo{}, err
+	}
+	var userInfo authstore.UserInfo
+	err = r.db.HGetAll(ctx, "user:"+userId).Scan(&userInfo)
+	return userInfo, err
 }
