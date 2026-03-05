@@ -20,8 +20,8 @@ import (
 	"github.com/geraud22/datafarm-api/authoriser"
 	"github.com/geraud22/datafarm-api/datafetcher"
 	df "github.com/geraud22/datafarm-api/datafetcher"
-	"github.com/geraud22/datafarm-api/metadatafetcher"
-	mdf "github.com/geraud22/datafarm-api/metadatafetcher"
+	deviceinfo "github.com/geraud22/datafarm-api/device-info"
+
 	"github.com/geraud22/datafarm-api/redis"
 	"github.com/gorilla/mux"
 )
@@ -50,7 +50,7 @@ type ApiOpts struct {
 
 type Api struct {
 	Port, AdminRole string
-	DeviceInfo      mdf.DeviceMetadataFetcher
+	DeviceInfo      deviceinfo.DeviceInfoFetcher
 	DataFetcher     df.DataFetcher
 	TokenProvider   authoriser.TokenProvider
 	AuthStore       authoriser.AuthStore

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	cfy "github.com/geraud22/config-from-yaml"
+	deviceinfo "github.com/geraud22/datafarm-api/device-info"
 	"github.com/geraud22/datafarm-api/metadatafetcher"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxApi "github.com/influxdata/influxdb-client-go/v2/api"
@@ -54,7 +55,7 @@ func (i *InfluxDatafetcher) Close() error {
 	return nil
 }
 
-func (i *InfluxDatafetcher) GetData(metadata metadatafetcher.Metadata) (*ConsolidatedDeviceData, error) {
+func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (*ConsolidatedDeviceData, error) {
 	formattedQueryRange, err := i.formatQueryRange(metadata.Start, metadata.Stop)
 	if err != nil {
 		return nil, err

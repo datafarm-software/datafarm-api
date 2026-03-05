@@ -3,13 +3,12 @@ package redis
 import (
 	"fmt"
 
-	"github.com/geraud22/datafarm-api/authoriser"
-	mdf "github.com/geraud22/datafarm-api/metadatafetcher"
+	deviceinfo "github.com/geraud22/datafarm-api/device-info"
 )
 
 const TestingDb = 13
 
-func (r *Redis) GetSnapshot() *mdf.Schema {
+func (r *Redis) PrepareDeviceInfo(deviceinfo.Schema) error {
 	return nil
 }
 
@@ -49,36 +48,4 @@ func (r *Redis) GetNetwork(deviceId string) (string, error) {
 		return "", err
 	}
 	return network, nil
-}
-
-func (r *Redis) StoreToken(ut authoriser.UserToken) error {
-	err := r.db.Set(ctx, "userToken:"+ut.Username, ut.Token, ut.Expiration).Err()
-	if err != nil {
-		return err
-	}
-	err = r.db.Set(ctx, "tokenUser:"+ut.Token, ut.Username, ut.Expiration).Err()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *Redis) DeleteToken(tr authoriser.TokenResponse) error {
-	username, err := r.db.Get(ctx, "tokenUser:"+tr.Token).Result()
-	if err != nil {
-		return err
-	}
-	err = r.db.Del(ctx, "userToken:"+username).Err()
-	if err != nil {
-		return err
-	}
-	err = r.db.Del(ctx, "tokenUser:"+tr.Token).Err()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *Redis) GetUser(token string) (authoriser.UserInfo, error) {
-	return r.db.Get(ctx, "tokenUser:"+token).Result()
 }

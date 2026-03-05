@@ -1,6 +1,6 @@
-package metadatafetcher
+package deviceinfo
 
-type Metadata struct {
+type DeviceInfo struct {
 	DeviceId, Company, Network   string
 	Start, Stop                  string
 	QueryFields, AttachedSensors []string
@@ -31,7 +31,6 @@ type Schema struct {
 	DeviceNetworks  []DeviceToNetwork
 	DeviceToSensors []DeviceToSensor
 	SensorToQF      []SensorToQueryFields
-	// UserTokens      []UserToken
 }
 
 type TestingDeviceInfoFetcher interface {

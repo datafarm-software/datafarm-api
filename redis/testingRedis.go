@@ -9,7 +9,7 @@ import (
 
 	cfy "github.com/geraud22/config-from-yaml"
 	"github.com/geraud22/datafarm-api/authoriser"
-	mdf "github.com/geraud22/datafarm-api/metadatafetcher"
+	deviceinfo "github.com/geraud22/datafarm-api/device-info"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -85,8 +85,7 @@ RetryLoop:
 	return nil
 }
 
-func (t *TestingRedis) PrepareAuthStore(db map[string]authoriser.UserInfo,
-	userTokens []authoriser.UserToken) error {
+func (t *TestingRedis) PrepareAuthStore(mockDb authoriser.Schema) error {
 	var hashedPassword []byte
 	var err error
 	pfn := func(pipe redis.Pipeliner) error {
@@ -114,7 +113,7 @@ func (t *TestingRedis) PrepareAuthStore(db map[string]authoriser.UserInfo,
 	return nil
 }
 
-func (t *TestingRedis) PrepareDeviceInfo(schema mdf.Schema) error {
+func (t *TestingRedis) PrepareDeviceInfo(schema deviceinfo.Schema) error {
 	pfn := func(pipe redis.Pipeliner) error {
 		for _, d := range schema.DeviceCompanies {
 			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
@@ -139,8 +138,8 @@ func (t *TestingRedis) PrepareDeviceInfo(schema mdf.Schema) error {
 	return nil
 }
 
-func (t *TestingRedis) GetSnapshot() *mdf.Schema {
-	schema := &mdf.Schema{}
+func (t *TestingRedis) GetSnapshot() *deviceinfo.Schema {
+	schema := &deviceinfo.Schema{}
 	deviceIds, err := t.redis.db.SMembers(ctx, "deviceIds").Result()
 	if err != nil {
 		log.Printf("getting deviceIds: %v", err)
@@ -165,13 +164,13 @@ func (t *TestingRedis) GetSnapshot() *mdf.Schema {
 	for _, id := range deviceIds {
 		company = getStringCmd(cmdVec[id]["company"])
 		schema.DeviceCompanies = append(schema.DeviceCompanies,
-			mdf.DeviceToCompany{DeviceId: id, Company: company})
+			deviceinfo.DeviceToCompany{DeviceId: id, Company: company})
 		network = getStringCmd(cmdVec[id]["network"])
 		schema.DeviceNetworks = append(schema.DeviceNetworks,
-			mdf.DeviceToNetwork{DeviceId: id, Network: network})
+			deviceinfo.DeviceToNetwork{DeviceId: id, Network: network})
 		deviceSensors = getStringSliceCmd(cmdVec[id]["attachedSensors"])
 		schema.DeviceToSensors = append(schema.DeviceToSensors,
-			mdf.DeviceToSensor{DeviceId: id, AttachedSensors: deviceSensors})
+			deviceinfo.DeviceToSensor{DeviceId: id, AttachedSensors: deviceSensors})
 		for _, s := range deviceSensors {
 			if !slices.Contains(uniqueSensors, s) {
 				uniqueSensors = append(uniqueSensors, s)
@@ -183,7 +182,7 @@ func (t *TestingRedis) GetSnapshot() *mdf.Schema {
 	for _, s := range uniqueSensors {
 		qf, _ = t.redis.db.SMembers(ctx, "attachedSensors:"+s).Result()
 		schema.SensorToQF = append(schema.SensorToQF,
-			mdf.SensorToQueryFields{Sensor: s, QueryFields: qf})
+			deviceinfo.SensorToQueryFields{Sensor: s, QueryFields: qf})
 	}
 
 	return schema

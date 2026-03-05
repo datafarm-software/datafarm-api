@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/geraud22/datafarm-api/authoriser"
-	mdf "github.com/geraud22/datafarm-api/metadatafetcher"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -55,10 +54,6 @@ func (r *Redis) PrepareBasicAuth(map[string]authoriser.UserInfo) error {
 	return nil
 }
 
-func (r *Redis) PrepareMetadataFetcher(mdf.Schema) error {
-	return nil
-}
-
 func (r *Redis) VerifyCredentials(username, passw string) error {
 	uuid, err := r.db.Get(ctx, "unique:"+username).Result()
 	if err != nil {
@@ -72,4 +67,36 @@ func (r *Redis) VerifyCredentials(username, passw string) error {
 		return fmt.Errorf("passwords did not match: %v", err)
 	}
 	return nil
+}
+
+func (r *Redis) StoreToken(ut authoriser.UserToken) error {
+	err := r.db.Set(ctx, "userToken:"+ut.Username, ut.Token, ut.Expiration).Err()
+	if err != nil {
+		return err
+	}
+	err = r.db.Set(ctx, "tokenUser:"+ut.Token, ut.Username, ut.Expiration).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Redis) DeleteToken(tr authoriser.TokenResponse) error {
+	username, err := r.db.Get(ctx, "tokenUser:"+tr.Token).Result()
+	if err != nil {
+		return err
+	}
+	err = r.db.Del(ctx, "userToken:"+username).Err()
+	if err != nil {
+		return err
+	}
+	err = r.db.Del(ctx, "tokenUser:"+tr.Token).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Redis) GetUser(token string) (authoriser.UserInfo, error) {
+	return r.db.Get(ctx, "tokenUser:"+token).Result()
 }

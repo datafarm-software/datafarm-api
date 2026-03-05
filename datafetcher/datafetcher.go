@@ -3,7 +3,7 @@ package datafetcher
 import (
 	"time"
 
-	"github.com/geraud22/datafarm-api/metadatafetcher"
+	deviceinfo "github.com/geraud22/datafarm-api/device-info"
 )
 
 type DeviceDataRequest struct {
@@ -29,6 +29,6 @@ type TestingDataFetcher interface {
 
 type DataFetcher interface {
 	TestingDataFetcher
-	GetData(metadata metadatafetcher.Metadata) (*ConsolidatedDeviceData, error)
+	GetData(metadata deviceinfo.DeviceInfo) (*ConsolidatedDeviceData, error)
 	Close() error
 }

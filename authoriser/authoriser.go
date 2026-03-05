@@ -4,6 +4,11 @@ import (
 	"time"
 )
 
+type Schema struct {
+	UserInfo   map[string]UserInfo
+	UserTokens []UserToken
+}
+
 type UserInfo struct {
 	Username string `redis:"username"`
 	Company  string `redis:"company"`
@@ -29,7 +34,7 @@ type TokenProvider interface {
 }
 
 type TestAuthStore interface {
-	PrepareAuthStore(map[string]UserInfo, []UserToken) error
+	PrepareAuthStore(Schema) error
 	GetActiveTokens() []UserToken
 }
 

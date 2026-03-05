@@ -14,7 +14,7 @@ import (
 	"github.com/geraud22/datafarm-api/api"
 	"github.com/geraud22/datafarm-api/authoriser"
 	"github.com/geraud22/datafarm-api/datafetcher"
-	mdf "github.com/geraud22/datafarm-api/metadatafetcher"
+	deviceinfo "github.com/geraud22/datafarm-api/device-info"
 	"github.com/geraud22/datafarm-api/redis"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
@@ -42,11 +42,11 @@ var a = &api.Api{}
 
 func TestLogin(t *testing.T) {
 	tests := map[string]struct {
-		wantErr            bool
-		wantStatus         int
-		username, password string
-		mockAuthStore      map[string]authoriser.UserInfo
-		mdfSchema, wantMdf mdf.Schema
+		wantErr                        bool
+		wantStatus                     int
+		username, password             string
+		mockAuthStore                  authoriser.Schema
+		mockDeviceInfo, wantDeviceInfo deviceinfo.Schema
 	}{
 
 		"successfully login": {
@@ -54,13 +54,15 @@ func TestLogin(t *testing.T) {
 			wantStatus: http.StatusOK,
 			username:   RegisteredUsername,
 			password:   RegisteredPassword,
-			mockAuthStore: map[string]authoriser.UserInfo{
-				RegisteredUsername: {
-					Username: RegisteredUsername,
-					Company:  RegisteredCompany,
-					Role:     UserRole,
-					Password: RegisteredPassword,
-					Network:  RegisteredNetwork,
+			mockAuthStore: authoriser.Schema{
+				UserInfo: map[string]authoriser.UserInfo{
+					RegisteredUsername: {
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     UserRole,
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
 				},
 			},
 		},
@@ -70,13 +72,15 @@ func TestLogin(t *testing.T) {
 			wantStatus: http.StatusUnauthorized,
 			username:   UnregisteredUsername,
 			password:   UnregisteredPassword,
-			mockAuthStore: map[string]authoriser.UserInfo{
-				RegisteredUsername: {
-					Username: RegisteredUsername,
-					Company:  RegisteredCompany,
-					Role:     UserRole,
-					Password: RegisteredPassword,
-					Network:  RegisteredNetwork,
+			mockAuthStore: authoriser.Schema{
+				UserInfo: map[string]authoriser.UserInfo{
+					RegisteredUsername: {
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     UserRole,
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
 				},
 			},
 		},
@@ -97,9 +101,9 @@ func TestLogin(t *testing.T) {
 			defer testingRedis.Close()
 			a.DeviceInfo = testingRedis
 			a.AuthStore = testingRedis
-			err = testingRedis.PrepareDeviceInfo(tc.mdfSchema)
+			err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
 			require.Nil(t, err)
-			err = testingRedis.PrepareAuthStore(tc.mockAuthStore, nil)
+			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
 			encodedDetails := base64.StdEncoding.EncodeToString(
 				[]byte(tc.username + ":" + tc.password))
@@ -123,8 +127,8 @@ func TestGetDeviceData(t *testing.T) {
 		wantErr               bool
 		wantStatus            int
 		mockDataFetcher, want *datafetcher.ConsolidatedDeviceData
-		mockAuthStore         map[string]authoriser.UserInfo
-		mdfSchema             mdf.Schema
+		mockAuthStore         authoriser.Schema
+		mockDeviceInfo        deviceinfo.Schema
 		token                 string
 		deviceRequest         datafetcher.DeviceDataRequest
 	}{
@@ -133,13 +137,18 @@ func TestGetDeviceData(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want:       &datafetcher.ConsolidatedDeviceData{},
-			mockAuthStore: map[string]authoriser.UserInfo{
-				RegisteredUsername: {
-					Username: RegisteredUsername,
-					Company:  RegisteredCompany,
-					Role:     UserRole,
-					Password: RegisteredPassword,
-					Network:  RegisteredNetwork,
+			mockAuthStore: authoriser.Schema{
+				UserInfo: map[string]authoriser.UserInfo{
+					RegisteredUsername: {
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     UserRole,
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authoriser.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
 			mockDataFetcher: &datafetcher.ConsolidatedDeviceData{
@@ -153,27 +162,24 @@ func TestGetDeviceData(t *testing.T) {
 					},
 				},
 			},
-			mdfSchema: mdf.Schema{
-				DeviceCompanies: []mdf.DeviceToCompany{
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
 					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 				},
-				DeviceNetworks: []mdf.DeviceToNetwork{
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []mdf.DeviceToSensor{
+				DeviceToSensors: []deviceinfo.DeviceToSensor{
 					{
 						DeviceId:        RegisteredDeviceId,
 						AttachedSensors: []string{RegisteredSensor},
 					},
 				},
-				SensorToQF: []mdf.SensorToQueryFields{
+				SensorToQF: []deviceinfo.SensorToQueryFields{
 					{
 						Sensor:      RegisteredSensor,
 						QueryFields: []string{RegisteredQueryField},
 					},
-				},
-				UserTokens: []mdf.UserToken{
-					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
 			token: ValidToken,
@@ -214,7 +220,7 @@ func TestGetDeviceData(t *testing.T) {
 			defer a.DataFetcher.Close()
 			err = a.DataFetcher.PrepareDb(TestInfluxMeasurement, tc.mockDataFetcher)
 			require.Nil(t, err)
-			err = testingRedis.PrepareDeviceInfo(tc.mdfSchema)
+			err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
 			require.Nil(t, err)
 			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
