@@ -1,12 +1,16 @@
 package datafetcher
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
+	cfy "github.com/geraud22/config-from-yaml"
 	"github.com/geraud22/datafarm-api/metadatafetcher"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxApi "github.com/influxdata/influxdb-client-go/v2/api"
@@ -143,4 +147,53 @@ func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string
 		return fmt.Sprintf("start: %s, stop: %s", startTime, stopTime), nil
 	}
 	return fmt.Sprintf("start: %s", startTime), nil
+}
+
+var testingInfluxOpts InfluxOpts
+var once sync.Once
+
+type TestingInflux struct {
+	influx *InfluxDatafetcher
+}
+
+func NewTestingInflux(configPath string) (DataFetcher, error) {
+	var topErr error
+	once.Do(func() {
+		config, err := os.ReadFile(configPath)
+		if err != nil {
+			topErr = err
+			return
+		}
+		opts, err := cfy.LoadConfig[struct {
+			InfluxOpts InfluxOpts `mapstructure:"influx"`
+		}](bytes.NewReader(config), "yaml", nil)
+		if err != nil {
+			topErr = err
+			return
+		}
+		testingInfluxOpts = opts.InfluxOpts
+	})
+	if topErr != nil {
+		return nil, topErr
+	}
+	db, err := NewInfluxDatafetcher(testingInfluxOpts)
+	if err != nil {
+		return nil, err
+	}
+	return &TestingInflux{
+		influx: db,
+	}, nil
+}
+
+func (t *TestingInflux) Close() error {
+	return fmt.Errorf("close not implemented")
+}
+
+func (t *TestingInflux) PrepareDb(mockDb any) error {
+	return fmt.Errorf("preparedb not implemented")
+}
+
+func (t *TestingInflux) GetData(metadata metadatafetcher.Metadata) (
+	*ConsolidatedDeviceData, error) {
+	return t.influx.GetData(metadata)
 }

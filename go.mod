@@ -3,10 +3,11 @@ module github.com/geraud22/datafarm-api
 go 1.25.0
 
 require (
+	github.com/alicebob/miniredis/v2 v2.37.0
 	github.com/danielgtaylor/huma/v2 v2.37.2
 	github.com/geraud22/config-from-yaml v1.1.1
-	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/google/go-cmp v0.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
 	github.com/redis/go-redis/v9 v9.7.0
@@ -16,7 +17,6 @@ require (
 )
 
 require (
-	github.com/alicebob/miniredis/v2 v2.37.0 // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

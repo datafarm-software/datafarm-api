@@ -229,15 +229,8 @@ func (a *Api) RegisterHumaOperations(api huma.API) {
 	huma.Register(api, operation, a.Login)
 }
 
-type DeviceDataRequest struct {
-	DeviceId   string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-	QueryField string `query:"queryField" required:"true"`
-	Start      string `query:"start" required:"true"`
-	Stop       string `query:"stop" required:"false"`
-}
-
 func (a *Api) GetDeviceData(ctx context.Context,
-	in *DeviceDataRequest) (*struct {
+	in *datafetcher.DeviceDataRequest) (*struct {
 	Body *datafetcher.ConsolidatedDeviceData
 }, error) {
 	// var relativeTime bool
