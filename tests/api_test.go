@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/danielgtaylor/huma/v2/humatest"
@@ -28,7 +29,15 @@ const RegisteredNetwork = "network"
 const UserRole = "1"
 const AdminUserRole = "3"
 const TestInfluxMeasurement = "mock-data"
+const RegisteredDeviceId = "device1"
+const RegisteredQueryField = "temperature"
+const RegisteredSensor = "temp-sensor"
+const ValidToken = "someToken0"
 
+var Start = time.Now().Add(-24 * time.Hour).Format(time.RFC3339)
+var Stop = time.Now().Format(time.RFC3339)
+var OutsideTimeRange = time.Now().Add(-25 * time.Hour)
+var InsideTimeRange = time.Now().Add(-1 * time.Hour)
 var a = &api.Api{}
 
 func TestLogin(t *testing.T) {
@@ -133,15 +142,56 @@ func TestGetDeviceData(t *testing.T) {
 					Network:  RegisteredNetwork,
 				},
 			},
-			mockDataFetcher: nil,
-			mdfSchema:       mdf.Schema{},
-			token:           "",
-			deviceRequest:   datafetcher.DeviceDataRequest{},
+			mockDataFetcher: &datafetcher.ConsolidatedDeviceData{
+				DeviceData: []datafetcher.DeviceData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]any{
+							RegisteredQueryField: 23,
+						},
+					},
+				},
+			},
+			mdfSchema: mdf.Schema{
+				DeviceCompanies: []mdf.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []mdf.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToSensors: []mdf.DeviceToSensor{
+					{
+						DeviceId:        RegisteredDeviceId,
+						AttachedSensors: []string{RegisteredSensor},
+					},
+				},
+				SensorToQF: []mdf.SensorToQueryFields{
+					{
+						Sensor:      RegisteredSensor,
+						QueryFields: []string{RegisteredQueryField},
+					},
+				},
+				UserTokens: []mdf.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			token: ValidToken,
+			deviceRequest: datafetcher.DeviceDataRequest{
+				DeviceId:   RegisteredDeviceId,
+				QueryField: RegisteredQueryField,
+				Start:      Start,
+				Stop:       Stop,
+			},
 		},
 
-		"invalid token": {},
+		"unknown token": {},
 
 		"expired token": {},
+
+		"get multiple data points within time range": {},
+
+		"get only a few data points in the time range": {},
 	}
 
 	var err error
