@@ -111,7 +111,31 @@ func TestGetDeviceData(t *testing.T) {
 		mdfSchema       mdf.Schema
 		token           string
 		deviceRequest   datafetcher.DeviceDataRequest
-	}{}
+	}{
+
+		"successfully get deviceid data": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want:       &datafetcher.ConsolidatedDeviceData{},
+			mockBasicAuth: map[string]authoriser.UserInfo{
+				RegisteredUsername: {
+					Username: RegisteredUsername,
+					Company:  RegisteredCompany,
+					Role:     UserRole,
+					Password: RegisteredPassword,
+					Network:  RegisteredNetwork,
+				},
+			},
+			mockDataFetcher: mdf,
+			mdfSchema:       mdf.Schema{},
+			token:           "",
+			deviceRequest:   datafetcher.DeviceDataRequest{},
+		},
+
+		"invalid token": {},
+
+		"expired token": {},
+	}
 
 	var err error
 	_, humaApi := humatest.New(t)
