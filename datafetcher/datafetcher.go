@@ -24,7 +24,7 @@ type DeviceData struct {
 }
 
 type TestingDataFetcher interface {
-	PrepareDb(any) error
+	PrepareDb(*ConsolidatedDeviceData) error
 }
 
 type DataFetcher interface {

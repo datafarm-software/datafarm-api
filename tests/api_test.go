@@ -26,6 +26,7 @@ const UnregisteredPassword = "@Password2"
 const RegisteredCompany = "company"
 const RegisteredNetwork = "network"
 const UserRole = "1"
+const AdminUserRole = "3"
 
 var a = &api.Api{}
 
@@ -109,14 +110,13 @@ func TestLogin(t *testing.T) {
 
 func TestGetDeviceData(t *testing.T) {
 	tests := map[string]struct {
-		wantErr         bool
-		wantStatus      int
-		want            *datafetcher.ConsolidatedDeviceData
-		mockBasicAuth   map[string]authoriser.UserInfo
-		mockDataFetcher any
-		mdfSchema       mdf.Schema
-		token           string
-		deviceRequest   datafetcher.DeviceDataRequest
+		wantErr               bool
+		wantStatus            int
+		mockDataFetcher, want *datafetcher.ConsolidatedDeviceData
+		mockBasicAuth         map[string]authoriser.UserInfo
+		mdfSchema             mdf.Schema
+		token                 string
+		deviceRequest         datafetcher.DeviceDataRequest
 	}{
 
 		"successfully get deviceid data": {

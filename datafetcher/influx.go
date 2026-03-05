@@ -13,6 +13,7 @@ import (
 	cfy "github.com/geraud22/config-from-yaml"
 	"github.com/geraud22/datafarm-api/metadatafetcher"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/influxdata/influxdb-client-go/v2/api"
 	influxApi "github.com/influxdata/influxdb-client-go/v2/api"
 )
 
@@ -149,7 +150,7 @@ func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string
 	return fmt.Sprintf("start: %s", startTime), nil
 }
 
-func (i *InfluxDatafetcher) PrepareDb(any) error {
+func (i *InfluxDatafetcher) PrepareDb(*ConsolidatedDeviceData) error {
 	return nil
 }
 
@@ -157,7 +158,8 @@ var testingInfluxOpts InfluxOpts
 var once sync.Once
 
 type TestingInflux struct {
-	influx *InfluxDatafetcher
+	influx   *InfluxDatafetcher
+	writeApi api.WriteAPI
 }
 
 func NewTestingInflux(configPath string) (DataFetcher, error) {
@@ -184,8 +186,10 @@ func NewTestingInflux(configPath string) (DataFetcher, error) {
 	if err != nil {
 		return nil, err
 	}
+	writeApi := db.db.WriteAPI(testingInfluxOpts.Org, testingInfluxOpts.Org)
 	return &TestingInflux{
-		influx: db,
+		influx:   db,
+		writeApi: writeApi,
 	}, nil
 }
 
@@ -193,8 +197,29 @@ func (t *TestingInflux) Close() error {
 	return fmt.Errorf("close not implemented")
 }
 
-func (t *TestingInflux) PrepareDb(mockDb any) error {
-	return fmt.Errorf("preparedb not implemented")
+func (t *TestingInflux) PrepareDb(mockDb *ConsolidatedDeviceData) error {
+	fields := make(map[string]any)
+	for _, dd := range mockDb.DeviceData {
+		for key, value := range dd.SensorData {
+			_, isStringValue := value.(string)
+			if isStringValue {
+				continue
+			}
+			fields[key] = value
+		}
+		p := influxdb2.NewPoint(
+			//NOTE: company string literal matches tests.RegisteredCompany
+			"company",
+			map[string]string{
+				"deviceID": dd.DeviceID,
+			},
+			fields,
+			dd.Timestamp,
+		)
+		t.writeApi.WritePoint(p)
+	}
+	t.writeApi.Flush()
+	return nil
 }
 
 func (t *TestingInflux) GetData(metadata metadatafetcher.Metadata) (
