@@ -68,5 +68,13 @@ func (r *Redis) DeleteToken(tr authoriser.TokenResponse) error {
 	if err != nil {
 		return err
 	}
-	return r.db.Del(ctx, "userToken:"+username).Err()
+	err = r.db.Del(ctx, "userToken:"+username).Err()
+	if err != nil {
+		return err
+	}
+	err = r.db.Del(ctx, "tokenUser:"+tr.Token).Err()
+	if err != nil {
+		return err
+	}
+	return nil
 }

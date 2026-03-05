@@ -227,10 +227,13 @@ func (t *TestingRedis) GetNetwork(deviceId string) (string, error) {
 	return t.redis.GetNetwork(deviceId)
 }
 func (t *TestingRedis) StoreToken(ut authoriser.UserToken) error {
+	t.redis.db.SAdd(ctx, "usersWithToken", ut.Username)
 	return t.redis.StoreToken(ut)
 }
 
 func (t *TestingRedis) DeleteToken(tr authoriser.TokenResponse) error {
+	username, _ := t.redis.db.Get(ctx, "tokenUser:"+tr.Token).Result()
+	t.redis.db.SRem(ctx, "usersWithToken", username)
 	return t.redis.DeleteToken(tr)
 }
 
