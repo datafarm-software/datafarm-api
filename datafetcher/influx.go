@@ -149,6 +149,10 @@ func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string
 	return fmt.Sprintf("start: %s", startTime), nil
 }
 
+func (i *InfluxDatafetcher) PrepareDb(any) error {
+	return nil
+}
+
 var testingInfluxOpts InfluxOpts
 var once sync.Once
 

@@ -132,7 +132,7 @@ func TestGetDeviceData(t *testing.T) {
 					Network:  RegisteredNetwork,
 				},
 			},
-			mockDataFetcher: mdf,
+			mockDataFetcher: nil,
 			mdfSchema:       mdf.Schema{},
 			token:           "",
 			deviceRequest:   datafetcher.DeviceDataRequest{},

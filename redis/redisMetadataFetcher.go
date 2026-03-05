@@ -4,9 +4,14 @@ import (
 	"fmt"
 
 	"github.com/geraud22/datafarm-api/authoriser"
+	mdf "github.com/geraud22/datafarm-api/metadatafetcher"
 )
 
 const TestingDb = 13
+
+func (r *Redis) GetSnapshot() *mdf.Schema {
+	return nil
+}
 
 func (r *Redis) GetAttachedSensors(deviceId string) ([]string, error) {
 	key := fmt.Sprintf("attachedSensors:%s", deviceId)
