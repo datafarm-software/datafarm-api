@@ -241,6 +241,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		relativeTime = true
 	} else {
 		if _, err := time.Parse(time.RFC3339Nano, in.Start); err != nil {
+			log.Printf("parsing start: %v", err)
 			return nil, huma.Error400BadRequest("Start time is invalid rfc.")
 		}
 	}
@@ -253,6 +254,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		}
 		in.Stop = strings.TrimSpace(in.Stop)
 		if _, err := time.Parse(time.RFC3339Nano, in.Stop); err != nil {
+			log.Printf("parsing stop: %v")
 			return nil, huma.Error400BadRequest("Stop time is invalid rfc.")
 		}
 	}
@@ -345,9 +347,11 @@ func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
 		return
 	}
 	var tr tokenprovider.TokenResponse
-	tr.Token = parts[1]
+	tr.Token = strings.TrimSpace(parts[1])
 	if !a.TokenProvider.IsValidToken(tr) {
+		log.Printf("invalid token")
 		if err := a.AuthStore.DeleteToken(authstore.UserToken{Token: tr.Token}); err != nil {
+			log.Printf("deleting token: %v", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError),
 				http.StatusInternalServerError)
 		}
@@ -357,6 +361,7 @@ func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
 	}
 	user, err := a.AuthStore.GetUser(tr.Token)
 	if err != nil {
+		log.Printf("getting user: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError),
 			http.StatusInternalServerError)
 	}

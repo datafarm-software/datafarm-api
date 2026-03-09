@@ -87,15 +87,15 @@ func (r *Redis) StoreToken(ut authstore.UserToken) error {
 
 func (r *Redis) DeleteToken(ut authstore.UserToken) error {
 	username, err := r.db.Get(ctx, "tokenUser:"+ut.Token).Result()
-	if err != nil {
+	if err != nil && err != redis.Nil {
 		return err
 	}
 	err = r.db.Del(ctx, "userToken:"+username).Err()
-	if err != nil {
+	if err != nil && err != redis.Nil {
 		return err
 	}
 	err = r.db.Del(ctx, "tokenUser:"+ut.Token).Err()
-	if err != nil {
+	if err != nil && err != redis.Nil {
 		return err
 	}
 	return nil
