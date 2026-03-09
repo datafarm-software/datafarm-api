@@ -238,5 +238,6 @@ func (t *TestingInflux) PrepareDb(measurement string, mockDb *ConsolidatedDevice
 
 func (t *TestingInflux) GetData(metadata deviceinfo.DeviceInfo) (
 	*ConsolidatedDeviceData, error) {
+	metadata.Company = t.testMeasurement
 	return t.influx.GetData(metadata)
 }

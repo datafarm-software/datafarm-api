@@ -7,22 +7,24 @@ import (
 	"github.com/geraud22/datafarm-api/authstore"
 )
 
-type MockTokenProvider struct{}
+type MockTokenProvider struct {
+	Tokens    map[string]bool
+	Increment int
+}
 
 func (m *MockTokenProvider) Close() error {
 	return nil
 }
 
-var increment int
-
 func (m *MockTokenProvider) GenerateToken() (string, time.Duration, error) {
-	token := fmt.Sprintf("someToken%d", increment)
-	increment++
+	token := fmt.Sprintf("someToken%d", m.Increment)
+	m.Increment++
+	m.Tokens[token] = true
 	return token, THREE_HOURS, nil
 }
 
-func (m *MockTokenProvider) IsValidToken(TokenResponse) bool {
-	return false
+func (m *MockTokenProvider) IsValidToken(t TokenResponse) bool {
+	return m.Tokens[t.Token]
 }
 
 type MockBasicAuth struct {

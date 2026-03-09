@@ -133,6 +133,7 @@ func TestGetDeviceData(t *testing.T) {
 		mockDataFetcher, want *datafetcher.ConsolidatedDeviceData
 		mockAuthStore         authstore.Schema
 		mockDeviceInfo        deviceinfo.Schema
+		mockTokens            map[string]bool
 		token                 string
 		deviceRequest         datafetcher.DeviceDataRequest
 	}{
@@ -140,7 +141,17 @@ func TestGetDeviceData(t *testing.T) {
 		"successfully get deviceid data": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want:       &datafetcher.ConsolidatedDeviceData{},
+			want: &datafetcher.ConsolidatedDeviceData{
+				DeviceData: []datafetcher.DeviceData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]any{
+							RegisteredQueryField: 23,
+						},
+					},
+				},
+			},
 			mockAuthStore: authstore.Schema{
 				UserInfo: map[string]authstore.UserInfo{
 					RegisteredUsername: {
@@ -186,6 +197,9 @@ func TestGetDeviceData(t *testing.T) {
 					},
 				},
 			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
 			token: ValidToken,
 			deviceRequest: datafetcher.DeviceDataRequest{
 				DeviceId:   RegisteredDeviceId,
@@ -215,7 +229,10 @@ func TestGetDeviceData(t *testing.T) {
 	defer db.Close()
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			a.TokenProvider = &tokenprovider.MockTokenProvider{}
+			a.TokenProvider = &tokenprovider.MockTokenProvider{
+				Tokens:    tc.mockTokens,
+				Increment: len(tc.mockTokens),
+			}
 			defer a.TokenProvider.Close()
 			testingRedis, err := redis.NewTestingRedis(db.Addr())
 			require.Nil(t, err)
@@ -233,7 +250,7 @@ func TestGetDeviceData(t *testing.T) {
 			require.Nil(t, err)
 			route := "/api/v1/device/" + tc.deviceRequest.DeviceId
 			resp := humaTest.Get(route,
-				fmt.Sprintf("Authorization: Bearer %s", tc.token), tc.deviceRequest)
+				fmt.Sprintf(`Authorization: Bearer %s`, tc.token), tc.deviceRequest)
 			if resp.Code != tc.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
 			}

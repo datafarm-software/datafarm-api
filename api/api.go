@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -346,10 +345,7 @@ func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
 		return
 	}
 	var tr tokenprovider.TokenResponse
-	if err := json.Unmarshal([]byte(parts[1]), &tr); err != nil {
-		log.Printf("marshalling into token response: %v", err)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-	}
+	tr.Token = parts[1]
 	if !a.TokenProvider.IsValidToken(tr) {
 		if err := a.AuthStore.DeleteToken(authstore.UserToken{Token: tr.Token}); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError),
