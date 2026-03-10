@@ -361,9 +361,9 @@ func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
 		return
 	}
 	var tr tokenprovider.TokenResponse
-	tr.Token = strings.TrimSpace(parts[1])
+	tr.Body = strings.TrimSpace(parts[1])
 	if !a.TokenProvider.IsValidToken(tr) {
-		if err := a.AuthStore.DeleteToken(authstore.UserToken{Token: tr.Token}); err != nil {
+		if err := a.AuthStore.DeleteToken(authstore.UserToken{Token: tr.Body}); err != nil {
 			log.Printf("deleting token: %v", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError),
 				http.StatusInternalServerError)
@@ -372,7 +372,7 @@ func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
 			http.StatusUnauthorized)
 		return
 	}
-	user, err := a.AuthStore.GetUser(tr.Token)
+	user, err := a.AuthStore.GetUser(tr.Body)
 	if err != nil {
 		log.Printf("getting user: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError),
@@ -387,7 +387,7 @@ type LoginRequest struct {
 }
 
 func (a *Api) Login(ctx context.Context,
-	lr *LoginRequest) (*struct{ Body tokenprovider.TokenResponse }, error) {
+	lr *LoginRequest) (*tokenprovider.TokenResponse, error) {
 	parts := strings.Split(lr.Auth, " ")
 	if len(parts) != 2 || parts[0] != "Basic" {
 		return nil, huma.Error400BadRequest(
@@ -441,6 +441,5 @@ func (a *Api) Login(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error linking the token to the user.")
 	}
-	return &struct{ Body tokenprovider.TokenResponse }{
-		tokenprovider.TokenResponse{Token: token}}, nil
+	return &tokenprovider.TokenResponse{Body: token}, nil
 }

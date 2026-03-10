@@ -27,7 +27,7 @@ func (m *MockTokenProvider) GenerateToken() (string, time.Duration, error) {
 }
 
 func (m *MockTokenProvider) IsValidToken(t TokenResponse) bool {
-	return m.Tokens[t.Token]
+	return m.Tokens[t.Body]
 }
 
 type MockBasicAuth struct {

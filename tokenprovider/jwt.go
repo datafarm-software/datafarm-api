@@ -109,7 +109,7 @@ func (j *jwtAuth) GenerateToken() (string, time.Duration, error) {
 
 func (j *jwtAuth) IsValidToken(tr TokenResponse) bool {
 	claims := jwt.MapClaims{}
-	token, err := jwt.ParseWithClaims(tr.Token, claims,
+	token, err := jwt.ParseWithClaims(tr.Body, claims,
 		func(token *jwt.Token) (any, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
 				return nil, nil
@@ -117,6 +117,7 @@ func (j *jwtAuth) IsValidToken(tr TokenResponse) bool {
 			return j.getPublicKey(), nil
 		})
 	if err != nil {
+		log.Printf("token: %s\n", tr.Body)
 		log.Printf("token parsing error: %v", err)
 		return false
 	}

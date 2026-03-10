@@ -136,6 +136,7 @@ func TestGetDeviceData(t *testing.T) {
 		mockDeviceInfo        deviceinfo.Schema
 		mockTokens            map[string]bool
 		token                 string
+		deviceId              string
 		deviceRequest         datafetcher.DeviceDataRequest
 	}{
 
@@ -201,9 +202,9 @@ func TestGetDeviceData(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token: ValidToken,
+			token:    ValidToken,
+			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				DeviceId:   RegisteredDeviceId,
 				QueryField: RegisteredQueryField,
 				Start:      Start,
 				Stop:       Stop,
@@ -215,8 +216,8 @@ func TestGetDeviceData(t *testing.T) {
 			wantStatus: http.StatusUnauthorized,
 			token:      InvalidToken,
 			want:       nil,
+			deviceId:   RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				DeviceId:   RegisteredDeviceId,
 				QueryField: RegisteredQueryField,
 				Start:      Start,
 				Stop:       Stop,
@@ -299,9 +300,9 @@ func TestGetDeviceData(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token: ValidToken,
+			token:    ValidToken,
+			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				DeviceId:   RegisteredDeviceId,
 				QueryField: RegisteredQueryField,
 				Start:      Start,
 				Stop:       Stop,
@@ -391,9 +392,9 @@ func TestGetDeviceData(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token: ValidToken,
+			token:    ValidToken,
+			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				DeviceId:   RegisteredDeviceId,
 				QueryField: RegisteredQueryField,
 				Start:      Start,
 				Stop:       Stop,
@@ -483,13 +484,15 @@ func TestGetDeviceData(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token: ValidToken,
+			token:    ValidToken,
+			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				DeviceId:   RegisteredDeviceId,
 				QueryField: RegisteredQueryField,
 				Start:      RelativeStart,
 			},
 		},
+
+		"no data in requested range": {},
 	}
 
 	db, err := miniredis.Run()
@@ -521,7 +524,7 @@ func TestGetDeviceData(t *testing.T) {
 			require.Nil(t, err)
 			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
-			route := "/api/v1/device/" + tc.deviceRequest.DeviceId
+			route := "/api/v1/device/" + tc.deviceId
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token), tc.deviceRequest)
 			if resp.Code != tc.wantStatus {
