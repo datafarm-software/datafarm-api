@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"slices"
+	"sync"
 
 	cfy "github.com/geraud22/config-from-yaml"
 	"github.com/geraud22/datafarm-api/authstore"
@@ -14,6 +15,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var once sync.Once
 var testingRedisOpts RedisOpts
 
 type TestingRedis struct {
@@ -36,12 +38,12 @@ func NewTestingRedis(addr string) (*TestingRedis, error) {
 			return
 		}
 		testingRedisOpts = opts.RedisOpts
-		if addr != "" {
-			testingRedisOpts.Addr = addr
-		}
 	})
 	if topErr != nil {
 		return nil, topErr
+	}
+	if addr != "" {
+		testingRedisOpts.Addr = addr
 	}
 	testingRedisOpts.Db = TestingDb
 	db, err := NewRedis(testingRedisOpts)

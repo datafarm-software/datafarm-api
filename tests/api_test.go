@@ -37,6 +37,7 @@ const RegisteredQueryField = "temperature"
 const RegisteredSensor = "temp-sensor"
 const ValidToken = "someToken0"
 const InvalidToken = "invalidToken0"
+const RelativeStart = "-6h"
 
 var Start = time.Now().Add(-24 * time.Hour).Format(time.RFC3339)
 var Stop = time.Now().Format(time.RFC3339)
@@ -91,16 +92,13 @@ func TestLogin(t *testing.T) {
 		},
 	}
 
-	var err error
-	_, humaApi := humatest.New(t)
-	a.RegisterHumaOperations(humaApi)
 	db, err := miniredis.Run()
 	require.Nil(t, err)
 	defer db.Close()
+	_, humaApi := humatest.New(t)
+	a.RegisterHumaOperations(humaApi)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			a.TokenProvider = &tokenprovider.MockTokenProvider{}
-			defer a.TokenProvider.Close()
 			testingRedis, err := redis.NewTestingRedis(db.Addr())
 			require.Nil(t, err)
 			defer testingRedis.Close()
@@ -110,6 +108,8 @@ func TestLogin(t *testing.T) {
 			require.Nil(t, err)
 			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
+			a.TokenProvider = &tokenprovider.MockTokenProvider{}
+			defer a.TokenProvider.Close()
 			encodedDetails := base64.StdEncoding.EncodeToString(
 				[]byte(tc.username + ":" + tc.password))
 			resp := humaApi.Post("/login",
@@ -399,17 +399,107 @@ func TestGetDeviceData(t *testing.T) {
 				Stop:       Stop,
 			},
 		},
+
+		"exclude data points outside requested time range, using relative start time": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: &datafetcher.ConsolidatedDeviceData{
+				DeviceData: []datafetcher.DeviceData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]any{
+							RegisteredQueryField: float64(23),
+						},
+					},
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: AlsoInsideTimeRange,
+						SensorData: map[string]any{
+							RegisteredQueryField: float64(25),
+						},
+					},
+				},
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: map[string]authstore.UserInfo{
+					RegisteredUsername: {
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     UserRole,
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDataFetcher: &datafetcher.ConsolidatedDeviceData{
+				DeviceData: []datafetcher.DeviceData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: OutsideTimeRange,
+						SensorData: map[string]any{
+							RegisteredQueryField: 22,
+						},
+					},
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]any{
+							RegisteredQueryField: 23,
+						},
+					},
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: AlsoInsideTimeRange,
+						SensorData: map[string]any{
+							RegisteredQueryField: 25,
+						},
+					},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToSensors: []deviceinfo.DeviceToSensor{
+					{
+						DeviceId:        RegisteredDeviceId,
+						AttachedSensors: []string{RegisteredSensor},
+					},
+				},
+				SensorToQF: []deviceinfo.SensorToQueryFields{
+					{
+						Sensor:      RegisteredSensor,
+						QueryFields: []string{RegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			deviceRequest: datafetcher.DeviceDataRequest{
+				DeviceId:   RegisteredDeviceId,
+				QueryField: RegisteredQueryField,
+				Start:      RelativeStart,
+			},
+		},
 	}
 
-	var err error
+	db, err := miniredis.Run()
+	require.Nil(t, err)
+	defer db.Close()
 	router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
 	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
 	humaApiMux := humamux.New(router, config)
 	humaTest := humatest.Wrap(t, humaApiMux)
 	a.RegisterHumaOperations(humaTest)
-	db, err := miniredis.Run()
-	require.Nil(t, err)
-	defer db.Close()
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			a.TokenProvider = &tokenprovider.MockTokenProvider{
