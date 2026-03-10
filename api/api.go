@@ -78,7 +78,8 @@ func Start(opts ApiOpts) error {
 	api.AdminRole = opts.AdminRole
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
 		router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
-		config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
+		config := huma.DefaultConfig("SensorData API", "1.0.0")
+		config.Servers = append(config.Servers, &huma.Server{URL: "/api/v1"})
 		humaApi := humamux.New(router, config)
 		api.RegisterHumaOperations(humaApi)
 		server := &http.Server{
@@ -135,7 +136,7 @@ func (a *Api) RegisterHumaOperations(api huma.API) {
 			{
 				Name:            "deviceId",
 				In:              "path",
-				Description:     "Device Id to get data for.",
+				Description:     "Device Id to request data from.",
 				Required:        true,
 				AllowEmptyValue: false,
 				Schema: &huma.Schema{
