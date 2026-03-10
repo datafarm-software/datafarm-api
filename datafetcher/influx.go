@@ -73,16 +73,19 @@ func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (*Consolidat
 
 func (i *InfluxDatafetcher) generateFluxQuery(metadata deviceinfo.DeviceInfo, queryRange string) string {
 	var queryBuilder strings.Builder
-	queryBuilder.WriteString(fmt.Sprintf(`from(bucket: "%s")`, metadata.Network))
-	queryBuilder.WriteString(fmt.Sprintf(` |> range(%s)`, queryRange))
-	queryBuilder.WriteString(fmt.Sprintf(` |> filter(fn: (r) => r["_measurement"] == "%s")`, metadata.Company))
-	queryBuilder.WriteString(fmt.Sprintf(` |> filter(fn: (r) => r["deviceID"] == "%s")`, metadata.DeviceId))
-	queryBuilder.WriteString(` |> filter(fn: (r) => `)
+	fmt.Fprintf(&queryBuilder, `from(bucket: "%s")`, metadata.Network)
+	fmt.Fprintf(&queryBuilder, ` |> range(%s)`, queryRange)
+	fmt.Fprintf(&queryBuilder, ` |> filter(fn: (r) => r["_measurement"] == "%s")`,
+		metadata.Company)
+	fmt.Fprintf(&queryBuilder, ` |> filter(fn: (r) => r["deviceID"] == "%s")`,
+		metadata.DeviceId)
+	fmt.Fprintf(&queryBuilder, ` |> filter(fn: (r) => `)
 	for _, filter := range metadata.QueryFields {
-		queryBuilder.WriteString(fmt.Sprintf(` r["_field"] == "%s" or`, filter))
+		fmt.Fprintf(&queryBuilder, ` r["_field"] == "%s" or`, filter)
 	}
-	queryBuilder.WriteString(` false)`) //NOTE: for clean syntax query termination, after the last iteration's 'or'
-	queryBuilder.WriteString(` |> yield(name: "last")`)
+	//NOTE: for clean syntax query termination, after the last iteration's 'or'
+	fmt.Fprintf(&queryBuilder, ` false)`)
+	fmt.Fprintf(&queryBuilder, ` |> yield(name: "last")`)
 	return queryBuilder.String()
 }
 
@@ -212,8 +215,9 @@ func (t *TestingInflux) PrepareDb(measurement string, mockDb *ConsolidatedDevice
 		return nil
 	}
 	t.testMeasurement = measurement
-	writeApi := t.influx.db.WriteAPI(testingInfluxOpts.Org, testingInfluxOpts.Org)
+	writeApi := t.influx.db.WriteAPIBlocking(testingInfluxOpts.Org, testingInfluxOpts.Org)
 	fields := make(map[string]any)
+	var err error
 	for _, dd := range mockDb.DeviceData {
 		for key, value := range dd.SensorData {
 			_, isStringValue := value.(string)
@@ -230,9 +234,13 @@ func (t *TestingInflux) PrepareDb(measurement string, mockDb *ConsolidatedDevice
 			fields,
 			dd.Timestamp,
 		)
-		writeApi.WritePoint(p)
+		if err = writeApi.WritePoint(context.Background(), p); err != nil {
+			break
+		}
 	}
-	writeApi.Flush()
+	if err != nil {
+		return fmt.Errorf("writing point: %v", err)
+	}
 	return nil
 }
 

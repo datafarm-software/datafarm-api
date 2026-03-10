@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"testing"
 	"time"
@@ -37,11 +36,13 @@ const RegisteredDeviceId = "device1"
 const RegisteredQueryField = "temperature"
 const RegisteredSensor = "temp-sensor"
 const ValidToken = "someToken0"
+const InvalidToken = "invalidToken0"
 
 var Start = time.Now().Add(-24 * time.Hour).Format(time.RFC3339)
 var Stop = time.Now().Format(time.RFC3339)
 var OutsideTimeRange = time.Now().Add(-25 * time.Hour)
-var InsideTimeRange = time.Now().Add(-1 * time.Hour)
+var InsideTimeRange = time.Now().Add(-2 * time.Hour)
+var AlsoInsideTimeRange = time.Now().Add(-1 * time.Hour)
 var a = &api.Api{}
 
 func TestLogin(t *testing.T) {
@@ -209,12 +210,104 @@ func TestGetDeviceData(t *testing.T) {
 			},
 		},
 
-		// "unknown token": {},
-		//
-		// "expired token": {},
-		//
-		// "get multiple data points within time range": {},
-		//
+		"unknown token": {
+			wantErr:    true,
+			wantStatus: http.StatusUnauthorized,
+			token:      InvalidToken,
+			want:       nil,
+			deviceRequest: datafetcher.DeviceDataRequest{
+				DeviceId:   RegisteredDeviceId,
+				QueryField: RegisteredQueryField,
+				Start:      Start,
+				Stop:       Stop,
+			},
+		},
+
+		"get multiple data points within time range": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: &datafetcher.ConsolidatedDeviceData{
+				DeviceData: []datafetcher.DeviceData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]any{
+							RegisteredQueryField: float64(23),
+						},
+					},
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: AlsoInsideTimeRange,
+						SensorData: map[string]any{
+							RegisteredQueryField: float64(25),
+						},
+					},
+				},
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: map[string]authstore.UserInfo{
+					RegisteredUsername: {
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     UserRole,
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDataFetcher: &datafetcher.ConsolidatedDeviceData{
+				DeviceData: []datafetcher.DeviceData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]any{
+							RegisteredQueryField: 23,
+						},
+					},
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: AlsoInsideTimeRange,
+						SensorData: map[string]any{
+							RegisteredQueryField: 25,
+						},
+					},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToSensors: []deviceinfo.DeviceToSensor{
+					{
+						DeviceId:        RegisteredDeviceId,
+						AttachedSensors: []string{RegisteredSensor},
+					},
+				},
+				SensorToQF: []deviceinfo.SensorToQueryFields{
+					{
+						Sensor:      RegisteredSensor,
+						QueryFields: []string{RegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			deviceRequest: datafetcher.DeviceDataRequest{
+				DeviceId:   RegisteredDeviceId,
+				QueryField: RegisteredQueryField,
+				Start:      Start,
+				Stop:       Stop,
+			},
+		},
+
 		// "get only a few data points in the time range": {},
 	}
 
@@ -255,12 +348,11 @@ func TestGetDeviceData(t *testing.T) {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
 			}
 			defer resp.Result().Body.Close()
-			var cdd datafetcher.ConsolidatedDeviceData
-			body := resp.Body.Bytes()
-			log.Printf("body:%v\n", body)
-			err = json.Unmarshal(body, &cdd)
-			require.Nil(t, err)
 			if !tc.wantErr {
+				var cdd datafetcher.ConsolidatedDeviceData
+				body := resp.Body.Bytes()
+				err = json.Unmarshal(body, &cdd)
+				require.Nil(t, err)
 				if diff := cmp.Diff(tc.want, &cdd); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}

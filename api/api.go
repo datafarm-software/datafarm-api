@@ -351,7 +351,6 @@ func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
 	var tr tokenprovider.TokenResponse
 	tr.Token = strings.TrimSpace(parts[1])
 	if !a.TokenProvider.IsValidToken(tr) {
-		log.Printf("invalid token")
 		if err := a.AuthStore.DeleteToken(authstore.UserToken{Token: tr.Token}); err != nil {
 			log.Printf("deleting token: %v", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError),
