@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/geraud22/datafarm-api/authstore"
 	"github.com/redis/go-redis/v9"
@@ -11,6 +12,7 @@ import (
 )
 
 var ctx = context.Background()
+var once sync.Once
 
 type RedisOpts struct {
 	Addr     string `mapstructure:"address" validate:"required"`
@@ -39,9 +41,11 @@ func NewRedis(opts RedisOpts) (*Redis, error) {
 }
 
 func (r *Redis) Close() error {
-	if err := r.db.Close(); err != nil {
-		log.Printf("error closing redis client: %v", err)
-	}
+	once.Do(func() {
+		if err := r.db.Close(); err != nil {
+			log.Printf("error closing redis client: %v", err)
+		}
+	})
 	return nil
 }
 

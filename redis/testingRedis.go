@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"slices"
-	"sync"
 
 	cfy "github.com/geraud22/config-from-yaml"
 	"github.com/geraud22/datafarm-api/authstore"
@@ -15,7 +14,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var once sync.Once
 var testingRedisOpts RedisOpts
 
 type TestingRedis struct {
