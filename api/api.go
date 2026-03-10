@@ -232,88 +232,90 @@ func (a *Api) RegisterHumaOperations(api huma.API) {
 }
 
 func (a *Api) GetDeviceData(ctx context.Context,
-	in *datafetcher.DeviceDataRequest) (*struct {
+	in *struct {
+		Body *datafetcher.DeviceDataRequest
+	}) (*struct {
 	Body *datafetcher.ConsolidatedDeviceData
 }, error) {
 	var relativeTime bool
-	in.Start = strings.TrimSpace(in.Start)
-	if RELATIVETIME_REGEX.MatchString(in.Start) {
+	in.Body.Start = strings.TrimSpace(in.Body.Start)
+	if RELATIVETIME_REGEX.MatchString(in.Body.Start) {
 		relativeTime = true
 	} else {
-		if _, err := time.Parse(time.RFC3339Nano, in.Start); err != nil {
+		if _, err := time.Parse(time.RFC3339Nano, in.Body.Start); err != nil {
 			log.Printf("parsing start: %v", err)
 			return nil, huma.Error400BadRequest("Start time is invalid rfc.")
 		}
 	}
 	if relativeTime {
-		in.Stop = ""
+		in.Body.Stop = ""
 	} else {
-		if in.Stop == "" {
+		if in.Body.Stop == "" {
 			return nil, huma.Error400BadRequest(
 				"Stop time is empty, when start is valid rfc format.")
 		}
-		in.Stop = strings.TrimSpace(in.Stop)
-		if _, err := time.Parse(time.RFC3339Nano, in.Stop); err != nil {
+		in.Body.Stop = strings.TrimSpace(in.Body.Stop)
+		if _, err := time.Parse(time.RFC3339Nano, in.Body.Stop); err != nil {
 			log.Printf("parsing stop: %v")
 			return nil, huma.Error400BadRequest("Stop time is invalid rfc.")
 		}
 	}
 	//TODO: allow users to ask for multiple queryfields at once
-	queryFields := []string{in.QueryField}
-	if in.QueryField == "all" {
-		attachedSensors, err := a.DeviceInfo.GetAttachedSensors(in.DeviceId)
+	queryFields := []string{in.Body.QueryField}
+	if in.Body.QueryField == "all" {
+		attachedSensors, err := a.DeviceInfo.GetAttachedSensors(in.Body.DeviceId)
 		if err != nil {
-			log.Printf("error getting attached sensors for: %s: %v", in.DeviceId, err)
+			log.Printf("error getting attached sensors for: %s: %v", in.Body.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting attached sensors for deviceId.")
 		}
 		queryFields, err = a.DeviceInfo.GetQueryFields(attachedSensors)
 		if err != nil {
-			log.Printf("error getting query fields for: %s: %v", in.DeviceId, err)
+			log.Printf("error getting query fields for: %s: %v", in.Body.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting query fields for deviceId.")
 		}
 	}
-	company, err := a.DeviceInfo.GetCompany(in.DeviceId)
+	company, err := a.DeviceInfo.GetCompany(in.Body.DeviceId)
 	if err != nil {
-		log.Printf("getting company: %s, error: %v", in.DeviceId, err)
+		log.Printf("getting company: %s, error: %v", in.Body.DeviceId, err)
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting device company.")
 	}
-	network, err := a.DeviceInfo.GetNetwork(in.DeviceId)
+	network, err := a.DeviceInfo.GetNetwork(in.Body.DeviceId)
 	if err != nil {
-		log.Printf("getting network: %s, error: %v", in.DeviceId, err)
+		log.Printf("getting network: %s, error: %v", in.Body.DeviceId, err)
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting device network.")
 	}
 	metadata := deviceinfo.DeviceInfo{
 		Company:     company,
-		DeviceId:    in.DeviceId,
+		DeviceId:    in.Body.DeviceId,
 		Network:     network,
 		QueryFields: queryFields,
-		Start:       in.Start,
-		Stop:        in.Stop,
+		Start:       in.Body.Start,
+		Stop:        in.Body.Stop,
 	}
-	userRole, ok := ctx.Value("user-role").(string)
+	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
-		log.Printf("user role is not a string")
+		log.Printf("user role is not UserInfo")
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user role.")
 	}
-	if strings.ToLower(userRole) == a.AdminRole {
-		company, err := a.DeviceInfo.GetCompany(in.DeviceId)
+	if strings.ToLower(user.Role) == a.AdminRole {
+		company, err := a.DeviceInfo.GetCompany(in.Body.DeviceId)
 		if err != nil {
 			log.Printf("error getting company for admin request on device: %s: %v",
-				in.DeviceId, err)
+				in.Body.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting associated company for deviceId.")
 		}
 		//NOTE: if deviceId belongs to other company than admin is assigned to:
 		if company != metadata.Company {
-			network, err := a.DeviceInfo.GetNetwork(in.DeviceId)
+			network, err := a.DeviceInfo.GetNetwork(in.Body.DeviceId)
 			if err != nil {
 				log.Printf("error getting network for admin request on deviceId: %s: %v",
-					in.DeviceId, err)
+					in.Body.DeviceId, err)
 				return nil, huma.Error500InternalServerError(
 					"Internal error getting associated network for deviceId.")
 			}

@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
+	"log"
 	"net/http"
 	"testing"
 	"time"
@@ -29,7 +29,7 @@ const UnregisteredUsername = "user2"
 const RegisteredPassword = "@Password1"
 const UnregisteredPassword = "@Password2"
 const RegisteredCompany = "company"
-const RegisteredNetwork = "network"
+const RegisteredNetwork = "Datafarm"
 const UserRole = "1"
 const AdminUserRole = "3"
 const TestInfluxMeasurement = "mock-data"
@@ -147,7 +147,7 @@ func TestGetDeviceData(t *testing.T) {
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
 						SensorData: map[string]any{
-							RegisteredQueryField: 23,
+							RegisteredQueryField: float64(23),
 						},
 					},
 				},
@@ -255,13 +255,13 @@ func TestGetDeviceData(t *testing.T) {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
 			}
 			defer resp.Result().Body.Close()
-			body, err := io.ReadAll(resp.Body)
-			require.Nil(t, err)
-			var cdd *datafetcher.ConsolidatedDeviceData
-			err = json.Unmarshal(body, cdd)
+			var cdd datafetcher.ConsolidatedDeviceData
+			body := resp.Body.Bytes()
+			log.Printf("body:%v\n", body)
+			err = json.Unmarshal(body, &cdd)
 			require.Nil(t, err)
 			if !tc.wantErr {
-				if diff := cmp.Diff(tc.want, cdd); diff != "" {
+				if diff := cmp.Diff(tc.want, &cdd); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
 			}

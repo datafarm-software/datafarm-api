@@ -8,9 +8,9 @@ import (
 
 type DeviceDataRequest struct {
 	DeviceId   string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-	QueryField string `query:"queryField" required:"true"`
-	Start      string `query:"start" required:"true"`
-	Stop       string `query:"stop" required:"false"`
+	QueryField string `json:"queryField" required:"true"`
+	Start      string `json:"start" required:"true"`
+	Stop       string `json:"stop" required:"false"`
 }
 
 type ConsolidatedDeviceData struct {
