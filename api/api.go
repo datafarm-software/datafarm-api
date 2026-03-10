@@ -134,11 +134,21 @@ func (a *Api) RegisterHumaOperations(api huma.API) {
 		Middlewares: huma.Middlewares{a.verifyToken},
 		Parameters: []*huma.Param{
 			{
-				Name:            "deviceId",
-				In:              "path",
-				Description:     "Device Id to request data from.",
-				Required:        true,
-				AllowEmptyValue: false,
+				Name:        "Authorization",
+				In:          "header",
+				Description: "Token used for authentication. Note 'Bearer' prefix.",
+				Required:    true,
+				Schema: &huma.Schema{
+					Type:    "string",
+					Pattern: `^[\w_-.]$`,
+				},
+				Example: "Bearer someValidToken",
+			},
+			{
+				Name:        "deviceId",
+				In:          "path",
+				Description: "Device Id to request data from.",
+				Required:    true,
 				Schema: &huma.Schema{
 					Type:    "string",
 					Pattern: `^\w{1,30}$`,
@@ -234,7 +244,8 @@ func (a *Api) RegisterHumaOperations(api huma.API) {
 
 func (a *Api) GetDeviceData(ctx context.Context,
 	in *struct {
-		Body *datafetcher.DeviceDataRequest
+		DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+		Body     *datafetcher.DeviceDataRequest
 	}) (*struct {
 	Body *datafetcher.ConsolidatedDeviceData
 }, error) {
@@ -264,34 +275,34 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	//TODO: allow users to ask for multiple queryfields at once
 	queryFields := []string{in.Body.QueryField}
 	if in.Body.QueryField == "all" {
-		attachedSensors, err := a.DeviceInfo.GetAttachedSensors(in.Body.DeviceId)
+		attachedSensors, err := a.DeviceInfo.GetAttachedSensors(in.DeviceId)
 		if err != nil {
-			log.Printf("error getting attached sensors for: %s: %v", in.Body.DeviceId, err)
+			log.Printf("error getting attached sensors for: %s: %v", in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting attached sensors for deviceId.")
 		}
 		queryFields, err = a.DeviceInfo.GetQueryFields(attachedSensors)
 		if err != nil {
-			log.Printf("error getting query fields for: %s: %v", in.Body.DeviceId, err)
+			log.Printf("error getting query fields for: %s: %v", in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting query fields for deviceId.")
 		}
 	}
-	company, err := a.DeviceInfo.GetCompany(in.Body.DeviceId)
+	company, err := a.DeviceInfo.GetCompany(in.DeviceId)
 	if err != nil {
-		log.Printf("getting company: %s, error: %v", in.Body.DeviceId, err)
+		log.Printf("getting company: %s, error: %v", in.DeviceId, err)
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting device company.")
 	}
-	network, err := a.DeviceInfo.GetNetwork(in.Body.DeviceId)
+	network, err := a.DeviceInfo.GetNetwork(in.DeviceId)
 	if err != nil {
-		log.Printf("getting network: %s, error: %v", in.Body.DeviceId, err)
+		log.Printf("getting network: %s, error: %v", in.DeviceId, err)
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting device network.")
 	}
 	metadata := deviceinfo.DeviceInfo{
 		Company:     company,
-		DeviceId:    in.Body.DeviceId,
+		DeviceId:    in.DeviceId,
 		Network:     network,
 		QueryFields: queryFields,
 		Start:       in.Body.Start,
@@ -304,19 +315,19 @@ func (a *Api) GetDeviceData(ctx context.Context,
 			"Internal error getting user role.")
 	}
 	if strings.ToLower(user.Role) == a.AdminRole {
-		company, err := a.DeviceInfo.GetCompany(in.Body.DeviceId)
+		company, err := a.DeviceInfo.GetCompany(in.DeviceId)
 		if err != nil {
 			log.Printf("error getting company for admin request on device: %s: %v",
-				in.Body.DeviceId, err)
+				in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting associated company for deviceId.")
 		}
 		//NOTE: if deviceId belongs to other company than admin is assigned to:
 		if company != metadata.Company {
-			network, err := a.DeviceInfo.GetNetwork(in.Body.DeviceId)
+			network, err := a.DeviceInfo.GetNetwork(in.DeviceId)
 			if err != nil {
 				log.Printf("error getting network for admin request on deviceId: %s: %v",
-					in.Body.DeviceId, err)
+					in.DeviceId, err)
 				return nil, huma.Error500InternalServerError(
 					"Internal error getting associated network for deviceId.")
 			}
