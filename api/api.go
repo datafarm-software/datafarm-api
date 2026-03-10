@@ -245,7 +245,7 @@ func (a *Api) RegisterHumaOperations(api huma.API) {
 func (a *Api) GetDeviceData(ctx context.Context,
 	in *struct {
 		DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-		Body     *datafetcher.DeviceDataRequest
+		Body     datafetcher.DeviceDataRequest
 	}) (*struct {
 	Body *datafetcher.ConsolidatedDeviceData
 }, error) {
@@ -362,6 +362,7 @@ func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
 	}
 	var tr tokenprovider.TokenResponse
 	tr.Body = strings.TrimSpace(parts[1])
+	tr.Body = strings.Trim(tr.Body, `"`)
 	if !a.TokenProvider.IsValidToken(tr) {
 		if err := a.AuthStore.DeleteToken(authstore.UserToken{Token: tr.Body}); err != nil {
 			log.Printf("deleting token: %v", err)
