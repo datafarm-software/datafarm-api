@@ -23,7 +23,7 @@ type DeviceData struct {
 }
 
 type TestingDataFetcher interface {
-	PrepareDb(measurement string, cdd *ConsolidatedDeviceData) error
+	PrepareDb(*deviceinfo.Schema, *ConsolidatedDeviceData) error
 }
 
 type DataFetcher interface {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +17,10 @@ import (
 	influxApi "github.com/influxdata/influxdb-client-go/v2/api"
 )
 
+const TestOrg = "test-org"
+
+var ctx context.Context
+
 type DataRow struct {
 	DeviceID string
 	Field    string
@@ -24,9 +29,10 @@ type DataRow struct {
 }
 
 type InfluxOpts struct {
-	Org   string `mapstructure:"org" validate:"required"`
-	Url   string `mapstructure:"url" validate:"required"`
-	Token string `mapstructure:"token" validate:"required"`
+	Org    string `mapstructure:"org" validate:"required"`
+	Bucket string `mapstructure:"bucket" validate:"required"`
+	Url    string `mapstructure:"url" validate:"required"`
+	Token  string `mapstructure:"token" validate:"required"`
 }
 
 type InfluxDatafetcher struct {
@@ -160,9 +166,7 @@ var testingInfluxOpts InfluxOpts
 var once sync.Once
 
 type TestingInflux struct {
-	//NOTE: testMeasurement set during prepareDb
-	testMeasurement string
-	influx          *InfluxDatafetcher
+	influx *InfluxDatafetcher
 }
 
 func NewTestingInflux(configPath string) (DataFetcher, error) {
@@ -185,39 +189,57 @@ func NewTestingInflux(configPath string) (DataFetcher, error) {
 	if topErr != nil {
 		return nil, topErr
 	}
+	testingInfluxOpts.Org = TestOrg
 	db, err := NewInfluxDatafetcher(testingInfluxOpts)
 	if err != nil {
 		return nil, err
 	}
+	ctx = context.Background()
 	return &TestingInflux{
 		influx: db,
 	}, nil
 }
 
 func (t *TestingInflux) Close() error {
-	deleteApi := t.influx.db.DeleteAPI()
-	start := time.Now().Add(-168 * time.Hour)
-	stop := time.Now()
-	predicate := fmt.Sprintf(`_measurement="%s"`, t.testMeasurement)
-	err := deleteApi.DeleteWithName(context.Background(), testingInfluxOpts.Org,
-		testingInfluxOpts.Org, start, stop, predicate)
+	bucketApi := t.influx.db.BucketsAPI()
+	err := bucketApi.DeleteBucketWithID(ctx, t.bucketId)
 	if err != nil {
 		return err
 	}
 	return t.influx.Close()
 }
 
-func (t *TestingInflux) PrepareDb(measurement string, mockDb *ConsolidatedDeviceData) error {
-	if measurement == "" {
-		return fmt.Errorf("measurement is empty")
-	}
+func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, mockDb *ConsolidatedDeviceData) error {
 	if mockDb == nil {
 		return nil
 	}
-	t.testMeasurement = measurement
-	writeApi := t.influx.db.WriteAPIBlocking(testingInfluxOpts.Org, testingInfluxOpts.Org)
+	if allDevicesInfo == nil {
+		return nil
+	}
+	deviceInfoMap := deviceInfoMap(allDevicesInfo)
+	orgApi := t.influx.db.OrganizationsAPI()
+	org, err := orgApi.CreateOrganizationWithName(ctx, TestOrg)
+	if err != nil {
+		return fmt.Errorf("org api: %v", err)
+	}
+	bucketsApi := t.influx.db.BucketsAPI()
+	uniqueNetworks := make([]string, 0, len(allDevicesInfo.DeviceNetworks))
+	for _, dd := range allDevicesInfo.DeviceNetworks {
+		if slices.Contains(uniqueNetworks, dd.Network) {
+			continue
+		}
+		uniqueNetworks = append(uniqueNetworks, dd.Network)
+		if _, err = bucketsApi.CreateBucketWithName(ctx, org, dd.Network); err != nil {
+			break
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("buckets api: %v", err)
+	}
 	fields := make(map[string]any)
-	var err error
+	var writeApi influxApi.WriteAPI
+	var ok bool
+	var deviceInfo deviceinfo.DeviceInfo
 	for _, dd := range mockDb.DeviceData {
 		for key, value := range dd.SensorData {
 			_, isStringValue := value.(string)
@@ -226,26 +248,33 @@ func (t *TestingInflux) PrepareDb(measurement string, mockDb *ConsolidatedDevice
 			}
 			fields[key] = value
 		}
+		deviceInfo, ok = deviceInfoMap[dd.DeviceID]
+		if !ok {
+			break
+		}
+		writeApi = t.influx.db.WriteAPI(testingInfluxOpts.Org, deviceInfo.Network)
 		p := influxdb2.NewPoint(
-			measurement,
+			deviceInfo.Company,
 			map[string]string{
 				"deviceID": dd.DeviceID,
 			},
 			fields,
 			dd.Timestamp,
 		)
-		if err = writeApi.WritePoint(context.Background(), p); err != nil {
-			break
-		}
+		writeApi.WritePoint(p)
 	}
-	if err != nil {
-		return fmt.Errorf("writing point: %v", err)
+	if !ok {
+		return fmt.Errorf("could not find deviceInfo")
 	}
+	writeApi.Flush()
+	return nil
+}
+
+func deviceInfoMap(deviceInfo *deviceinfo.Schema) map[string]deviceinfo.DeviceInfo {
 	return nil
 }
 
 func (t *TestingInflux) GetData(metadata deviceinfo.DeviceInfo) (
 	*ConsolidatedDeviceData, error) {
-	metadata.Company = t.testMeasurement
 	return t.influx.GetData(metadata)
 }
