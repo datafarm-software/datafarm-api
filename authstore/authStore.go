@@ -5,7 +5,7 @@ import (
 )
 
 type Schema struct {
-	UserInfo   map[string]UserInfo
+	UserInfo   []UserInfo
 	UserTokens []UserToken
 }
 
@@ -14,7 +14,7 @@ type UserInfo struct {
 	Company  string `redis:"company"`
 	Role     string `redis:"role"`
 	Password string `redis:"password"`
-	Network  string
+	Network  string `redis:"network"`
 }
 
 type UserToken struct {

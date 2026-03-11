@@ -59,7 +59,8 @@ func (i *InfluxDatafetcher) Close() error {
 	return nil
 }
 
-func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (*ConsolidatedDeviceData, error) {
+func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
+	*ConsolidatedDeviceData, error) {
 	formattedQueryRange, err := i.formatQueryRange(metadata.Start, metadata.Stop)
 	if err != nil {
 		return nil, err

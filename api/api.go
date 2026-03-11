@@ -288,51 +288,35 @@ func (a *Api) GetDeviceData(ctx context.Context,
 				"Internal error getting query fields for deviceId.")
 		}
 	}
-	company, err := a.DeviceInfo.GetCompany(in.DeviceId)
-	if err != nil {
-		log.Printf("getting company: %s, error: %v", in.DeviceId, err)
-		return nil, huma.Error500InternalServerError(
-			"Internal error getting device company.")
-	}
-	network, err := a.DeviceInfo.GetNetwork(in.DeviceId)
-	if err != nil {
-		log.Printf("getting network: %s, error: %v", in.DeviceId, err)
-		return nil, huma.Error500InternalServerError(
-			"Internal error getting device network.")
-	}
-	metadata := deviceinfo.DeviceInfo{
-		Company:     company,
-		DeviceId:    in.DeviceId,
-		Network:     network,
-		QueryFields: queryFields,
-		Start:       in.Body.Start,
-		Stop:        in.Body.Stop,
-	}
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
 		log.Printf("user role is not UserInfo")
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user role.")
 	}
+	metadata := deviceinfo.DeviceInfo{
+		Company:     user.Company,
+		DeviceId:    in.DeviceId,
+		Network:     user.Network,
+		QueryFields: queryFields,
+		Start:       in.Body.Start,
+		Stop:        in.Body.Stop,
+	}
+	var err error
 	if strings.ToLower(user.Role) == a.AdminRole {
-		company, err := a.DeviceInfo.GetCompany(in.DeviceId)
+		metadata.Company, err = a.DeviceInfo.GetCompany(in.DeviceId)
 		if err != nil {
 			log.Printf("error getting company for admin request on device: %s: %v",
 				in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting associated company for deviceId.")
 		}
-		//NOTE: if deviceId belongs to other company than admin is assigned to:
-		if company != metadata.Company {
-			network, err := a.DeviceInfo.GetNetwork(in.DeviceId)
-			if err != nil {
-				log.Printf("error getting network for admin request on deviceId: %s: %v",
-					in.DeviceId, err)
-				return nil, huma.Error500InternalServerError(
-					"Internal error getting associated network for deviceId.")
-			}
-			metadata.Company = company
-			metadata.Network = network
+		metadata.Network, err = a.DeviceInfo.GetNetwork(in.DeviceId)
+		if err != nil {
+			log.Printf("error getting network for admin request on deviceId: %s: %v",
+				in.DeviceId, err)
+			return nil, huma.Error500InternalServerError(
+				"Internal error getting associated network for deviceId.")
 		}
 	}
 	deviceData, err := a.DataFetcher.GetData(metadata)

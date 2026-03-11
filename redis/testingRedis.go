@@ -94,15 +94,15 @@ func (t *TestingRedis) PrepareAuthStore(mockDb authstore.Schema) error {
 			pipe.Set(ctx, "userToken:"+u.Username, u.Token, u.Expiration)
 			pipe.Set(ctx, "tokenUser:"+u.Token, u.Username, u.Expiration)
 		}
-		for k, v := range mockDb.UserInfo {
+		for _, user := range mockDb.UserInfo {
 			hashedPassword, err = bcrypt.GenerateFromPassword(
-				[]byte(v.Password), bcrypt.DefaultCost)
+				[]byte(user.Password), bcrypt.DefaultCost)
 			if err != nil {
-				break
+				return err
 			}
-			v.Password = string(hashedPassword)
-			pipe.Set(ctx, "unique:"+k, k, 0)
-			pipe.HSet(ctx, "user:"+k, v)
+			user.Password = string(hashedPassword)
+			pipe.Set(ctx, "unique:"+user.Username, user.Username, 0)
+			pipe.HSet(ctx, "user:"+user.Username, user)
 		}
 		return nil
 	}

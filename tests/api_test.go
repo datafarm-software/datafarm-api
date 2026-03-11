@@ -61,8 +61,8 @@ func TestLogin(t *testing.T) {
 			username:   RegisteredUsername,
 			password:   RegisteredPassword,
 			mockAuthStore: authstore.Schema{
-				UserInfo: map[string]authstore.UserInfo{
-					RegisteredUsername: {
+				UserInfo: []authstore.UserInfo{
+					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
 						Role:     UserRole,
@@ -79,8 +79,8 @@ func TestLogin(t *testing.T) {
 			username:   UnregisteredUsername,
 			password:   UnregisteredPassword,
 			mockAuthStore: authstore.Schema{
-				UserInfo: map[string]authstore.UserInfo{
-					RegisteredUsername: {
+				UserInfo: []authstore.UserInfo{
+					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
 						Role:     UserRole,
@@ -155,8 +155,8 @@ func TestGetDeviceData(t *testing.T) {
 				},
 			},
 			mockAuthStore: authstore.Schema{
-				UserInfo: map[string]authstore.UserInfo{
-					RegisteredUsername: {
+				UserInfo: []authstore.UserInfo{
+					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
 						Role:     UserRole,
@@ -246,8 +246,8 @@ func TestGetDeviceData(t *testing.T) {
 				},
 			},
 			mockAuthStore: authstore.Schema{
-				UserInfo: map[string]authstore.UserInfo{
-					RegisteredUsername: {
+				UserInfo: []authstore.UserInfo{
+					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
 						Role:     UserRole,
@@ -331,8 +331,8 @@ func TestGetDeviceData(t *testing.T) {
 				},
 			},
 			mockAuthStore: authstore.Schema{
-				UserInfo: map[string]authstore.UserInfo{
-					RegisteredUsername: {
+				UserInfo: []authstore.UserInfo{
+					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
 						Role:     UserRole,
@@ -423,8 +423,8 @@ func TestGetDeviceData(t *testing.T) {
 				},
 			},
 			mockAuthStore: authstore.Schema{
-				UserInfo: map[string]authstore.UserInfo{
-					RegisteredUsername: {
+				UserInfo: []authstore.UserInfo{
+					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
 						Role:     UserRole,
@@ -497,8 +497,8 @@ func TestGetDeviceData(t *testing.T) {
 			wantStatus: http.StatusOK,
 			want:       &datafetcher.ConsolidatedDeviceData{},
 			mockAuthStore: authstore.Schema{
-				UserInfo: map[string]authstore.UserInfo{
-					RegisteredUsername: {
+				UserInfo: []authstore.UserInfo{
+					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
 						Role:     UserRole,
@@ -557,8 +557,8 @@ func TestGetDeviceData(t *testing.T) {
 			wantStatus: http.StatusUnauthorized,
 			want:       &datafetcher.ConsolidatedDeviceData{},
 			mockAuthStore: authstore.Schema{
-				UserInfo: map[string]authstore.UserInfo{
-					RegisteredUsername: {
+				UserInfo: []authstore.UserInfo{
+					{
 						Username: RegisteredUsername,
 						Company:  OtherCompanyThanDevice,
 						Role:     UserRole,
@@ -627,8 +627,8 @@ func TestGetDeviceData(t *testing.T) {
 				},
 			},
 			mockAuthStore: authstore.Schema{
-				UserInfo: map[string]authstore.UserInfo{
-					RegisteredUsername: {
+				UserInfo: []authstore.UserInfo{
+					{
 						Username: RegisteredUsername,
 						Company:  OtherCompanyThanDevice,
 						Role:     AdminUserRole,
