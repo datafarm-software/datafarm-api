@@ -706,7 +706,7 @@ func TestGetDeviceData(t *testing.T) {
 			a.DataFetcher, err = datafetcher.NewTestingInflux("../config.yml")
 			require.Nil(t, err)
 			defer a.DataFetcher.Close()
-			err = a.DataFetcher.PrepareDb(RegisteredCompany, tc.mockDataFetcher)
+			err = a.DataFetcher.PrepareDb(&tc.mockDeviceInfo, tc.mockDataFetcher)
 			require.Nil(t, err)
 			err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
 			require.Nil(t, err)

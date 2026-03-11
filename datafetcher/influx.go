@@ -253,7 +253,7 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, mockDb *Con
 		}
 		deviceInfo, ok = deviceInfoMap[dd.DeviceID]
 		if !ok {
-			break
+			err = fmt.Errorf("could not find deviceInfo: %s", dd.DeviceID)
 		}
 		writeApi = t.influx.db.WriteAPI(testingInfluxOpts.Org, deviceInfo.Network)
 		p := influxdb2.NewPoint(
@@ -267,14 +267,26 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, mockDb *Con
 		writeApi.WritePoint(p)
 	}
 	if !ok {
-		return fmt.Errorf("could not find deviceInfo")
+		return err
 	}
 	writeApi.Flush()
 	return nil
 }
 
-func deviceInfoMap(deviceInfo *deviceinfo.Schema) map[string]deviceinfo.DeviceInfo {
-	return nil
+func deviceInfoMap(allDevicesInfo *deviceinfo.Schema) map[string]deviceinfo.DeviceInfo {
+	deviceInfoMap := make(map[string]deviceinfo.DeviceInfo)
+	var di deviceinfo.DeviceInfo
+	for _, dd := range allDevicesInfo.DeviceNetworks {
+		di = deviceInfoMap[dd.DeviceId]
+		di.Network = dd.Network
+		deviceInfoMap[dd.DeviceId] = di
+	}
+	for _, dd := range allDevicesInfo.DeviceCompanies {
+		di = deviceInfoMap[dd.DeviceId]
+		di.Company = dd.Company
+		deviceInfoMap[dd.DeviceId] = di
+	}
+	return deviceInfoMap
 }
 
 func (t *TestingInflux) GetData(metadata deviceinfo.DeviceInfo) (
