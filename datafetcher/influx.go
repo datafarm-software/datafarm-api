@@ -29,10 +29,9 @@ type DataRow struct {
 }
 
 type InfluxOpts struct {
-	Org    string `mapstructure:"org" validate:"required"`
-	Bucket string `mapstructure:"bucket" validate:"required"`
-	Url    string `mapstructure:"url" validate:"required"`
-	Token  string `mapstructure:"token" validate:"required"`
+	Org   string `mapstructure:"org" validate:"required"`
+	Url   string `mapstructure:"url" validate:"required"`
+	Token string `mapstructure:"token" validate:"required"`
 }
 
 type InfluxDatafetcher struct {
@@ -158,7 +157,7 @@ func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string
 	return fmt.Sprintf("start: %s", startTime), nil
 }
 
-func (i *InfluxDatafetcher) PrepareDb(string, *ConsolidatedDeviceData) error {
+func (i *InfluxDatafetcher) PrepareDb(*deviceinfo.Schema, *ConsolidatedDeviceData) error {
 	return nil
 }
 
