@@ -201,10 +201,13 @@ func NewTestingInflux(configPath string) (DataFetcher, error) {
 }
 
 func (t *TestingInflux) Close() error {
-	bucketApi := t.influx.db.BucketsAPI()
-	err := bucketApi.DeleteBucketWithID(ctx, t.bucketId)
+	orgApi := t.influx.db.OrganizationsAPI()
+	org, err := orgApi.FindOrganizationByName(ctx, TestOrg)
 	if err != nil {
-		return err
+		return fmt.Errorf("finding org: %v", err)
+	}
+	if err = orgApi.DeleteOrganization(ctx, org); err != nil {
+		return fmt.Errorf("deleting org: %v", err)
 	}
 	return t.influx.Close()
 }
