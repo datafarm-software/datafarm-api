@@ -44,7 +44,9 @@ var Stop = time.Now().Format(time.RFC3339)
 var OutsideTimeRange = time.Now().Add(-25 * time.Hour)
 var InsideTimeRange = time.Now().Add(-2 * time.Hour)
 var AlsoInsideTimeRange = time.Now().Add(-1 * time.Hour)
-var a = &api.Api{}
+var a = &api.Api{
+	AdminRole: AdminUserRole,
+}
 
 func TestLogin(t *testing.T) {
 	tests := map[string]struct {

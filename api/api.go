@@ -74,8 +74,8 @@ func Start(opts ApiOpts) error {
 		DeviceInfo: redis, DataFetcher: df,
 		TokenProvider: tokenAuth,
 		AuthStore:     redis,
+		AdminRole:     opts.AdminRole,
 	}
-	api.AdminRole = opts.AdminRole
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
 		router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
 		config := huma.DefaultConfig("SensorData API", "1.0.0")
@@ -288,6 +288,20 @@ func (a *Api) GetDeviceData(ctx context.Context,
 				"Internal error getting query fields for deviceId.")
 		}
 	}
+	deviceCompany, err := a.DeviceInfo.GetCompany(in.DeviceId)
+	if err != nil {
+		log.Printf("error getting company for admin request on device: %s: %v",
+			in.DeviceId, err)
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting associated company for deviceId.")
+	}
+	deviceNetwork, err := a.DeviceInfo.GetNetwork(in.DeviceId)
+	if err != nil {
+		log.Printf("error getting network for admin request on deviceId: %s: %v",
+			in.DeviceId, err)
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting associated network for deviceId.")
+	}
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
 		log.Printf("user role is not UserInfo")
@@ -302,21 +316,22 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		Start:       in.Body.Start,
 		Stop:        in.Body.Stop,
 	}
-	var err error
-	if strings.ToLower(user.Role) == a.AdminRole {
-		metadata.Company, err = a.DeviceInfo.GetCompany(in.DeviceId)
-		if err != nil {
-			log.Printf("error getting company for admin request on device: %s: %v",
-				in.DeviceId, err)
-			return nil, huma.Error500InternalServerError(
-				"Internal error getting associated company for deviceId.")
+	isAdminUser := strings.ToLower(user.Role) == a.AdminRole
+	if isAdminUser {
+		metadata.Company = deviceCompany
+		metadata.Network = deviceNetwork
+	} else {
+		if deviceCompany != user.Company {
+			log.Printf("user: %s requested deviceId: %s. User Company: %s, Device Company: %s",
+				user.Username, in.DeviceId, user.Company, deviceCompany)
+			return nil, huma.Error401Unauthorized(
+				"Unauthorized for access to this device.")
 		}
-		metadata.Network, err = a.DeviceInfo.GetNetwork(in.DeviceId)
-		if err != nil {
-			log.Printf("error getting network for admin request on deviceId: %s: %v",
-				in.DeviceId, err)
-			return nil, huma.Error500InternalServerError(
-				"Internal error getting associated network for deviceId.")
+		if deviceNetwork != user.Network {
+			log.Printf("user: %s requested deviceId: %s. User Network: %s, Device Network: %s",
+				user.Username, in.DeviceId, user.Network, deviceNetwork)
+			return nil, huma.Error401Unauthorized(
+				"Unauthorized for access to this device.")
 		}
 	}
 	deviceData, err := a.DataFetcher.GetData(metadata)
