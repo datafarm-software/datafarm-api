@@ -250,26 +250,34 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	Body *datafetcher.ConsolidatedDeviceData
 }, error) {
 	var relativeTime bool
+	var err error
+	var rfcStart time.Time
+	var rfcStop time.Time
 	in.Body.Start = strings.TrimSpace(in.Body.Start)
 	if RELATIVETIME_REGEX.MatchString(in.Body.Start) {
 		relativeTime = true
+		in.Body.Stop = ""
 	} else {
-		if _, err := time.Parse(time.RFC3339Nano, in.Body.Start); err != nil {
+		rfcStart, err = time.Parse(time.RFC3339Nano, in.Body.Start)
+		if err != nil {
 			log.Printf("parsing start: %v", err)
 			return nil, huma.Error400BadRequest("Start time is invalid rfc.")
 		}
+		if rfcStart.UnixMilli() >= time.Now().UnixMilli() {
+			return nil, huma.Error400BadRequest("Start time is in the future.")
+		}
 	}
-	if relativeTime {
-		in.Body.Stop = ""
-	} else {
+	if !relativeTime {
 		if in.Body.Stop == "" {
-			return nil, huma.Error400BadRequest(
-				"Stop time is empty, when start is valid rfc format.")
+			return nil, huma.Error400BadRequest("No stop time provided.")
 		}
 		in.Body.Stop = strings.TrimSpace(in.Body.Stop)
-		if _, err := time.Parse(time.RFC3339Nano, in.Body.Stop); err != nil {
+		if rfcStop, err = time.Parse(time.RFC3339Nano, in.Body.Stop); err != nil {
 			log.Printf("parsing stop: %v")
 			return nil, huma.Error400BadRequest("Stop time is invalid rfc.")
+		}
+		if rfcStart.UnixMilli() >= rfcStop.UnixMilli() {
+			return nil, huma.Error400BadRequest("Stop time is greater than start time.")
 		}
 	}
 	//TODO: allow users to ask for multiple queryfields at once

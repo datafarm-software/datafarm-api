@@ -40,6 +40,8 @@ const InvalidToken = "invalidToken0"
 const RelativeStart = "-6h"
 
 var Start = time.Now().Add(-24 * time.Hour).Format(time.RFC3339)
+var StartGreaterThanStop = time.Now().Add(1 * time.Hour).Format(time.RFC3339)
+var FutureStart = time.Now().Add(1 * time.Hour).Format(time.RFC3339)
 var Stop = time.Now().Format(time.RFC3339)
 var OutsideTimeRange = time.Now().Add(-25 * time.Hour)
 var InsideTimeRange = time.Now().Add(-2 * time.Hour)
@@ -222,6 +224,32 @@ func TestGetDeviceData(t *testing.T) {
 			deviceRequest: datafetcher.DeviceDataRequest{
 				QueryField: RegisteredQueryField,
 				Start:      Start,
+				Stop:       Stop,
+			},
+		},
+
+		"start time in future": {
+			wantErr:    true,
+			wantStatus: http.StatusBadRequest,
+			token:      ValidToken,
+			want:       nil,
+			deviceId:   RegisteredDeviceId,
+			deviceRequest: datafetcher.DeviceDataRequest{
+				QueryField: RegisteredQueryField,
+				Start:      FutureStart,
+				Stop:       Stop,
+			},
+		},
+
+		"start time greater than stop time": {
+			wantErr:    true,
+			wantStatus: http.StatusBadRequest,
+			token:      ValidToken,
+			want:       nil,
+			deviceId:   RegisteredDeviceId,
+			deviceRequest: datafetcher.DeviceDataRequest{
+				QueryField: RegisteredQueryField,
+				Start:      StartGreaterThanStop,
 				Stop:       Stop,
 			},
 		},
