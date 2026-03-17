@@ -1,0 +1,34 @@
+name: API Contract Check
+
+on:
+  pull_request:
+    branches: [huma]
+
+jobs:
+  check-api:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Install oasdiff
+        run: go install github.com/oasdiff/oasdiff/cmd/oasdiff@latest
+
+      - name: Generate OpenAPI
+        run: ./scripts/generate-openapi-spec.sh
+
+      - name: Detect Changes
+        run: |
+          oasdiff diff api/openapi.yaml api/openapi.generated.yaml || true
+
+      - name: Fail if spec changed
+        run: |
+          if ! diff -q api/openapi.yaml api/openapi.generated.yaml; then
+            echo "OpenAPI spec changed. Review and commit required."
+            exit 1
+          fi
