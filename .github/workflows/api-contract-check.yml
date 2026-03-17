@@ -18,7 +18,7 @@ jobs:
           go-version: "1.25"
 
       - name: Install oasdiff
-        run: go install github.com/oasdiff/oasdiff/cmd/oasdiff@latest
+        run: go install github.com/oasdiff/oasdiff@latest
 
       - name: Generate OpenAPI
         run: ./scripts/generate-openapi-spec.sh
