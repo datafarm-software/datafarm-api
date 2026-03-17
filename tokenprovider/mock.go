@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/geraud22/datafarm-api/authstore"
+	"github.com/datafarm-software/datafarm-api/authstore"
 )
 
 type MockTokenProvider struct {

@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
+	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
 	cfy "github.com/geraud22/config-from-yaml"
-	deviceinfo "github.com/geraud22/datafarm-api/device-info"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxApi "github.com/influxdata/influxdb-client-go/v2/api"
 )

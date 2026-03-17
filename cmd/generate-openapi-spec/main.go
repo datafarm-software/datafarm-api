@@ -6,7 +6,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
-	"github.com/geraud22/datafarm-api/api"
+	"github.com/datafarm-software/datafarm-api/api"
 	"github.com/gorilla/mux"
 	"gopkg.in/yaml.v3"
 )

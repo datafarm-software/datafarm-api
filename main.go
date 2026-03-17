@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
+	apiModule "github.com/datafarm-software/datafarm-api/api"
 	cfy "github.com/geraud22/config-from-yaml"
-	apiModule "github.com/geraud22/datafarm-api/api"
 )
 
 func main() {

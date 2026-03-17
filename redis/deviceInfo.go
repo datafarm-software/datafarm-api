@@ -3,7 +3,7 @@ package redis
 import (
 	"fmt"
 
-	deviceinfo "github.com/geraud22/datafarm-api/device-info"
+	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
 )
 
 const TestingDb = 13

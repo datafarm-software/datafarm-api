@@ -3,7 +3,7 @@ package datafetcher
 import (
 	"time"
 
-	deviceinfo "github.com/geraud22/datafarm-api/device-info"
+	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
 )
 
 type DeviceDataRequest struct {

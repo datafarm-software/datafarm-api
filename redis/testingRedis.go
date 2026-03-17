@@ -7,9 +7,9 @@ import (
 	"os"
 	"slices"
 
+	"github.com/datafarm-software/datafarm-api/authstore"
+	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
 	cfy "github.com/geraud22/config-from-yaml"
-	"github.com/geraud22/datafarm-api/authstore"
-	deviceinfo "github.com/geraud22/datafarm-api/device-info"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )

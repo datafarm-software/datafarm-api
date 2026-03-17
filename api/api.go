@@ -16,13 +16,13 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/danielgtaylor/huma/v2/humacli"
-	"github.com/geraud22/datafarm-api/authstore"
-	"github.com/geraud22/datafarm-api/datafetcher"
-	df "github.com/geraud22/datafarm-api/datafetcher"
-	deviceinfo "github.com/geraud22/datafarm-api/device-info"
-	"github.com/geraud22/datafarm-api/tokenprovider"
+	"github.com/datafarm-software/datafarm-api/authstore"
+	"github.com/datafarm-software/datafarm-api/datafetcher"
+	df "github.com/datafarm-software/datafarm-api/datafetcher"
+	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
+	"github.com/datafarm-software/datafarm-api/tokenprovider"
 
-	"github.com/geraud22/datafarm-api/redis"
+	"github.com/datafarm-software/datafarm-api/redis"
 	"github.com/gorilla/mux"
 )
 

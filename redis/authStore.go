@@ -6,7 +6,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/geraud22/datafarm-api/authstore"
+	"github.com/datafarm-software/datafarm-api/authstore"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
