@@ -34,8 +34,7 @@ const UserRole = "1"
 const AdminUserRole = "3"
 const RegisteredDeviceId = "device1"
 const RegisteredQueryField = "temperature"
-const AnotherRegisteredQueryField = "humidity"
-const RegisteredSensor = "weather-sensor"
+const RegisteredSensor = "temp-sensor"
 const ValidToken = "someToken0"
 const InvalidToken = "invalidToken0"
 const RelativeStart = "-6h"
@@ -211,8 +210,8 @@ func TestGetDeviceData(t *testing.T) {
 			token:    ValidToken,
 			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				QueryFields: []string{RegisteredQueryField},
-				Start:       RelativeStart,
+				QueryField: RegisteredQueryField,
+				Start:      RelativeStart,
 			},
 		},
 
@@ -223,8 +222,8 @@ func TestGetDeviceData(t *testing.T) {
 			want:       nil,
 			deviceId:   RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				QueryFields: []string{RegisteredQueryField},
-				Start:       RelativeStart,
+				QueryField: RegisteredQueryField,
+				Start:      RelativeStart,
 			},
 		},
 
@@ -235,9 +234,9 @@ func TestGetDeviceData(t *testing.T) {
 			want:       nil,
 			deviceId:   RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				QueryFields: []string{RegisteredQueryField},
-				Start:       FutureStart,
-				Stop:        Stop,
+				QueryField: RegisteredQueryField,
+				Start:      FutureStart,
+				Stop:       Stop,
 			},
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{
@@ -265,9 +264,9 @@ func TestGetDeviceData(t *testing.T) {
 			want:       nil,
 			deviceId:   RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				QueryFields: []string{RegisteredQueryField},
-				Start:       StartGreaterThanStop,
-				Stop:        Stop,
+				QueryField: RegisteredQueryField,
+				Start:      StartGreaterThanStop,
+				Stop:       Stop,
 			},
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{
@@ -367,9 +366,9 @@ func TestGetDeviceData(t *testing.T) {
 			token:    ValidToken,
 			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				QueryFields: []string{RegisteredQueryField},
-				Start:       Start,
-				Stop:        StopInFuture,
+				QueryField: RegisteredQueryField,
+				Start:      Start,
+				Stop:       StopInFuture,
 			},
 		},
 
@@ -452,96 +451,8 @@ func TestGetDeviceData(t *testing.T) {
 			token:    ValidToken,
 			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				QueryFields: []string{RegisteredQueryField},
-				Start:       RelativeStart,
-			},
-		},
-
-		"get multiple queryfields' data": {
-			wantErr:    false,
-			wantStatus: http.StatusOK,
-			want: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        float64(23),
-							AnotherRegisteredQueryField: float64(80),
-						},
-					},
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        float64(25),
-							AnotherRegisteredQueryField: float64(70),
-						},
-					},
-				},
-			},
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  RegisteredCompany,
-						Role:     UserRole,
-						Password: RegisteredPassword,
-						Network:  RegisteredNetwork,
-					},
-				},
-				UserTokens: []authstore.UserToken{
-					{Username: RegisteredUsername, Token: ValidToken},
-				},
-			},
-			mockDataFetcher: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        23,
-							AnotherRegisteredQueryField: 80,
-						},
-					},
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        25,
-							AnotherRegisteredQueryField: 70,
-						},
-					},
-				},
-			},
-			mockDeviceInfo: deviceinfo.Schema{
-				DeviceCompanies: []deviceinfo.DeviceToCompany{
-					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
-				},
-				DeviceNetworks: []deviceinfo.DeviceToNetwork{
-					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
-				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
-					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					},
-				},
-			},
-			mockTokens: map[string]bool{
-				ValidToken: true,
-			},
-			token:    ValidToken,
-			deviceId: RegisteredDeviceId,
-			deviceRequest: datafetcher.DeviceDataRequest{
-				QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-				Start:       RelativeStart,
+				QueryField: RegisteredQueryField,
+				Start:      RelativeStart,
 			},
 		},
 
@@ -631,8 +542,8 @@ func TestGetDeviceData(t *testing.T) {
 			token:    ValidToken,
 			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				QueryFields: []string{RegisteredQueryField},
-				Start:       RelativeStart,
+				QueryField: RegisteredQueryField,
+				Start:      RelativeStart,
 			},
 		},
 
@@ -722,8 +633,8 @@ func TestGetDeviceData(t *testing.T) {
 			token:    ValidToken,
 			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				QueryFields: []string{RegisteredQueryField},
-				Start:       RelativeStart,
+				QueryField: RegisteredQueryField,
+				Start:      RelativeStart,
 			},
 		},
 
@@ -782,8 +693,8 @@ func TestGetDeviceData(t *testing.T) {
 			token:    ValidToken,
 			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				QueryFields: []string{RegisteredQueryField},
-				Start:       "-1h",
+				QueryField: RegisteredQueryField,
+				Start:      "-1h",
 			},
 		},
 
@@ -842,8 +753,8 @@ func TestGetDeviceData(t *testing.T) {
 			token:    ValidToken,
 			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				QueryFields: []string{RegisteredQueryField},
-				Start:       RelativeStart,
+				QueryField: RegisteredQueryField,
+				Start:      RelativeStart,
 			},
 		},
 
@@ -912,8 +823,8 @@ func TestGetDeviceData(t *testing.T) {
 			token:    ValidToken,
 			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
-				QueryFields: []string{RegisteredQueryField},
-				Start:       RelativeStart,
+				QueryField: RegisteredQueryField,
+				Start:      RelativeStart,
 			},
 		},
 	}
