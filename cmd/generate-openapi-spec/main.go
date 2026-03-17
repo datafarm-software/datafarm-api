@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"regexp"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
@@ -11,7 +12,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var FileNameRegex = regexp.MustCompile(`^[\w-_/.]+\.{1,2}[\w]{1,5}$`)
+
 func main() {
+	args := os.Args
+	filename := "api/openapi.yaml"
+	if len(args) > 1 {
+		if len(args) != 3 || args[1] != "--filename" {
+			log.Fatalf("Usage: go run main.go --filename someName.yml")
+		}
+		filename = args[2]
+		if !FileNameRegex.MatchString(filename) {
+			log.Fatalf("Filename failed regex: %s", FileNameRegex)
+		}
+	}
 	api := &api.Api{}
 	router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
 	config := huma.DefaultConfig("SensorData API", "1.0.0")
@@ -23,7 +37,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("marshalling yaml: %v", err)
 	}
-	if err = os.WriteFile("api/openapi.yaml", out, 0644); err != nil {
+	if err = os.WriteFile(filename, out, 0644); err != nil {
 		log.Fatalf("writing yaml: %v", err)
 	}
 }

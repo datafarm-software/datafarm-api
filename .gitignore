@@ -7,7 +7,6 @@
 *.dll
 *.so
 *.dylib
-*.yml
 *.json
 *.txt
 *.pem
@@ -27,3 +26,9 @@ go.work.sum
 
 # env file
 .env
+
+# config file
+config.yml
+
+# all generated files
+*.generated.*
