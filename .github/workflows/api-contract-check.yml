@@ -11,25 +11,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.26.1"
-
-      - name: Install oasdiff
-        run: go install github.com/oasdiff/oasdiff@latest
-
+      
       - name: Generate OpenAPI
         run: ./scripts/generate-openapi-spec.sh
 
-      - name: Detect Changes
-        run: |
-          oasdiff diff api/openapi.yaml api/openapi.generated.yaml || true
-
-      - name: Fail if spec changed
-        run: |
-          if ! diff -q api/openapi.yaml api/openapi.generated.yaml; then
-            echo "OpenAPI spec changed. Review and commit required."
-            exit 1
-          fi
+      - name: Run oasdiff changelog action
+        uses: oasdiff/oasdiff-action/changelog@main
+        with:
+          old-spec: api/openapi.yaml
+          new-spec: api/openapi.generated.yaml
+          fail-on-breaking: true
