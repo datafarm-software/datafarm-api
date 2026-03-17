@@ -7,9 +7,9 @@ import (
 )
 
 type DeviceDataRequest struct {
-	QueryField string `json:"queryField" required:"true"`
-	Start      string `json:"start" required:"true"`
-	Stop       string `json:"stop" required:"false"`
+	QueryFields []string `json:"queryFields" required:"true"`
+	Start       string   `json:"start" required:"true"`
+	Stop        string   `json:"stop" required:"false"`
 }
 
 type ConsolidatedDeviceData struct {
