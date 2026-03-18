@@ -138,7 +138,7 @@ func TestGetDeviceData(t *testing.T) {
 	tests := map[string]struct {
 		wantErr               bool
 		wantStatus            int
-		mockDataFetcher, want *datafetcher.ConsolidatedDeviceData
+		mockDataFetcher, want []datafetcher.DeviceData
 		mockAuthStore         authstore.Schema
 		mockDeviceInfo        deviceinfo.Schema
 		mockTokens            map[string]bool
@@ -150,14 +150,12 @@ func TestGetDeviceData(t *testing.T) {
 		"successfully get deviceid data": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: float64(23),
-						},
+			want: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: float64(23),
 					},
 				},
 			},
@@ -175,14 +173,12 @@ func TestGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: 23,
-						},
+			mockDataFetcher: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: 23,
 					},
 				},
 			},
@@ -292,21 +288,19 @@ func TestGetDeviceData(t *testing.T) {
 		"stop time in future": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: float64(23),
-						},
+			want: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: float64(23),
 					},
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: float64(25),
-						},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: float64(25),
 					},
 				},
 			},
@@ -324,21 +318,19 @@ func TestGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: 23,
-						},
+			mockDataFetcher: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: 23,
 					},
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: 25,
-						},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: 25,
 					},
 				},
 			},
@@ -377,21 +369,19 @@ func TestGetDeviceData(t *testing.T) {
 		"get multiple data points within time range": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: float64(23),
-						},
+			want: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: float64(23),
 					},
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: float64(25),
-						},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: float64(25),
 					},
 				},
 			},
@@ -409,21 +399,19 @@ func TestGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: 23,
-						},
+			mockDataFetcher: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: 23,
 					},
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: 25,
-						},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: 25,
 					},
 				},
 			},
@@ -461,23 +449,21 @@ func TestGetDeviceData(t *testing.T) {
 		"get multiple queryfields' data": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        float64(23),
-							AnotherRegisteredQueryField: float64(80),
-						},
+			want: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField:        float64(23),
+						AnotherRegisteredQueryField: float64(80),
 					},
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        float64(25),
-							AnotherRegisteredQueryField: float64(70),
-						},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField:        float64(25),
+						AnotherRegisteredQueryField: float64(70),
 					},
 				},
 			},
@@ -495,23 +481,21 @@ func TestGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        23,
-							AnotherRegisteredQueryField: 80,
-						},
+			mockDataFetcher: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField:        23,
+						AnotherRegisteredQueryField: 80,
 					},
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        25,
-							AnotherRegisteredQueryField: 70,
-						},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField:        25,
+						AnotherRegisteredQueryField: 70,
 					},
 				},
 			},
@@ -549,21 +533,19 @@ func TestGetDeviceData(t *testing.T) {
 		"exclude data points outside requested time range": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: float64(23),
-						},
+			want: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: float64(23),
 					},
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: float64(25),
-						},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: float64(25),
 					},
 				},
 			},
@@ -581,28 +563,26 @@ func TestGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: OutsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: 22,
-						},
+			mockDataFetcher: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: OutsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: 22,
 					},
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: 23,
-						},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: 23,
 					},
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: 25,
-						},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: 25,
 					},
 				},
 			},
@@ -640,21 +620,19 @@ func TestGetDeviceData(t *testing.T) {
 		"exclude data points outside requested time range, using relative start time": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: float64(23),
-						},
+			want: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: float64(23),
 					},
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: float64(25),
-						},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: float64(25),
 					},
 				},
 			},
@@ -672,28 +650,26 @@ func TestGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: OutsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: 22,
-						},
+			mockDataFetcher: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: OutsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: 22,
 					},
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: 23,
-						},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: 23,
 					},
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: 25,
-						},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: 25,
 					},
 				},
 			},
@@ -731,7 +707,7 @@ func TestGetDeviceData(t *testing.T) {
 		"no data in requested range": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want:       &datafetcher.ConsolidatedDeviceData{},
+			want:       nil,
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{
 					{
@@ -746,14 +722,12 @@ func TestGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: 23,
-						},
+			mockDataFetcher: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: 23,
 					},
 				},
 			},
@@ -791,7 +765,7 @@ func TestGetDeviceData(t *testing.T) {
 		"non admin can't request deviceid not in user company": {
 			wantErr:    true,
 			wantStatus: http.StatusUnauthorized,
-			want:       &datafetcher.ConsolidatedDeviceData{},
+			want:       nil,
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{
 					{
@@ -806,14 +780,12 @@ func TestGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: 23,
-						},
+			mockDataFetcher: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: 23,
 					},
 				},
 			},
@@ -851,14 +823,12 @@ func TestGetDeviceData(t *testing.T) {
 		"admin user can request deviceid not in user company": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: float64(23),
-						},
+			want: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: float64(23),
 					},
 				},
 			},
@@ -876,14 +846,12 @@ func TestGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: &datafetcher.ConsolidatedDeviceData{
-				DeviceData: []datafetcher.DeviceData{
-					{
-						DeviceID:  RegisteredDeviceId,
-						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField: 23,
-						},
+			mockDataFetcher: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField: 23,
 					},
 				},
 			},
@@ -956,11 +924,11 @@ func TestGetDeviceData(t *testing.T) {
 			}
 			defer resp.Result().Body.Close()
 			if !tc.wantErr {
-				var cdd datafetcher.ConsolidatedDeviceData
+				var dd []datafetcher.DeviceData
 				body := resp.Body.Bytes()
-				err = json.Unmarshal(body, &cdd)
+				err = json.Unmarshal(body, &dd)
 				require.Nil(t, err)
-				if diff := cmp.Diff(tc.want, &cdd); diff != "" {
+				if diff := cmp.Diff(tc.want, dd); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
 			}

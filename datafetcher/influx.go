@@ -60,7 +60,7 @@ func (i *InfluxDatafetcher) Close() error {
 }
 
 func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
-	*ConsolidatedDeviceData, error) {
+	[]DeviceData, error) {
 	formattedQueryRange, err := i.formatQueryRange(metadata.Start, metadata.Stop)
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
 	if err != nil {
 		return nil, fmt.Errorf("error processing query result: %v", err)
 	}
-	return i.dataRows2ConsolidatedDeviceData(dataRows), nil
+	return i.dataRows2DeviceData(dataRows), nil
 }
 
 func (i *InfluxDatafetcher) generateFluxQuery(metadata deviceinfo.DeviceInfo, queryRange string) string {
@@ -112,7 +112,7 @@ func (i *InfluxDatafetcher) extractValue(result *influxApi.QueryTableResult) ([]
 	return records, nil
 }
 
-func (i *InfluxDatafetcher) dataRows2ConsolidatedDeviceData(data []DataRow) *ConsolidatedDeviceData {
+func (i *InfluxDatafetcher) dataRows2DeviceData(data []DataRow) []DeviceData {
 	var deviceDataSlice []DeviceData
 	for _, row := range data {
 		found := false
@@ -132,9 +132,7 @@ func (i *InfluxDatafetcher) dataRows2ConsolidatedDeviceData(data []DataRow) *Con
 			deviceDataSlice = append(deviceDataSlice, newDeviceData)
 		}
 	}
-	return &ConsolidatedDeviceData{
-		DeviceData: deviceDataSlice,
-	}
+	return deviceDataSlice
 }
 
 func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string, error) {
@@ -158,7 +156,7 @@ func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string
 	return fmt.Sprintf("start: %s", startTime), nil
 }
 
-func (i *InfluxDatafetcher) PrepareDb(*deviceinfo.Schema, *ConsolidatedDeviceData) error {
+func (i *InfluxDatafetcher) PrepareDb(*deviceinfo.Schema, []DeviceData) error {
 	return nil
 }
 
@@ -212,11 +210,11 @@ func (t *TestingInflux) Close() error {
 	return t.influx.Close()
 }
 
-func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, mockDb *ConsolidatedDeviceData) error {
-	if mockDb == nil {
+func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, deviceData []DeviceData) error {
+	if allDevicesInfo == nil {
 		return nil
 	}
-	if allDevicesInfo == nil {
+	if deviceData == nil {
 		return nil
 	}
 	deviceInfoMap := deviceInfoMap(allDevicesInfo)
@@ -243,7 +241,7 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, mockDb *Con
 	var writeApi influxApi.WriteAPI
 	var ok bool
 	var deviceInfo deviceinfo.DeviceInfo
-	for _, dd := range mockDb.DeviceData {
+	for _, dd := range deviceData {
 		for key, value := range dd.SensorData {
 			_, isStringValue := value.(string)
 			if isStringValue {
@@ -290,6 +288,6 @@ func deviceInfoMap(allDevicesInfo *deviceinfo.Schema) map[string]deviceinfo.Devi
 }
 
 func (t *TestingInflux) GetData(metadata deviceinfo.DeviceInfo) (
-	*ConsolidatedDeviceData, error) {
+	[]DeviceData, error) {
 	return t.influx.GetData(metadata)
 }
