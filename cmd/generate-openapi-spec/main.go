@@ -1,13 +1,15 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"regexp"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
-	"github.com/datafarm-software/datafarm-api/api"
+	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
+	"github.com/datafarm-software/datafarm-api/tokenprovider"
 	"github.com/gorilla/mux"
 	"gopkg.in/yaml.v3"
 )
@@ -26,12 +28,19 @@ func main() {
 			log.Fatalf("Filename failed regex: %s", FileNameRegex)
 		}
 	}
-	api := &api.Api{}
 	router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
 	config := huma.DefaultConfig("SensorData API", "1.0.0")
 	config.Servers = append(config.Servers, &huma.Server{URL: "/api/v1"})
 	humaApi := humamux.New(router, config)
-	api.RegisterHumaOperations(humaApi)
+	localhuma.RegisterHumaOperations(humaApi,
+		func(ctx huma.Context, next func(huma.Context)) {},
+		func(context.Context, *localhuma.DeviceInput) (*localhuma.DeviceOutput, error) {
+			return nil, nil
+		},
+		func(context.Context, *localhuma.LoginRequest) (*tokenprovider.TokenResponse, error) {
+			return nil, nil
+		},
+	)
 	doc := humaApi.OpenAPI()
 	out, err := yaml.Marshal(doc)
 	if err != nil {
