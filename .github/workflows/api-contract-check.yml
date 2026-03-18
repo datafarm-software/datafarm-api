@@ -8,6 +8,8 @@ on:
 jobs:
   check-api:
     runs-on: ubuntu-latest
+    env:
+      ALLOW_BREAKING_CHANGE: ${{ contains(join(github.event.pull_request.labels.*.name, ','), 'allow-breaking-change') }}
 
     steps:
       - uses: actions/checkout@v6
@@ -19,4 +21,4 @@ jobs:
         with:
           base: "origin/${{ github.base_ref }}:api/openapi.yaml"
           revision: "api/openapi.generated.yaml"
-          fail-on: true
+          fail-on: ${{ !env.ALLOW_BREAKING_CHANGE }}
