@@ -14,11 +14,11 @@ jobs:
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
 
       - name: "Generate OpenAPI Spec"
-        if: ${{ contains(join(github.event.pull_request.labels.*.name, ','), 'allow-breaking-change') }}
+        if: ${{ !contains(join(github.event.pull_request.labels.*.name, ','), 'allow-breaking-change') }}
         run: scripts/generate-openapi-spec.sh
 
       - uses: oasdiff/oasdiff-action/breaking@v0.0.31
-        if: ${{ contains(join(github.event.pull_request.labels.*.name, ','), 'allow-breaking-change') }}
+        if: ${{ !contains(join(github.event.pull_request.labels.*.name, ','), 'allow-breaking-change') }}
         with:
           base: "origin/${{ github.base_ref }}:api/openapi.yaml"
           revision: "api/openapi.generated.yaml"
