@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/danielgtaylor/huma/v2/humacli"
+	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
 	"github.com/datafarm-software/datafarm-api/authstore"
 	"github.com/datafarm-software/datafarm-api/datafetcher"
 	df "github.com/datafarm-software/datafarm-api/datafetcher"
@@ -81,7 +81,8 @@ func Start(opts ApiOpts) error {
 		config := huma.DefaultConfig("SensorData API", "1.0.0")
 		config.Servers = append(config.Servers, &huma.Server{URL: "/api/v1"})
 		humaApi := humamux.New(router, config)
-		api.RegisterHumaOperations(humaApi)
+		localhuma.RegisterHumaOperations(humaApi,
+			api.verifyToken, api.GetDeviceData, api.Login)
 		server := &http.Server{
 			Addr:    opts.Port,
 			Handler: router,
@@ -119,136 +120,8 @@ func (a *Api) Close() {
 	log.Println("Api shutdown.")
 }
 
-type HumaError struct {
-	Schema string `json:"$schema" doc:"Link to Object Model."`
-	Title  string `json:"title" doc:"Name associated with error code."`
-	Status int    `json:"status" doc:"Http Status Code."`
-	Detail string `json:"detail" doc:"Human Readable explanation of what went wrong."`
-}
-
-func (a *Api) RegisterHumaOperations(api huma.API) {
-	registry := huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
-	operation := huma.Operation{
-		Method:      "GET",
-		Path:        "/device/{deviceId}",
-		Middlewares: huma.Middlewares{a.verifyToken},
-		Parameters: []*huma.Param{
-			{
-				Name:        "Authorization",
-				In:          "header",
-				Description: "Token used for authentication. Note 'Bearer' prefix.",
-				Required:    true,
-				Schema: &huma.Schema{
-					Type:    "string",
-					Pattern: `^[\w_-.]$`,
-				},
-				Example: "Bearer someValidToken",
-			},
-			{
-				Name:        "deviceId",
-				In:          "path",
-				Description: "Device Id to request data from.",
-				Required:    true,
-				Schema: &huma.Schema{
-					Type:    "string",
-					Pattern: `^\w{1,30}$`,
-				},
-			},
-		},
-		Tags:        []string{"GET"},
-		Summary:     "Get Sensor Data.",
-		Description: "Clients can use this route to request data from a specific sensor using its device id.",
-		RequestBody: &huma.RequestBody{},
-		Responses: map[string]*huma.Response{
-			"500": {
-				Description: "Internal Server Error",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Internal Server Error",
-							Status: 500,
-							Detail: "Internal error while getting data for the device.",
-						},
-					}}},
-			"400": {
-				Description: "Bad Request",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Bad Request",
-							Status: 400,
-							Detail: "Invalid start time.",
-						},
-					},
-				},
-			},
-		},
-	}
-	huma.Register(api, operation, a.GetDeviceData)
-	operation = huma.Operation{
-		Method:      "POST",
-		Path:        "/login",
-		Tags:        []string{"POST"},
-		Summary:     "Login.",
-		Description: "Clients can use this route to login and receive an active session token.",
-		RequestBody: &huma.RequestBody{},
-		Responses: map[string]*huma.Response{
-			"500": {
-				Description: "Internal Server Error",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Internal Server Error",
-							Status: http.StatusInternalServerError,
-							Detail: "Internal error logging in.",
-						},
-					}}},
-			"400": {
-				Description: "Bad Request",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Bad Request",
-							Status: http.StatusBadRequest,
-							Detail: "No auth header provided.",
-						},
-					},
-				},
-			},
-			"401": {
-				Description: "Unauthorized",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Unauthorized",
-							Status: http.StatusUnauthorized,
-							Detail: "Unknown username.",
-						},
-					},
-				},
-			},
-		},
-	}
-	huma.Register(api, operation, a.Login)
-}
-
 func (a *Api) GetDeviceData(ctx context.Context,
-	in *struct {
-		DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-		Body     datafetcher.DeviceDataRequest
-	}) (*struct {
-	Body *datafetcher.ConsolidatedDeviceData
-}, error) {
+	in *localhuma.DeviceInput) (*localhuma.DeviceOutput, error) {
 	in.Body.Start = strings.TrimSpace(in.Body.Start)
 	if RELATIVETIME_REGEX.MatchString(in.Body.Start) {
 		in.Body.Stop = ""
@@ -341,9 +214,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error fetching data.")
 	}
-	return &struct {
-		Body *datafetcher.ConsolidatedDeviceData
-	}{deviceData}, nil
+	return &localhuma.DeviceOutput{Body: deviceData}, nil
 }
 
 func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
@@ -383,12 +254,8 @@ func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
 	next(ctx)
 }
 
-type LoginRequest struct {
-	Auth string `header:"Authorization" doc:"Required in the format: Bearer base64(username:password)" required:"true"`
-}
-
 func (a *Api) Login(ctx context.Context,
-	lr *LoginRequest) (*tokenprovider.TokenResponse, error) {
+	lr *localhuma.LoginRequest) (*tokenprovider.TokenResponse, error) {
 	parts := strings.Split(lr.Auth, " ")
 	if len(parts) != 2 || parts[0] != "Basic" {
 		return nil, huma.Error400BadRequest(
