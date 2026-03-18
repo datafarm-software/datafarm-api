@@ -3,7 +3,6 @@ name: API Contract Check
 on:
   pull_request:
     branches: [huma]
-  workflow_dispatch:
 
 jobs:
   check-api:
