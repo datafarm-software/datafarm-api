@@ -21,4 +21,4 @@ jobs:
         with:
           base: "origin/${{ github.base_ref }}:api/openapi.yaml"
           revision: "api/openapi.generated.yaml"
-          fail-on: ${{ !env.ALLOW_BREAKING_CHANGE }}
+          fail-on: ${{ env.ALLOW_BREAKING_CHANGE && '' || 'ERR' }}
