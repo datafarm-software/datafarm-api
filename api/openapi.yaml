@@ -39,7 +39,9 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/ConsolidatedDeviceData'
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/DeviceData'
                 "400":
                     description: Bad Request
                     content:
@@ -221,39 +223,22 @@ paths:
                                 detail: Internal error logging in.
 components:
     schemas:
-        ConsolidatedDeviceData:
-            type: object
-            additionalProperties: false
-            properties:
-                $schema:
-                    type: string
-                    description: A URL to the JSON Schema for this object.
-                    format: uri
-                    examples:
-                        - https://example.com/schemas/ConsolidatedDeviceData.json
-                    readOnly: true
-                payload:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/DeviceData'
-            required:
-                - payload
         DeviceData:
             type: object
             additionalProperties: false
             properties:
-                SensorData:
-                    type: object
-                    additionalProperties: {}
                 rtuid:
                     type: string
+                sensorData:
+                    type: object
+                    additionalProperties: {}
                 timestamp:
                     type: string
                     format: date-time
             required:
                 - rtuid
                 - timestamp
-                - SensorData
+                - sensorData
         DeviceDataRequest:
             type: object
             additionalProperties: false

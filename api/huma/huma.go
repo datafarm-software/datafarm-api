@@ -25,7 +25,7 @@ type DeviceInput struct {
 }
 
 type DeviceOutput struct {
-	Body *datafetcher.ConsolidatedDeviceData
+	Body []datafetcher.DeviceData
 }
 
 type LoginRequest struct {

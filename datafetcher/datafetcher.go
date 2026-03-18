@@ -12,22 +12,18 @@ type DeviceDataRequest struct {
 	Stop        string   `json:"stop" required:"false"`
 }
 
-type ConsolidatedDeviceData struct {
-	DeviceData []DeviceData `json:"payload"`
-}
-
 type DeviceData struct {
-	DeviceID   string    `json:"rtuid"`
-	Timestamp  time.Time `json:"timestamp"`
-	SensorData map[string]any
+	DeviceID   string         `json:"rtuid"`
+	Timestamp  time.Time      `json:"timestamp"`
+	SensorData map[string]any `json:"sensorData"`
 }
 
 type TestingDataFetcher interface {
-	PrepareDb(*deviceinfo.Schema, *ConsolidatedDeviceData) error
+	PrepareDb(*deviceinfo.Schema, []DeviceData) error
 }
 
 type DataFetcher interface {
 	TestingDataFetcher
-	GetData(metadata deviceinfo.DeviceInfo) (*ConsolidatedDeviceData, error)
+	GetData(metadata deviceinfo.DeviceInfo) ([]DeviceData, error)
 	Close() error
 }
