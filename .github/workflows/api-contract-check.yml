@@ -9,7 +9,7 @@ jobs:
   check-api:
     runs-on: ubuntu-latest
     env:
-      ALLOW_BREAKING_CHANGE: ${{ contains(join(github.event.pull_request.labels.*.name, ','), 'allow-breaking-change') }}
+      ALLOW_BREAKING_CHANGE: ${{ contains(github.event.pull_request.labels.*.name, 'allow-breaking-change' }}
 
     steps:
       - uses: actions/checkout@v6
