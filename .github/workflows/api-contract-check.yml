@@ -3,6 +3,11 @@ name: API Contract Check
 on:
   pull_request:
     branches: [huma]
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
 
 jobs:
   check-api:
