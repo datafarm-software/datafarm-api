@@ -17,6 +17,11 @@ jobs:
 
       - run: scripts/generate-openapi-spec.sh
 
+      - name: Debug PR labels
+        run: |
+          echo "PR labels:"
+          echo "${{ toJson(github.event.pull_request.labels) }}"
+
       - uses: oasdiff/oasdiff-action/breaking@v0.0.31
         with:
           base: "origin/${{ github.base_ref }}:api/openapi.yaml"
