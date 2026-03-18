@@ -9,7 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - run: git fetch --depth=1 origin ${{ github.base_ref }}
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -27,6 +26,6 @@ jobs:
           git commit -m "Update OpenAPI spec [skip ci]" || echo "No changes to commit"
 
       - name: Push Updated Spec
-        run: git push origin HEAD:${{ github.head_ref }}
+        run: git push origin HEAD:${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
