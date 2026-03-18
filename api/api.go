@@ -82,7 +82,7 @@ func Start(opts ApiOpts) error {
 		config.Servers = append(config.Servers, &huma.Server{URL: "/api/v1"})
 		humaApi := humamux.New(router, config)
 		localhuma.RegisterHumaOperations(humaApi,
-			api.verifyToken, api.GetDeviceData, api.Login)
+			api.VerifyToken, api.GetDeviceData, api.Login)
 		server := &http.Server{
 			Addr:    opts.Port,
 			Handler: router,
@@ -217,7 +217,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	return &localhuma.DeviceOutput{Body: deviceData}, nil
 }
 
-func (a *Api) verifyToken(ctx huma.Context, next func(huma.Context)) {
+func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
 	r, w := humamux.Unwrap(ctx)
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {

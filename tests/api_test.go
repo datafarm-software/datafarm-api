@@ -13,6 +13,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/datafarm-software/datafarm-api/api"
+	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
 	"github.com/datafarm-software/datafarm-api/authstore"
 	"github.com/datafarm-software/datafarm-api/datafetcher"
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
@@ -102,7 +103,7 @@ func TestLogin(t *testing.T) {
 	require.Nil(t, err)
 	defer db.Close()
 	_, humaApi := humatest.New(t)
-	a.RegisterHumaOperations(humaApi)
+	localhuma.RegisterHumaOperations(humaApi, a.VerifyToken, a.GetDeviceData, a.Login)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			testingRedis, err := redis.NewTestingRedis(db.Addr())
@@ -925,7 +926,7 @@ func TestGetDeviceData(t *testing.T) {
 	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
 	humaApiMux := humamux.New(router, config)
 	humaTest := humatest.Wrap(t, humaApiMux)
-	a.RegisterHumaOperations(humaTest)
+	localhuma.RegisterHumaOperations(humaTest, a.VerifyToken, a.GetDeviceData, a.Login)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			a.TokenProvider = &tokenprovider.MockTokenProvider{
