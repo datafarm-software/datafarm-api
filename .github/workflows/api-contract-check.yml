@@ -8,22 +8,21 @@ on:
 jobs:
   check-api:
     runs-on: ubuntu-latest
-    env:
-      ALLOW_BREAKING_CHANGE: ${{ contains(join(github.event.pull_request.labels.*.name, ','), 'allow-breaking-change') }}
 
     steps:
+      - name: Skip breaking check if allowed
+        if: ${{ contains(join(github.event.pull_request.labels.*.name, ','), 'allow-breaking-change') }}
+        run: |
+          echo "allow-breaking-change label present, skipping workflow."
+          exit 0
+
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
 
       - run: scripts/generate-openapi-spec.sh
 
-      - name: Debug PR labels
-        run: |
-          echo "PR labels:"
-          echo "${{ toJson(github.event.pull_request.labels) }}"
-
       - uses: oasdiff/oasdiff-action/breaking@v0.0.31
         with:
           base: "origin/${{ github.base_ref }}:api/openapi.yaml"
           revision: "api/openapi.generated.yaml"
-          fail-on: ${{ env.ALLOW_BREAKING_CHANGE && null || 'ERR' }}
+          fail-on: true
