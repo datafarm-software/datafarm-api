@@ -275,14 +275,15 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		}
 	}
 	//TODO: allow users to ask for multiple queryfields at once
-	if in.Body.QueryFields[0] == "all" {
+	queryFields := []string{in.Body.QueryField}
+	if in.Body.QueryField == "all" {
 		attachedSensors, err := a.DeviceInfo.GetAttachedSensors(in.DeviceId)
 		if err != nil {
 			log.Printf("error getting attached sensors for: %s: %v", in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting attached sensors for deviceId.")
 		}
-		in.Body.QueryFields, err = a.DeviceInfo.GetQueryFields(attachedSensors)
+		queryFields, err = a.DeviceInfo.GetQueryFields(attachedSensors)
 		if err != nil {
 			log.Printf("error getting query fields for: %s: %v", in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
@@ -313,7 +314,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		Company:     user.Company,
 		DeviceId:    in.DeviceId,
 		Network:     user.Network,
-		QueryFields: in.Body.QueryFields,
+		QueryFields: queryFields,
 		Start:       in.Body.Start,
 		Stop:        in.Body.Stop,
 	}
