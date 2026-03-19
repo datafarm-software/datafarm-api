@@ -55,11 +55,11 @@ var a = &api.Api{
 
 func TestLogin(t *testing.T) {
 	tests := map[string]struct {
-		wantErr                        bool
-		wantStatus                     int
-		username, password             string
-		mockAuthStore                  authstore.Schema
-		mockDeviceInfo, wantDeviceInfo deviceinfo.Schema
+		wantErr            bool
+		wantStatus         int
+		username, password string
+		mockAuthStore      authstore.Schema
+		mockDeviceInfo     deviceinfo.Schema
 	}{
 
 		"successfully login": {
@@ -189,15 +189,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -341,15 +335,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -422,15 +410,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -506,15 +488,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 				},
@@ -593,15 +569,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -680,15 +650,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -738,15 +702,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -796,15 +754,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -862,15 +814,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -980,15 +926,9 @@ func TestGetQueryFields(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
