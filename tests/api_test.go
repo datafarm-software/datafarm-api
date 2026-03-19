@@ -888,7 +888,7 @@ func TestGetQueryFields(t *testing.T) {
 		wantErr        bool
 		wantStatus     int
 		deviceId       string
-		want           deviceinfo.QueryFields
+		want           []string
 		mockTokens     map[string]bool
 		mockAuthStore  authstore.Schema
 		mockDeviceInfo deviceinfo.Schema
@@ -898,9 +898,7 @@ func TestGetQueryFields(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			deviceId:   RegisteredDeviceId,
-			want: deviceinfo.QueryFields{
-				Body: append(deviceinfo.GeneralQueryFields, RegisteredQueryField),
-			},
+			want:       append(deviceinfo.GeneralQueryFields, RegisteredQueryField),
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{
 					{

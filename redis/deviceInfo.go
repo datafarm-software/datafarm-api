@@ -13,13 +13,15 @@ func (r *Redis) PrepareDeviceInfo(deviceinfo.Schema) error {
 }
 
 func (r *Redis) GetQueryFields(deviceId string) (deviceinfo.QueryFields, error) {
-	var qf deviceinfo.QueryFields
+	var qf []string
 	var err error
-	qf.Body, err = r.db.SMembers(ctx, "queryFields:"+deviceId).Result()
+	qf, err = r.db.SMembers(ctx, "queryFields:"+deviceId).Result()
 	if err != nil {
 		err = fmt.Errorf("redis smembers: %v", err)
 	}
-	return qf, err
+	return deviceinfo.QueryFields{
+		Body: append(deviceinfo.GeneralQueryFields, qf...),
+	}, err
 }
 
 func (r *Redis) GetCompany(deviceId string) (string, error) {
