@@ -155,6 +155,7 @@ func RegisterHumaOperations(api huma.API,
 			},
 		},
 	}
+	huma.Register(api, operation, login)
 	operation = huma.Operation{
 		Method:      "GET",
 		Path:        "/device/queryfields/{deviceId}",
