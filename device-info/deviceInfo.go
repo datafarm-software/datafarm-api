@@ -14,6 +14,10 @@ type QueryFields struct {
 	Body []string
 }
 
+type DeviceIds struct {
+	Body []string
+}
+
 type DeviceToCompany struct {
 	DeviceId string
 	Company  string

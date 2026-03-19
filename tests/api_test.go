@@ -49,6 +49,7 @@ var StopInFuture = time.Now().Add(24 * time.Hour).Format(time.RFC3339)
 var OutsideTimeRange = time.Now().Add(-25 * time.Hour)
 var InsideTimeRange = time.Now().Add(-2 * time.Hour)
 var AlsoInsideTimeRange = time.Now().Add(-1 * time.Hour)
+var RegisteredCompanyDevices = []string{RegisteredDeviceId}
 var a = &api.Api{
 	AdminRole: AdminUserRole,
 }
@@ -103,7 +104,8 @@ func TestLogin(t *testing.T) {
 	require.Nil(t, err)
 	defer db.Close()
 	_, humaApi := humatest.New(t)
-	localhuma.RegisterHumaOperations(humaApi, a.VerifyToken, a.GetDeviceData, a.Login, a.GetQueryFields)
+	localhuma.RegisterHumaOperations(humaApi, a.VerifyToken, a.GetDeviceData, a.Login,
+		a.GetQueryFields)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			testingRedis, err := redis.NewTestingRedis(db.Addr())
@@ -894,6 +896,7 @@ func TestGetQueryFields(t *testing.T) {
 		mockDeviceInfo deviceinfo.Schema
 		token          string
 	}{
+
 		"successfully get queryfields": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
@@ -903,8 +906,86 @@ func TestGetQueryFields(t *testing.T) {
 				UserInfo: []authstore.UserInfo{
 					{
 						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     UserRole,
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+				},
+			},
+		},
+
+		"regular user cannot request queryfields for device from other company": {
+			wantErr:    true,
+			wantStatus: http.StatusUnauthorized,
+			deviceId:   RegisteredDeviceId,
+			want:       nil,
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
 						Company:  OtherCompanyThanDevice,
 						Role:     UserRole,
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+				},
+			},
+		},
+
+		"admin user can request queryfields for device from other company": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			deviceId:   RegisteredDeviceId,
+			want:       append(deviceinfo.GeneralQueryFields, RegisteredQueryField),
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  OtherCompanyThanDevice,
+						Role:     AdminUserRole,
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},

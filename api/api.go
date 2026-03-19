@@ -28,7 +28,6 @@ import (
 
 const EmptyPayloadLength int = 16
 
-var ctx context.Context
 var QUERYFIELD_REGEX = regexp.MustCompile(`^[a-zA-Z0-9_\-\s:]*$`)
 
 // var DEVICE_ID_REGEX = regexp.MustCompile(`\w{1,30}`)
@@ -82,7 +81,8 @@ func Start(opts ApiOpts) error {
 		config.Servers = append(config.Servers, &huma.Server{URL: "/api/v1"})
 		humaApi := humamux.New(router, config)
 		localhuma.RegisterHumaOperations(humaApi,
-			api.VerifyToken, api.GetDeviceData, api.Login, api.GetQueryFields)
+			api.VerifyToken, api.GetDeviceData, api.Login, api.GetQueryFields,
+		)
 		server := &http.Server{
 			Addr:    opts.Port,
 			Handler: router,
@@ -307,6 +307,26 @@ func (a *Api) Login(ctx context.Context,
 
 func (a *Api) GetQueryFields(ctx context.Context, in *localhuma.DeviceId) (
 	*deviceinfo.QueryFields, error) {
+	ctxUser := ctx.Value("user")
+	user, ok := ctxUser.(authstore.UserInfo)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error finding user info.")
+	}
+	if user.Company == "" {
+		return nil, huma.Error500InternalServerError(
+			"Internal error, user info unexpectedly null.")
+	}
+	deviceCompany, err := a.DeviceInfo.GetCompany(in.DeviceId)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"Internal error checking device company.")
+	}
+	if user.Role != a.AdminRole {
+		if user.Company != deviceCompany {
+			return nil, huma.Error401Unauthorized("Access denied.")
+		}
+	}
 	queryFields, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
 	if err != nil {
 		return nil, huma.Error500InternalServerError(
