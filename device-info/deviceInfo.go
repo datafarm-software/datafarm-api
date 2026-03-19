@@ -6,6 +6,10 @@ type DeviceInfo struct {
 	QueryFields, AttachedSensors []string
 }
 
+type QueryFields struct {
+	Body []string
+}
+
 type DeviceToCompany struct {
 	DeviceId string
 	Company  string

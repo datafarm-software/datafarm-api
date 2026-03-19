@@ -13,7 +13,7 @@ type DeviceDataRequest struct {
 }
 
 type DeviceData struct {
-	DeviceID   string         `json:"rtuid"`
+	DeviceID   string         `json:"deviceId"`
 	Timestamp  time.Time      `json:"timestamp"`
 	SensorData map[string]any `json:"sensorData"`
 }

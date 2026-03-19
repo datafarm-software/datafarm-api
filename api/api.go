@@ -82,7 +82,7 @@ func Start(opts ApiOpts) error {
 		config.Servers = append(config.Servers, &huma.Server{URL: "/api/v1"})
 		humaApi := humamux.New(router, config)
 		localhuma.RegisterHumaOperations(humaApi,
-			api.VerifyToken, api.GetDeviceData, api.Login)
+			api.VerifyToken, api.GetDeviceData, api.Login, api.GetQueryFields)
 		server := &http.Server{
 			Addr:    opts.Port,
 			Handler: router,
@@ -310,4 +310,9 @@ func (a *Api) Login(ctx context.Context,
 			"Internal error linking the token to the user.")
 	}
 	return &tokenprovider.TokenResponse{Body: token}, nil
+}
+
+func (a *Api) GetQueryFields(context.Context, *localhuma.DeviceId) (
+	*deviceinfo.QueryFields, error) {
+	return nil, nil
 }
