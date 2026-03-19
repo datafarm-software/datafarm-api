@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"slices"
 
 	"github.com/datafarm-software/datafarm-api/authstore"
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
@@ -123,12 +122,9 @@ func (t *TestingRedis) PrepareDeviceInfo(schema deviceinfo.Schema) error {
 			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
 			pipe.HSet(ctx, "fieldUnit:"+d.DeviceId, "network", d.Network)
 		}
-		for _, d := range schema.DeviceToSensors {
+		for _, d := range schema.DeviceToQF {
 			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
-			pipe.SAdd(ctx, "attachedSensors:"+d.DeviceId, d.AttachedSensors)
-		}
-		for _, d := range schema.SensorToQF {
-			pipe.SAdd(ctx, "queryFields:"+d.Sensor, d.QueryFields)
+			pipe.SAdd(ctx, "queryFields:"+d.DeviceId, d.QueryFields)
 		}
 		return nil
 	}
@@ -150,7 +146,7 @@ func (t *TestingRedis) GetSnapshot() *deviceinfo.Schema {
 		for _, id := range deviceIds {
 			cmdVec[id]["company"] = pipe.HGet(ctx, "fieldUnit:"+id, "company")
 			cmdVec[id]["network"] = pipe.HGet(ctx, "fieldUnit:"+id, "network")
-			cmdVec[id]["attachedSensors"] = pipe.SMembers(ctx, "attachedSensors:"+id)
+			cmdVec[id]["queryFields"] = pipe.SMembers(ctx, "queryFields:"+id)
 		}
 		return nil
 	}
@@ -159,8 +155,7 @@ func (t *TestingRedis) GetSnapshot() *deviceinfo.Schema {
 		return schema
 	}
 	var company, network string
-	var deviceSensors []string
-	var uniqueSensors []string
+	var queryFields []string
 	for _, id := range deviceIds {
 		company = getStringCmd(cmdVec[id]["company"])
 		schema.DeviceCompanies = append(schema.DeviceCompanies,
@@ -168,21 +163,9 @@ func (t *TestingRedis) GetSnapshot() *deviceinfo.Schema {
 		network = getStringCmd(cmdVec[id]["network"])
 		schema.DeviceNetworks = append(schema.DeviceNetworks,
 			deviceinfo.DeviceToNetwork{DeviceId: id, Network: network})
-		deviceSensors = getStringSliceCmd(cmdVec[id]["attachedSensors"])
-		schema.DeviceToSensors = append(schema.DeviceToSensors,
-			deviceinfo.DeviceToSensor{DeviceId: id, AttachedSensors: deviceSensors})
-		for _, s := range deviceSensors {
-			if !slices.Contains(uniqueSensors, s) {
-				uniqueSensors = append(uniqueSensors, s)
-			}
-		}
-	}
-
-	var qf []string
-	for _, s := range uniqueSensors {
-		qf, _ = t.redis.db.SMembers(ctx, "attachedSensors:"+s).Result()
-		schema.SensorToQF = append(schema.SensorToQF,
-			deviceinfo.SensorToQueryFields{Sensor: s, QueryFields: qf})
+		queryFields = getStringSliceCmd(cmdVec[id]["queryFields"])
+		schema.DeviceToQF = append(schema.DeviceToQF,
+			deviceinfo.DeviceToQueryFields{DeviceId: id, QueryFields: queryFields})
 	}
 
 	return schema
@@ -208,12 +191,8 @@ func getStringSliceCmd(cmd any) []string {
 	return slice
 }
 
-func (t *TestingRedis) GetAttachedSensors(deviceId string) ([]string, error) {
-	return t.redis.GetAttachedSensors(deviceId)
-}
-
-func (t *TestingRedis) GetQueryFields(attachedSensors []string) ([]string, error) {
-	return t.redis.GetQueryFields(attachedSensors)
+func (t *TestingRedis) GetQueryFields(deviceId string) (deviceinfo.QueryFields, error) {
+	return t.redis.GetQueryFields(deviceId)
 }
 
 func (t *TestingRedis) GetCompany(deviceId string) (string, error) {

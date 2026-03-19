@@ -9,6 +9,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
+	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
 	"github.com/datafarm-software/datafarm-api/tokenprovider"
 	"github.com/gorilla/mux"
 	"gopkg.in/yaml.v3"
@@ -38,6 +39,9 @@ func main() {
 			return nil, nil
 		},
 		func(context.Context, *localhuma.LoginRequest) (*tokenprovider.TokenResponse, error) {
+			return nil, nil
+		},
+		func(context.Context, *localhuma.DeviceId) (*deviceinfo.QueryFields, error) {
 			return nil, nil
 		},
 	)

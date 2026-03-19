@@ -49,17 +49,18 @@ var StopInFuture = time.Now().Add(24 * time.Hour).Format(time.RFC3339)
 var OutsideTimeRange = time.Now().Add(-25 * time.Hour)
 var InsideTimeRange = time.Now().Add(-2 * time.Hour)
 var AlsoInsideTimeRange = time.Now().Add(-1 * time.Hour)
+var RegisteredCompanyDevices = []string{RegisteredDeviceId}
 var a = &api.Api{
 	AdminRole: AdminUserRole,
 }
 
 func TestLogin(t *testing.T) {
 	tests := map[string]struct {
-		wantErr                        bool
-		wantStatus                     int
-		username, password             string
-		mockAuthStore                  authstore.Schema
-		mockDeviceInfo, wantDeviceInfo deviceinfo.Schema
+		wantErr            bool
+		wantStatus         int
+		username, password string
+		mockAuthStore      authstore.Schema
+		mockDeviceInfo     deviceinfo.Schema
 	}{
 
 		"successfully login": {
@@ -103,7 +104,8 @@ func TestLogin(t *testing.T) {
 	require.Nil(t, err)
 	defer db.Close()
 	_, humaApi := humatest.New(t)
-	localhuma.RegisterHumaOperations(humaApi, a.VerifyToken, a.GetDeviceData, a.Login)
+	localhuma.RegisterHumaOperations(humaApi, a.VerifyToken, a.GetDeviceData, a.Login,
+		a.GetQueryFields)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			testingRedis, err := redis.NewTestingRedis(db.Addr())
@@ -189,15 +191,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -341,15 +337,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -422,15 +412,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -506,15 +490,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 				},
@@ -593,15 +571,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -680,15 +652,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -738,15 +704,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -796,15 +756,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -862,15 +816,9 @@ func TestGetDeviceData(t *testing.T) {
 				DeviceNetworks: []deviceinfo.DeviceToNetwork{
 					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 				},
-				DeviceToSensors: []deviceinfo.DeviceToSensor{
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
 					{
-						DeviceId:        RegisteredDeviceId,
-						AttachedSensors: []string{RegisteredSensor},
-					},
-				},
-				SensorToQF: []deviceinfo.SensorToQueryFields{
-					{
-						Sensor:      RegisteredSensor,
+						DeviceId:    RegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -894,7 +842,8 @@ func TestGetDeviceData(t *testing.T) {
 	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
 	humaApiMux := humamux.New(router, config)
 	humaTest := humatest.Wrap(t, humaApiMux)
-	localhuma.RegisterHumaOperations(humaTest, a.VerifyToken, a.GetDeviceData, a.Login)
+	localhuma.RegisterHumaOperations(humaTest, a.VerifyToken, a.GetDeviceData,
+		a.Login, a.GetQueryFields)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			a.TokenProvider = &tokenprovider.MockTokenProvider{
@@ -916,7 +865,7 @@ func TestGetDeviceData(t *testing.T) {
 			require.Nil(t, err)
 			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
-			route := "/api/v1/device/" + tc.deviceId
+			route := "/api/v1/device/data/" + tc.deviceId
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token), tc.deviceRequest)
 			if resp.Code != tc.wantStatus {
@@ -929,6 +878,189 @@ func TestGetDeviceData(t *testing.T) {
 				err = json.Unmarshal(body, &dd)
 				require.Nil(t, err)
 				if diff := cmp.Diff(tc.want, dd); diff != "" {
+					t.Fatalf("response mismatch (-want +got):\n%s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestGetQueryFields(t *testing.T) {
+	tests := map[string]struct {
+		wantErr        bool
+		wantStatus     int
+		deviceId       string
+		want           []string
+		mockTokens     map[string]bool
+		mockAuthStore  authstore.Schema
+		mockDeviceInfo deviceinfo.Schema
+		token          string
+	}{
+
+		"successfully get queryfields": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			deviceId:   RegisteredDeviceId,
+			want:       append(deviceinfo.GeneralQueryFields, RegisteredQueryField),
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     UserRole,
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+				},
+			},
+		},
+
+		"regular user cannot request queryfields for device from other company": {
+			wantErr:    true,
+			wantStatus: http.StatusUnauthorized,
+			deviceId:   RegisteredDeviceId,
+			want:       nil,
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  OtherCompanyThanDevice,
+						Role:     UserRole,
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+				},
+			},
+		},
+
+		"admin user can request queryfields for device from other company": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			deviceId:   RegisteredDeviceId,
+			want:       append(deviceinfo.GeneralQueryFields, RegisteredQueryField),
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  OtherCompanyThanDevice,
+						Role:     AdminUserRole,
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+				},
+			},
+		},
+
+		"unknown token": {
+			wantErr:    true,
+			wantStatus: http.StatusUnauthorized,
+			token:      InvalidToken,
+			want:       nil,
+			deviceId:   RegisteredDeviceId,
+		},
+	}
+
+	db, err := miniredis.Run()
+	require.Nil(t, err)
+	defer db.Close()
+	router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
+	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
+	humaApiMux := humamux.New(router, config)
+	humaTest := humatest.Wrap(t, humaApiMux)
+	localhuma.RegisterHumaOperations(humaTest, a.VerifyToken, a.GetDeviceData,
+		a.Login, a.GetQueryFields)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			a.TokenProvider = &tokenprovider.MockTokenProvider{
+				Tokens:    tc.mockTokens,
+				Increment: len(tc.mockTokens),
+			}
+			defer a.TokenProvider.Close()
+			testingRedis, err := redis.NewTestingRedis(db.Addr())
+			require.Nil(t, err)
+			defer testingRedis.Close()
+			a.DeviceInfo = testingRedis
+			a.AuthStore = testingRedis
+			err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
+			require.Nil(t, err)
+			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
+			require.Nil(t, err)
+			route := "/api/v1/device/queryfields/" + tc.deviceId
+			resp := humaTest.Get(route,
+				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
+			if resp.Code != tc.wantStatus {
+				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
+			}
+			defer resp.Result().Body.Close()
+			if !tc.wantErr {
+				var qf []string
+				body := resp.Body.Bytes()
+				err = json.Unmarshal(body, &qf)
+				require.Nil(t, err)
+				if diff := cmp.Diff(tc.want, qf); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
 			}

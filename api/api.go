@@ -28,7 +28,6 @@ import (
 
 const EmptyPayloadLength int = 16
 
-var ctx context.Context
 var QUERYFIELD_REGEX = regexp.MustCompile(`^[a-zA-Z0-9_\-\s:]*$`)
 
 // var DEVICE_ID_REGEX = regexp.MustCompile(`\w{1,30}`)
@@ -82,7 +81,8 @@ func Start(opts ApiOpts) error {
 		config.Servers = append(config.Servers, &huma.Server{URL: "/api/v1"})
 		humaApi := humamux.New(router, config)
 		localhuma.RegisterHumaOperations(humaApi,
-			api.VerifyToken, api.GetDeviceData, api.Login)
+			api.VerifyToken, api.GetDeviceData, api.Login, api.GetQueryFields,
+		)
 		server := &http.Server{
 			Addr:    opts.Port,
 			Handler: router,
@@ -140,27 +140,20 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		in.Body.Stop = strings.TrimSpace(in.Body.Stop)
 		rfcStop, err := time.Parse(time.RFC3339Nano, in.Body.Stop)
 		if err != nil {
-			log.Printf("parsing stop: %v")
 			return nil, huma.Error400BadRequest("Stop time is invalid rfc.")
 		}
 		if rfcStart.UnixMilli() >= rfcStop.UnixMilli() {
 			return nil, huma.Error400BadRequest("Start time is greater than stop time.")
 		}
 	}
-	//TODO: allow users to ask for multiple queryfields at once
 	if in.Body.QueryFields[0] == "all" {
-		attachedSensors, err := a.DeviceInfo.GetAttachedSensors(in.DeviceId)
-		if err != nil {
-			log.Printf("error getting attached sensors for: %s: %v", in.DeviceId, err)
-			return nil, huma.Error500InternalServerError(
-				"Internal error getting attached sensors for deviceId.")
-		}
-		in.Body.QueryFields, err = a.DeviceInfo.GetQueryFields(attachedSensors)
+		qf, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
 		if err != nil {
 			log.Printf("error getting query fields for: %s: %v", in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting query fields for deviceId.")
 		}
+		in.Body.QueryFields = qf.Body
 	}
 	deviceCompany, err := a.DeviceInfo.GetCompany(in.DeviceId)
 	if err != nil {
@@ -310,4 +303,34 @@ func (a *Api) Login(ctx context.Context,
 			"Internal error linking the token to the user.")
 	}
 	return &tokenprovider.TokenResponse{Body: token}, nil
+}
+
+func (a *Api) GetQueryFields(ctx context.Context, in *localhuma.DeviceId) (
+	*deviceinfo.QueryFields, error) {
+	ctxUser := ctx.Value("user")
+	user, ok := ctxUser.(authstore.UserInfo)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error finding user info.")
+	}
+	if user.Company == "" {
+		return nil, huma.Error500InternalServerError(
+			"Internal error, user info unexpectedly null.")
+	}
+	deviceCompany, err := a.DeviceInfo.GetCompany(in.DeviceId)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"Internal error checking device company.")
+	}
+	if user.Role != a.AdminRole {
+		if user.Company != deviceCompany {
+			return nil, huma.Error401Unauthorized("Access denied.")
+		}
+	}
+	queryFields, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"Internal error while getting queryfields.")
+	}
+	return &queryFields, nil
 }

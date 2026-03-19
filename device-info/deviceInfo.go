@@ -1,9 +1,21 @@
 package deviceinfo
 
+var GeneralQueryFields = []string{
+	"latitude", "longitude", "signal_strength", "rssi", "snr", "batv",
+}
+
 type DeviceInfo struct {
 	DeviceId, Company, Network   string
 	Start, Stop                  string
 	QueryFields, AttachedSensors []string
+}
+
+type QueryFields struct {
+	Body []string
+}
+
+type DeviceIds struct {
+	Body []string
 }
 
 type DeviceToCompany struct {
@@ -16,21 +28,16 @@ type DeviceToNetwork struct {
 	Network  string
 }
 
-type DeviceToSensor struct {
-	DeviceId        string
-	AttachedSensors []string
-}
-
-type SensorToQueryFields struct {
-	Sensor      string
+type DeviceToQueryFields struct {
+	DeviceId    string
 	QueryFields []string
 }
 
 type Schema struct {
 	DeviceCompanies []DeviceToCompany
 	DeviceNetworks  []DeviceToNetwork
-	DeviceToSensors []DeviceToSensor
-	SensorToQF      []SensorToQueryFields
+	// DeviceToSensors []DeviceToSensor
+	DeviceToQF []DeviceToQueryFields
 }
 
 type TestingDeviceInfoFetcher interface {
@@ -40,8 +47,7 @@ type TestingDeviceInfoFetcher interface {
 type DeviceInfoFetcher interface {
 	TestingDeviceInfoFetcher
 	Close() error
-	GetAttachedSensors(deviceId string) ([]string, error)
-	GetQueryFields(attachedSensors []string) ([]string, error)
+	GetQueryFields(deviceId string) (QueryFields, error)
 	GetCompany(deviceId string) (string, error)
 	GetNetwork(deviceId string) (string, error)
 }
