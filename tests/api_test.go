@@ -932,6 +932,14 @@ func TestGetQueryFields(t *testing.T) {
 				},
 			},
 		},
+
+		"unknown token": {
+			wantErr:    true,
+			wantStatus: http.StatusUnauthorized,
+			token:      InvalidToken,
+			want:       nil,
+			deviceId:   RegisteredDeviceId,
+		},
 	}
 
 	db, err := miniredis.Run()
