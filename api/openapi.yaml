@@ -5,7 +5,7 @@ info:
 servers:
     - url: /api/v1
 paths:
-    /device/{deviceId}:
+    /device/data/{deviceId}:
         get:
             tags:
                 - GET
@@ -104,20 +104,28 @@ paths:
                                 title: Internal Server Error
                                 status: 500
                                 detail: Internal error while getting data for the device.
-    /login:
-        post:
+    /device/queryfields/{deviceId}:
+        get:
             tags:
-                - POST
-            summary: Login.
-            description: Clients can use this route to login and receive an active session token.
+                - GET
+            summary: Get all available QueryFields
+            description: Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor will have a 'temperature' QueryField.
             parameters:
                 - name: Authorization
                   in: header
-                  description: 'Required in the format: Bearer base64(username:password)'
+                  description: Token used for authentication. Note 'Bearer' prefix.
                   required: true
                   schema:
                     type: string
-                    description: 'Required in the format: Bearer base64(username:password)'
+                    pattern: ^[\w_-.]$
+                  example: Bearer someValidToken
+                - name: deviceId
+                  in: path
+                  description: Device Id to get QueryField information from.
+                  required: true
+                  schema:
+                    type: string
+                    pattern: ^\w{1,30}$
             requestBody:
                 content: {}
             responses:
@@ -126,8 +134,9 @@ paths:
                     content:
                         application/json:
                             schema:
-                                type: string
-                                description: Access token for API resources.
+                                type: array
+                                items:
+                                    type: string
                 "400":
                     description: Bad Request
                     content:
@@ -220,14 +229,14 @@ paths:
                                 schema: http://localhost:3030/schemas/ErrorModel.json
                                 title: Internal Server Error
                                 status: 500
-                                detail: Internal error logging in.
+                                detail: Internal error getting queryFields.
 components:
     schemas:
         DeviceData:
             type: object
             additionalProperties: false
             properties:
-                rtuid:
+                deviceId:
                     type: string
                 sensorData:
                     type: object
@@ -236,7 +245,7 @@ components:
                     type: string
                     format: date-time
             required:
-                - rtuid
+                - deviceId
                 - timestamp
                 - sensorData
         DeviceDataRequest:
