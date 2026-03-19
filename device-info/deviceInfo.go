@@ -24,21 +24,16 @@ type DeviceToNetwork struct {
 	Network  string
 }
 
-type DeviceToSensor struct {
-	DeviceId        string
-	AttachedSensors []string
-}
-
-type SensorToQueryFields struct {
-	Sensor      string
+type DeviceToQueryFields struct {
+	DeviceId    string
 	QueryFields []string
 }
 
 type Schema struct {
 	DeviceCompanies []DeviceToCompany
 	DeviceNetworks  []DeviceToNetwork
-	DeviceToSensors []DeviceToSensor
-	SensorToQF      []SensorToQueryFields
+	// DeviceToSensors []DeviceToSensor
+	DeviceToQF []DeviceToQueryFields
 }
 
 type TestingDeviceInfoFetcher interface {
