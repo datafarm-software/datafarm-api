@@ -208,12 +208,8 @@ func getStringSliceCmd(cmd any) []string {
 	return slice
 }
 
-func (t *TestingRedis) GetAttachedSensors(deviceId string) ([]string, error) {
-	return t.redis.GetAttachedSensors(deviceId)
-}
-
-func (t *TestingRedis) GetQueryFields(attachedSensors []string) ([]string, error) {
-	return t.redis.GetQueryFields(attachedSensors)
+func (t *TestingRedis) GetQueryFields(deviceId string) (deviceinfo.QueryFields, error) {
+	return t.redis.GetQueryFields(deviceId)
 }
 
 func (t *TestingRedis) GetCompany(deviceId string) (string, error) {

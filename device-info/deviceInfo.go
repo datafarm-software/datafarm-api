@@ -48,8 +48,7 @@ type TestingDeviceInfoFetcher interface {
 type DeviceInfoFetcher interface {
 	TestingDeviceInfoFetcher
 	Close() error
-	GetAttachedSensors(deviceId string) ([]string, error)
-	GetQueryFields(attachedSensors []string) ([]string, error)
+	GetQueryFields(deviceId string) (QueryFields, error)
 	GetCompany(deviceId string) (string, error)
 	GetNetwork(deviceId string) (string, error)
 }

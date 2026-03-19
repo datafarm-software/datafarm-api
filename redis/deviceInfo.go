@@ -12,26 +12,14 @@ func (r *Redis) PrepareDeviceInfo(deviceinfo.Schema) error {
 	return nil
 }
 
-func (r *Redis) GetAttachedSensors(deviceId string) ([]string, error) {
-	key := fmt.Sprintf("attachedSensors:%s", deviceId)
-	attachedSensors, err := r.db.SMembers(ctx, key).Result()
+func (r *Redis) GetQueryFields(deviceId string) (deviceinfo.QueryFields, error) {
+	var qf deviceinfo.QueryFields
+	var err error
+	qf.Body, err = r.db.SMembers(ctx, "queryFields:"+deviceId).Result()
 	if err != nil {
-		return nil, fmt.Errorf("redis: %v", err)
+		err = fmt.Errorf("redis smembers: %v", err)
 	}
-	return attachedSensors, nil
-}
-
-func (r *Redis) GetQueryFields(attachedSensors []string) ([]string, error) {
-	queryfields := make([]string, 0)
-	for _, a := range attachedSensors {
-		key := fmt.Sprintf("queryFields:%s", a)
-		qf, err := r.db.SMembers(ctx, key).Result()
-		if err != nil {
-			return nil, fmt.Errorf("redis smembers: %v", err)
-		}
-		queryfields = append(queryfields, qf...)
-	}
-	return queryfields, nil
+	return qf, err
 }
 
 func (r *Redis) GetCompany(deviceId string) (string, error) {
