@@ -33,14 +33,10 @@ type DeviceOutput struct {
 	Body []datafetcher.DeviceData
 }
 
-type LoginRequest struct {
-	Auth string `header:"Authorization" doc:"Required in the format: Bearer base64(username:password)" required:"true"`
-}
-
 func RegisterHumaOperations(api huma.API,
 	verifyToken func(ctx huma.Context, next func(huma.Context)),
 	getDeviceData HumaHandler[DeviceInput, DeviceOutput],
-	login HumaHandler[LoginRequest, tokenprovider.TokenResponse],
+	login HumaHandler[struct{}, tokenprovider.TokenResponse],
 	getQueryFields HumaHandler[DeviceId, struct{ Body deviceinfo.QueryFields }],
 ) {
 	registry := huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
@@ -48,18 +44,10 @@ func RegisterHumaOperations(api huma.API,
 		Method:      "GET",
 		Path:        "/device/data/{deviceId}",
 		Middlewares: huma.Middlewares{verifyToken},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
 		Parameters: []*huma.Param{
-			{
-				Name:        "Authorization",
-				In:          "header",
-				Description: "Token used for authentication. Note 'Bearer' prefix.",
-				Required:    true,
-				Schema: &huma.Schema{
-					Type:    "string",
-					Pattern: `^[\w_-.]$`,
-				},
-				Example: "Bearer someValidToken",
-			},
 			{
 				Name:        "deviceId",
 				In:          "path",
@@ -102,6 +90,20 @@ func RegisterHumaOperations(api huma.API,
 					},
 				},
 			},
+			"401": {
+				Description: "Unauthorized",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Unauthorized",
+							Status: http.StatusUnauthorized,
+							Detail: "Unknown user.",
+						},
+					},
+				},
+			},
 		},
 	}
 	huma.Register(api, operation, getDeviceData)
@@ -111,6 +113,9 @@ func RegisterHumaOperations(api huma.API,
 		Tags:        []string{"POST"},
 		Summary:     "Login.",
 		Description: "Clients can use this route to login and receive an active session token.",
+		Security: []map[string][]string{
+			{"basic": {}},
+		},
 		RequestBody: &huma.RequestBody{},
 		Responses: map[string]*huma.Response{
 			"500": {
@@ -148,7 +153,7 @@ func RegisterHumaOperations(api huma.API,
 							Schema: "http://localhost:3030/schemas/ErrorModel.json",
 							Title:  "Unauthorized",
 							Status: http.StatusUnauthorized,
-							Detail: "Unknown username.",
+							Detail: "Unknown user.",
 						},
 					},
 				},
@@ -162,20 +167,12 @@ func RegisterHumaOperations(api huma.API,
 		Tags:        []string{"GET"},
 		Middlewares: huma.Middlewares{verifyToken},
 		Summary:     "Get DeviceId QueryFields",
-		Description: "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor will have a 'temperature' QueryField.",
+		Description: "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor might have a 'temperature' QueryField.",
 		RequestBody: &huma.RequestBody{},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
 		Parameters: []*huma.Param{
-			{
-				Name:        "Authorization",
-				In:          "header",
-				Description: "Token used for authentication. Note 'Bearer' prefix.",
-				Required:    true,
-				Schema: &huma.Schema{
-					Type:    "string",
-					Pattern: `^[\w_-.]$`,
-				},
-				Example: "Bearer someValidToken",
-			},
 			{
 				Name:        "deviceId",
 				In:          "path",
@@ -223,7 +220,7 @@ func RegisterHumaOperations(api huma.API,
 							Schema: "http://localhost:3030/schemas/ErrorModel.json",
 							Title:  "Unauthorized",
 							Status: http.StatusUnauthorized,
-							Detail: "Unknown username.",
+							Detail: "Unknown user.",
 						},
 					},
 				},
