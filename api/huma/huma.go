@@ -24,18 +24,13 @@ type DeviceId struct {
 	DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
 }
 
-type DeviceInput struct {
-	DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-	Body     datafetcher.DeviceDataRequest
-}
-
 type DeviceOutput struct {
 	Body []datafetcher.DeviceData
 }
 
 func RegisterHumaOperations(api huma.API,
 	verifyToken func(ctx huma.Context, next func(huma.Context)),
-	getDeviceData HumaHandler[DeviceInput, DeviceOutput],
+	getDeviceData HumaHandler[datafetcher.DeviceDataRequest, DeviceOutput],
 	login HumaHandler[struct{}, tokenprovider.TokenResponse],
 	getQueryFields HumaHandler[DeviceId, struct{ Body deviceinfo.QueryFields }],
 ) {

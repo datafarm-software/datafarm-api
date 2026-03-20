@@ -7,9 +7,10 @@ import (
 )
 
 type DeviceDataRequest struct {
-	QueryFields []string `json:"queryFields" required:"true"`
-	Start       string   `json:"start" required:"true"`
-	Stop        string   `json:"stop" required:"false"`
+	DeviceId    string   `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+	QueryFields []string `query:"queryField,explode" json:"queryFields" required:"true" doc:"If all QueryFields desired, set ?queryField=all. Multiple QueryFields supported using format: ?queryField=temperature&queryField=humidity."`
+	Start       string   `query:"start" json:"start" required:"true"`
+	Stop        string   `query:"stop" json:"stop" required:"false"`
 }
 
 type DeviceData struct {
