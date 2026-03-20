@@ -41,7 +41,7 @@ func RegisterHumaOperations(api huma.API,
 	verifyToken func(ctx huma.Context, next func(huma.Context)),
 	getDeviceData HumaHandler[DeviceInput, DeviceOutput],
 	login HumaHandler[LoginRequest, tokenprovider.TokenResponse],
-	getQueryFields HumaHandler[DeviceId, deviceinfo.QueryFields],
+	getQueryFields HumaHandler[DeviceId, struct{ Body deviceinfo.QueryFields }],
 ) {
 	registry := huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
 	operation := huma.Operation{

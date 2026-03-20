@@ -20,7 +20,8 @@ func (r *Redis) GetQueryFields(deviceId string) (deviceinfo.QueryFields, error) 
 		err = fmt.Errorf("redis smembers: %v", err)
 	}
 	return deviceinfo.QueryFields{
-		Body: append(deviceinfo.GeneralQueryFields, qf...),
+		DeviceId:    deviceId,
+		QueryFields: append(deviceinfo.GeneralQueryFields, qf...),
 	}, err
 }
 

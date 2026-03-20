@@ -11,7 +11,8 @@ type DeviceInfo struct {
 }
 
 type QueryFields struct {
-	Body []string
+	DeviceId    string   `json:"deviceId"`
+	QueryFields []string `json:"queryFields"`
 }
 
 type DeviceIds struct {
