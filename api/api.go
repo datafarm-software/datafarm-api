@@ -153,7 +153,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting query fields for deviceId.")
 		}
-		in.Body.QueryFields = qf.Body
+		in.Body.QueryFields = qf.QueryFields
 	}
 	deviceCompany, err := a.DeviceInfo.GetCompany(in.DeviceId)
 	if err != nil {
@@ -306,7 +306,7 @@ func (a *Api) Login(ctx context.Context,
 }
 
 func (a *Api) GetQueryFields(ctx context.Context, in *localhuma.DeviceId) (
-	*deviceinfo.QueryFields, error) {
+	*struct{ Body deviceinfo.QueryFields }, error) {
 	ctxUser := ctx.Value("user")
 	user, ok := ctxUser.(authstore.UserInfo)
 	if !ok {
@@ -332,5 +332,5 @@ func (a *Api) GetQueryFields(ctx context.Context, in *localhuma.DeviceId) (
 		return nil, huma.Error500InternalServerError(
 			"Internal error while getting queryfields.")
 	}
-	return &queryFields, nil
+	return &struct{ Body deviceinfo.QueryFields }{queryFields}, nil
 }
