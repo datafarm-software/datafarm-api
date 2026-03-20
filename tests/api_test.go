@@ -890,7 +890,7 @@ func TestGetQueryFields(t *testing.T) {
 		wantErr        bool
 		wantStatus     int
 		deviceId       string
-		want           []string
+		want           deviceinfo.QueryFields
 		mockTokens     map[string]bool
 		mockAuthStore  authstore.Schema
 		mockDeviceInfo deviceinfo.Schema
@@ -901,7 +901,10 @@ func TestGetQueryFields(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			deviceId:   RegisteredDeviceId,
-			want:       append(deviceinfo.GeneralQueryFields, RegisteredQueryField),
+			want: deviceinfo.QueryFields{
+				DeviceId:    RegisteredDeviceId,
+				QueryFields: append(deviceinfo.GeneralQueryFields, RegisteredQueryField),
+			},
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{
 					{
@@ -940,7 +943,7 @@ func TestGetQueryFields(t *testing.T) {
 			wantErr:    true,
 			wantStatus: http.StatusUnauthorized,
 			deviceId:   RegisteredDeviceId,
-			want:       nil,
+			want:       deviceinfo.QueryFields{},
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{
 					{
@@ -979,7 +982,10 @@ func TestGetQueryFields(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			deviceId:   RegisteredDeviceId,
-			want:       append(deviceinfo.GeneralQueryFields, RegisteredQueryField),
+			want: deviceinfo.QueryFields{
+				DeviceId:    RegisteredDeviceId,
+				QueryFields: append(deviceinfo.GeneralQueryFields, RegisteredQueryField),
+			},
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{
 					{
@@ -1018,7 +1024,7 @@ func TestGetQueryFields(t *testing.T) {
 			wantErr:    true,
 			wantStatus: http.StatusUnauthorized,
 			token:      InvalidToken,
-			want:       nil,
+			want:       deviceinfo.QueryFields{},
 			deviceId:   RegisteredDeviceId,
 		},
 	}
@@ -1056,7 +1062,7 @@ func TestGetQueryFields(t *testing.T) {
 			}
 			defer resp.Result().Body.Close()
 			if !tc.wantErr {
-				var qf []string
+				var qf deviceinfo.QueryFields
 				body := resp.Body.Bytes()
 				err = json.Unmarshal(body, &qf)
 				require.Nil(t, err)
