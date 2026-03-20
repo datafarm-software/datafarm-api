@@ -78,6 +78,22 @@ func Start(opts ApiOpts) error {
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
 		router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
 		config := huma.DefaultConfig("SensorData API", "1.0.0")
+		config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
+			"bearer": {
+				Type:         "http",
+				Scheme:       "bearer",
+				Name:         "Authorization",
+				In:           "header",
+				BearerFormat: "JWT",
+			},
+			"basic": {
+				Type:         "http",
+				Scheme:       "basic",
+				Name:         "Authorization",
+				In:           "header",
+				BearerFormat: "Basic",
+			},
+		}
 		config.Servers = append(config.Servers, &huma.Server{URL: "/api/v1"})
 		humaApi := humamux.New(router, config)
 		localhuma.RegisterHumaOperations(humaApi,
@@ -248,8 +264,14 @@ func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
 }
 
 func (a *Api) Login(ctx context.Context,
-	lr *localhuma.LoginRequest) (*tokenprovider.TokenResponse, error) {
-	parts := strings.Split(lr.Auth, " ")
+	_ *struct{}) (*tokenprovider.TokenResponse, error) {
+	hctx, ok := ctx.(huma.Context)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error asserting handler context.")
+	}
+	authHeader := hctx.Header("Authorization")
+	parts := strings.Split(authHeader, " ")
 	if len(parts) != 2 || parts[0] != "Basic" {
 		return nil, huma.Error400BadRequest(
 			"Authorization header must follow the basic format: 'Basic base64(username:password)'")
