@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -844,6 +846,7 @@ func TestGetDeviceData(t *testing.T) {
 	humaTest := humatest.Wrap(t, humaApiMux)
 	localhuma.RegisterHumaOperations(humaTest, a.VerifyToken, a.GetDeviceData,
 		a.Login, a.GetQueryFields)
+	var qp string
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			a.TokenProvider = &tokenprovider.MockTokenProvider{
@@ -865,9 +868,10 @@ func TestGetDeviceData(t *testing.T) {
 			require.Nil(t, err)
 			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
-			route := "/api/v1/device/data/" + tc.deviceId
+			qp = makeQueryParams(tc.deviceRequest)
+			route := "/api/v1/device/data/" + tc.deviceId + qp
 			resp := humaTest.Get(route,
-				fmt.Sprintf(`Authorization: Bearer %s`, tc.token), tc.deviceRequest)
+				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
 			if resp.Code != tc.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
 			}
@@ -883,6 +887,20 @@ func TestGetDeviceData(t *testing.T) {
 			}
 		})
 	}
+}
+
+func makeQueryParams(dr datafetcher.DeviceDataRequest) string {
+	b := strings.Builder{}
+	start := url.QueryEscape(dr.Start)
+	fmt.Fprintf(&b, "?start=%s", start)
+	if dr.Stop != "" {
+		stop := url.QueryEscape(dr.Stop)
+		fmt.Fprintf(&b, "&stop=%s", stop)
+	}
+	for _, q := range dr.QueryFields {
+		fmt.Fprintf(&b, "&queryField=%s", q)
+	}
+	return b.String()
 }
 
 func TestGetQueryFields(t *testing.T) {

@@ -137,12 +137,13 @@ func (a *Api) Close() {
 }
 
 func (a *Api) GetDeviceData(ctx context.Context,
-	in *localhuma.DeviceInput) (*localhuma.DeviceOutput, error) {
-	in.Body.Start = strings.TrimSpace(in.Body.Start)
-	if RELATIVETIME_REGEX.MatchString(in.Body.Start) {
-		in.Body.Stop = ""
+	in *datafetcher.DeviceDataRequest) (*localhuma.DeviceOutput, error) {
+	log.Printf("request received: %v\n", *in)
+	in.Start = strings.TrimSpace(in.Start)
+	if RELATIVETIME_REGEX.MatchString(in.Start) {
+		in.Stop = ""
 	} else {
-		rfcStart, err := time.Parse(time.RFC3339Nano, in.Body.Start)
+		rfcStart, err := time.Parse(time.RFC3339Nano, in.Start)
 		if err != nil {
 			log.Printf("parsing start: %v", err)
 			return nil, huma.Error400BadRequest("Start time is invalid rfc.")
@@ -150,11 +151,11 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		if rfcStart.UnixMilli() >= time.Now().UnixMilli() {
 			return nil, huma.Error400BadRequest("Start time is in the future.")
 		}
-		if in.Body.Stop == "" {
+		if in.Stop == "" {
 			return nil, huma.Error400BadRequest("No stop time provided.")
 		}
-		in.Body.Stop = strings.TrimSpace(in.Body.Stop)
-		rfcStop, err := time.Parse(time.RFC3339Nano, in.Body.Stop)
+		in.Stop = strings.TrimSpace(in.Stop)
+		rfcStop, err := time.Parse(time.RFC3339Nano, in.Stop)
 		if err != nil {
 			return nil, huma.Error400BadRequest("Stop time is invalid rfc.")
 		}
@@ -162,14 +163,14 @@ func (a *Api) GetDeviceData(ctx context.Context,
 			return nil, huma.Error400BadRequest("Start time is greater than stop time.")
 		}
 	}
-	if in.Body.QueryFields[0] == "all" {
+	if in.QueryFields[0] == "all" {
 		qf, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
 		if err != nil {
 			log.Printf("error getting query fields for: %s: %v", in.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting query fields for deviceId.")
 		}
-		in.Body.QueryFields = qf.QueryFields
+		in.QueryFields = qf.QueryFields
 	}
 	deviceCompany, err := a.DeviceInfo.GetCompany(in.DeviceId)
 	if err != nil {
@@ -195,9 +196,9 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		Company:     user.Company,
 		DeviceId:    in.DeviceId,
 		Network:     user.Network,
-		QueryFields: in.Body.QueryFields,
-		Start:       in.Body.Start,
-		Stop:        in.Body.Stop,
+		QueryFields: in.QueryFields,
+		Start:       in.Start,
+		Stop:        in.Stop,
 	}
 	isAdminUser := strings.ToLower(user.Role) == a.AdminRole
 	if isAdminUser {
