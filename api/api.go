@@ -138,7 +138,6 @@ func (a *Api) Close() {
 
 func (a *Api) GetDeviceData(ctx context.Context,
 	in *datafetcher.DeviceDataRequest) (*localhuma.DeviceOutput, error) {
-	log.Printf("request received: %v\n", *in)
 	in.Start = strings.TrimSpace(in.Start)
 	if RELATIVETIME_REGEX.MatchString(in.Start) {
 		in.Stop = ""
@@ -265,14 +264,8 @@ func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
 }
 
 func (a *Api) Login(ctx context.Context,
-	_ *struct{}) (*tokenprovider.TokenResponse, error) {
-	hctx, ok := ctx.(huma.Context)
-	if !ok {
-		return nil, huma.Error500InternalServerError(
-			"Internal error asserting handler context.")
-	}
-	authHeader := hctx.Header("Authorization")
-	parts := strings.Split(authHeader, " ")
+	ar *localhuma.LoginRequest) (*tokenprovider.TokenResponse, error) {
+	parts := strings.Split(ar.Auth, " ")
 	if len(parts) != 2 || parts[0] != "Basic" {
 		return nil, huma.Error400BadRequest(
 			"Authorization header must follow the basic format: 'Basic base64(username:password)'")
