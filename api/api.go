@@ -41,18 +41,17 @@ var SPECIAL_CHARS_REGEX = regexp.MustCompile(`[@$!%*?&#]`)
 type ApiOpts struct {
 	RedisOpts      redis.RedisOpts        `mapstructure:"Redis" validate:"required"`
 	InfluxOpts     datafetcher.InfluxOpts `mapstructure:"Influx" validate:"required"`
-	AdminRole      string                 `mapstructure:"adminRole" validate:"required,alphanum"`
 	Port           string                 `mapstructure:"port" validate:"required"`
 	PrivateKeyFile string                 `mapstructure:"privatekeyfile" validate:"required"`
 	PublicKeyFile  string                 `mapstructure:"publickeyfile" validate:"required"`
 }
 
 type Api struct {
-	Port, AdminRole string
-	DeviceInfo      deviceinfo.DeviceInfoFetcher
-	DataFetcher     df.DataFetcher
-	TokenProvider   tokenprovider.TokenProvider
-	AuthStore       authstore.AuthStore
+	Port          string
+	DeviceInfo    deviceinfo.DeviceInfoFetcher
+	DataFetcher   df.DataFetcher
+	TokenProvider tokenprovider.TokenProvider
+	AuthStore     authstore.AuthStore
 }
 
 func Start(opts ApiOpts) error {
@@ -73,7 +72,6 @@ func Start(opts ApiOpts) error {
 		DeviceInfo: redis, DataFetcher: df,
 		TokenProvider: tokenAuth,
 		AuthStore:     redis,
-		AdminRole:     opts.AdminRole,
 	}
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
 		router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
@@ -199,8 +197,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		Start:       in.Start,
 		Stop:        in.Stop,
 	}
-	isAdminUser := strings.ToLower(user.Role) == a.AdminRole
-	if isAdminUser {
+	if authstore.Role(user.Role) == authstore.Admin {
 		metadata.Company = deviceCompany
 		metadata.Network = deviceNetwork
 	} else {
@@ -338,7 +335,7 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 		return nil, huma.Error500InternalServerError(
 			"Internal error checking device company.")
 	}
-	if user.Role != a.AdminRole {
+	if authstore.Role(user.Role) != authstore.Admin {
 		if user.Company != deviceCompany {
 			return nil, huma.Error401Unauthorized("Access denied.")
 		}
