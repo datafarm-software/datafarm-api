@@ -121,7 +121,7 @@ func TestLogin(t *testing.T) {
 			defer a.TokenProvider.Close()
 			encodedDetails := base64.StdEncoding.EncodeToString(
 				[]byte(tc.username + ":" + tc.password))
-			resp := humaTest.Post("/login",
+			resp := humaTest.Post("/api/v1/login",
 				fmt.Sprintf("Authorization: Basic %s", encodedDetails))
 			if resp.Code != tc.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
