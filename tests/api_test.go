@@ -892,6 +892,16 @@ func setupHuma(t *testing.T) humatest.TestAPI {
 	return humaTest
 }
 
+func setupBatchHuma(t *testing.T) humatest.TestAPI {
+	router := mux.NewRouter().PathPrefix("/batch/api/v1").Subrouter()
+	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
+	humaApiMux := humamux.New(router, config)
+	humaTest := humatest.Wrap(t, humaApiMux)
+	localhuma.RegisterBatchHumaOperations(humaTest, a.VerifyToken,
+		a.BatchGetDeviceData)
+	return humaTest
+}
+
 func makeQueryParams(dr datafetcher.DeviceDataRequest) string {
 	b := strings.Builder{}
 	start := url.QueryEscape(dr.Start)
@@ -1202,7 +1212,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 	db, err := miniredis.Run()
 	require.Nil(t, err)
 	defer db.Close()
-	humaTest := setupHuma(t)
+	humaTest := setupBatchHuma(t)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			a.TokenProvider = &tokenprovider.MockTokenProvider{
