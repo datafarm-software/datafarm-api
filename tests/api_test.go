@@ -121,7 +121,7 @@ func TestLogin(t *testing.T) {
 			defer a.TokenProvider.Close()
 			encodedDetails := base64.StdEncoding.EncodeToString(
 				[]byte(tc.username + ":" + tc.password))
-			resp := humaTest.Post("/api/v1/login",
+			resp := humaTest.Post("/login",
 				fmt.Sprintf("Authorization: Basic %s", encodedDetails))
 			if resp.Code != tc.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
@@ -1966,7 +1966,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 	db, err := miniredis.Run()
 	require.Nil(t, err)
 	defer db.Close()
-	humaTest := setupBatchHuma(t)
+	humaTest := setupHuma(t)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			a.TokenProvider = &tokenprovider.MockTokenProvider{
