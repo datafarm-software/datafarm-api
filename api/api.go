@@ -349,6 +349,10 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 }
 
 func (a *Api) BatchGetDeviceData(ctx context.Context,
-	in *datafetcher.BatchDeviceDataRequest) (*datafetcher.BatchDeviceDataResponse, error) {
+	in *struct {
+		Body []datafetcher.BatchDeviceDataRequest
+	}) (*struct {
+	Body datafetcher.BatchDeviceDataResponse
+}, error) {
 	return nil, fmt.Errorf("not implemented")
 }
