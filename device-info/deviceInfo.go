@@ -10,6 +10,14 @@ type DeviceInfo struct {
 	QueryFields, AttachedSensors []string
 }
 
+type QueryFieldsResponse struct {
+	Body QueryFields
+}
+
+type QueryFieldsRequest struct {
+	DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+}
+
 type QueryFields struct {
 	DeviceId    string   `json:"deviceId"`
 	QueryFields []string `json:"queryFields"`
