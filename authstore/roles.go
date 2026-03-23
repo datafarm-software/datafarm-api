@@ -37,7 +37,15 @@ var AllRoles = []Role{User, NetworkUser, Admin}
 
 type Permission string
 
-var rolePermissions = map[Role][]Permission{}
+const (
+	GetAnyDevice Permission = "get-any-device"
+)
+
+var rolePermissions = map[Role][]Permission{
+	Admin: {
+		GetAnyDevice,
+	},
+}
 
 func InitRoles() error {
 	rolePermissions[NetworkUser] = append(rolePermissions[NetworkUser], rolePermissions[User]...)

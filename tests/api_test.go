@@ -33,9 +33,6 @@ const UnregisteredPassword = "@Password2"
 const RegisteredCompany = "company"
 const OtherCompanyThanDevice = "othercompany"
 const RegisteredNetwork = "Datafarm"
-const UserRole = "1"
-const NetworkUserRole = "2"
-const AdminUserRole = "3"
 const RegisteredDeviceId = "device1"
 const AnotherRegisteredDeviceId = "device2"
 const RegisteredQueryField = "temperature"
@@ -1094,34 +1091,38 @@ func TestGetQueryFields(t *testing.T) {
 
 func TestBatchGetDeviceData(t *testing.T) {
 	tests := map[string]struct {
-		wantErr               bool
-		wantStatus            int
-		mockDataFetcher, want []datafetcher.DeviceData
-		mockAuthStore         authstore.Schema
-		mockDeviceInfo        deviceinfo.Schema
-		mockTokens            map[string]bool
-		token                 string
-		deviceRequests        []datafetcher.DeviceDataRequest
+		wantErr         bool
+		wantStatus      int
+		mockDataFetcher []datafetcher.DeviceData
+		want            datafetcher.BatchDeviceDataResponse
+		mockAuthStore   authstore.Schema
+		mockDeviceInfo  deviceinfo.Schema
+		mockTokens      map[string]bool
+		token           string
+		deviceRequests  []datafetcher.DeviceDataRequest
 	}{
 
 		"get multiple deviceIds' data": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: []datafetcher.DeviceData{
-				{
-					DeviceID:  RegisteredDeviceId,
-					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField:        float64(23),
-						AnotherRegisteredQueryField: float64(80),
+			want: datafetcher.BatchDeviceDataResponse{
+				Errors: []datafetcher.DeviceDataError{},
+				Result: []datafetcher.DeviceData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]any{
+							RegisteredQueryField:        float64(23),
+							AnotherRegisteredQueryField: float64(80),
+						},
 					},
-				},
-				{
-					DeviceID:  AnotherRegisteredDeviceId,
-					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField:        float64(25),
-						AnotherRegisteredQueryField: float64(70),
+					{
+						DeviceID:  AnotherRegisteredDeviceId,
+						Timestamp: AlsoInsideTimeRange,
+						SensorData: map[string]any{
+							RegisteredQueryField:        float64(25),
+							AnotherRegisteredQueryField: float64(70),
+						},
 					},
 				},
 			},
@@ -1222,14 +1223,14 @@ func TestBatchGetDeviceData(t *testing.T) {
 			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
 			route := "/batch/device/sensordata"
-			resp := humaTest.Get(route,
+			resp := humaTest.Post(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token), tc.deviceRequests)
 			if resp.Code != tc.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
 			}
 			defer resp.Result().Body.Close()
 			if !tc.wantErr {
-				var dd []datafetcher.DeviceData
+				var dd datafetcher.BatchDeviceDataResponse
 				body := resp.Body.Bytes()
 				err = json.Unmarshal(body, &dd)
 				require.Nil(t, err)

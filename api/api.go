@@ -197,7 +197,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		Start:       in.Start,
 		Stop:        in.Stop,
 	}
-	if authstore.Role(user.Role) == authstore.Admin {
+	if authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyDevice) {
 		metadata.Company = deviceCompany
 		metadata.Network = deviceNetwork
 	} else {
@@ -335,8 +335,9 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 		return nil, huma.Error500InternalServerError(
 			"Internal error checking device company.")
 	}
-	if authstore.Role(user.Role) != authstore.Admin {
-		if user.Company != deviceCompany {
+	if user.Company != deviceCompany {
+		if !authstore.HasPermission(authstore.Role(user.Role),
+			authstore.GetAnyDevice) {
 			return nil, huma.Error401Unauthorized("Access denied.")
 		}
 	}
@@ -354,5 +355,34 @@ func (a *Api) BatchGetDeviceData(ctx context.Context,
 	}) (*struct {
 	Body datafetcher.BatchDeviceDataResponse
 }, error) {
-	return nil, fmt.Errorf("not implemented")
+	var dr datafetcher.DeviceDataRequest
+	var dataResp *datafetcher.DeviceDataResponse
+	var deviceErr datafetcher.DeviceDataError
+	var err error
+	errSlice := make([]datafetcher.DeviceDataError, 0, len(in.Body))
+	resultSlice := make([]datafetcher.DeviceData, 0, len(in.Body))
+	for _, bdr := range in.Body {
+		dr = datafetcher.DeviceDataRequest{
+			DeviceId:    bdr.DeviceId,
+			QueryFields: bdr.QueryFields,
+			Start:       bdr.Start,
+			Stop:        bdr.Stop,
+		}
+		dataResp, err = a.GetDeviceData(ctx, &dr)
+		if err == nil {
+			resultSlice = append(resultSlice, dataResp.Body...)
+		} else {
+			deviceErr.DeviceId = bdr.DeviceId
+			deviceErr.Error = err
+			errSlice = append(errSlice, deviceErr)
+		}
+	}
+	return &struct {
+		Body datafetcher.BatchDeviceDataResponse
+	}{
+		Body: datafetcher.BatchDeviceDataResponse{
+			Result: resultSlice,
+			Errors: errSlice,
+		},
+	}, nil
 }
