@@ -18,22 +18,24 @@ type DeviceDataRequest struct {
 }
 
 type BatchDeviceDataRequest struct {
-	DeviceId    string   `json:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-	QueryFields []string `json:"queryFields" required:"true" doc:"If all QueryFields desired, set ?queryField=all. Multiple QueryFields supported using format: ?queryField=temperature&queryField=humidity."`
-	Start       string   `json:"start" required:"true"`
-	Stop        string   `json:"stop" required:"false"`
+	Body []struct {
+		DeviceId    string   `json:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+		QueryFields []string `json:"queryFields" required:"true"`
+		Start       string   `json:"start" required:"true"`
+		Stop        string   `json:"stop" required:"false"`
+	}
 }
 
 type DeviceDataError struct {
-	DeviceId string
-	Error    error
+	DeviceId string `json:"deviceId"`
+	Error    error  `json:"error"`
 }
 
 type BatchDeviceDataResponse struct {
 	Body struct {
-		Successful []DeviceDataResponse `json:"successful"`
-		Errors     []DeviceDataError
-	} `json:"result"`
+		Result []DeviceData      `json:"result"`
+		Errors []DeviceDataError `json:"errors"`
+	}
 }
 
 type DeviceData struct {
