@@ -26,7 +26,7 @@ type BatchDeviceDataRequest struct {
 
 type DeviceDataError struct {
 	DeviceId string `json:"deviceId"`
-	Error    error  `json:"error"`
+	Error    string `json:"error"`
 }
 
 type BatchDeviceDataResponse struct {

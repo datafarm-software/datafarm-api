@@ -205,13 +205,13 @@ func (a *Api) GetDeviceData(ctx context.Context,
 			log.Printf("user: %s requested deviceId: %s. User Company: %s, Device Company: %s",
 				user.Username, in.DeviceId, user.Company, deviceCompany)
 			return nil, huma.Error401Unauthorized(
-				"Unauthorized for access to this device.")
+				"Unauthorized access to this device.")
 		}
 		if deviceNetwork != user.Network {
 			log.Printf("user: %s requested deviceId: %s. User Network: %s, Device Network: %s",
 				user.Username, in.DeviceId, user.Network, deviceNetwork)
 			return nil, huma.Error401Unauthorized(
-				"Unauthorized for access to this device.")
+				"Unauthorized access to this device.")
 		}
 	}
 	deviceData, err := a.DataFetcher.GetData(metadata)
@@ -373,7 +373,7 @@ func (a *Api) BatchGetDeviceData(ctx context.Context,
 			resultSlice = append(resultSlice, dataResp.Body...)
 		} else {
 			deviceErr.DeviceId = bdr.DeviceId
-			deviceErr.Error = err
+			deviceErr.Error = err.Error()
 			errSlice = append(errSlice, deviceErr)
 		}
 	}
