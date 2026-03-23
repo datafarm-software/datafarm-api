@@ -20,23 +20,11 @@ type HumaError struct {
 
 type HumaHandler[I, O any] func(context.Context, *I) (*O, error)
 
-type DeviceId struct {
-	DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-}
-
-type LoginRequest struct {
-	Auth string `header:"Authorization" required:"true" hidden:"true"`
-}
-
-type DeviceOutput struct {
-	Body []datafetcher.DeviceData
-}
-
 func RegisterHumaOperations(api huma.API,
 	verifyToken func(ctx huma.Context, next func(huma.Context)),
-	getDeviceData HumaHandler[datafetcher.DeviceDataRequest, DeviceOutput],
-	login HumaHandler[LoginRequest, tokenprovider.TokenResponse],
-	getQueryFields HumaHandler[DeviceId, struct{ Body deviceinfo.QueryFields }],
+	getDeviceData HumaHandler[datafetcher.DeviceDataRequest, datafetcher.DeviceDataResponse],
+	login HumaHandler[tokenprovider.LoginRequest, tokenprovider.LoginResponse],
+	getQueryFields HumaHandler[deviceinfo.QueryFieldsRequest, deviceinfo.QueryFieldsResponse],
 ) {
 	registry := huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
 	operation := huma.Operation{

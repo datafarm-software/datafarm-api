@@ -26,7 +26,7 @@ func (m *MockTokenProvider) GenerateToken() (string, time.Duration, error) {
 	return token, THREE_HOURS, nil
 }
 
-func (m *MockTokenProvider) IsValidToken(t TokenResponse) bool {
+func (m *MockTokenProvider) IsValidToken(t LoginResponse) bool {
 	return m.Tokens[t.Body]
 }
 

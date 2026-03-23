@@ -107,7 +107,7 @@ func (j *jwtAuth) GenerateToken() (string, time.Duration, error) {
 	return tokenString, THREE_HOURS, nil
 }
 
-func (j *jwtAuth) IsValidToken(tr TokenResponse) bool {
+func (j *jwtAuth) IsValidToken(tr LoginResponse) bool {
 	claims := jwt.MapClaims{}
 	token, err := jwt.ParseWithClaims(tr.Body, claims,
 		func(token *jwt.Token) (any, error) {

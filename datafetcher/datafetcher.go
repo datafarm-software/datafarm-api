@@ -6,6 +6,10 @@ import (
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
 )
 
+type DeviceDataResponse struct {
+	Body []DeviceData
+}
+
 type DeviceDataRequest struct {
 	DeviceId    string   `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
 	QueryFields []string `query:"queryField,explode" json:"queryFields" required:"true" doc:"If all QueryFields desired, set ?queryField=all. Multiple QueryFields supported using format: ?queryField=temperature&queryField=humidity."`

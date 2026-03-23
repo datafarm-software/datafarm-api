@@ -137,7 +137,7 @@ func (a *Api) Close() {
 }
 
 func (a *Api) GetDeviceData(ctx context.Context,
-	in *datafetcher.DeviceDataRequest) (*localhuma.DeviceOutput, error) {
+	in *datafetcher.DeviceDataRequest) (*datafetcher.DeviceDataResponse, error) {
 	in.Start = strings.TrimSpace(in.Start)
 	if RELATIVETIME_REGEX.MatchString(in.Start) {
 		in.Stop = ""
@@ -223,7 +223,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error fetching data.")
 	}
-	return &localhuma.DeviceOutput{Body: deviceData}, nil
+	return &datafetcher.DeviceDataResponse{Body: deviceData}, nil
 }
 
 func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
@@ -240,11 +240,11 @@ func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	var tr tokenprovider.TokenResponse
-	tr.Body = strings.TrimSpace(parts[1])
-	tr.Body = strings.Trim(tr.Body, `"`)
-	if !a.TokenProvider.IsValidToken(tr) {
-		if err := a.AuthStore.DeleteToken(authstore.UserToken{Token: tr.Body}); err != nil {
+	var lr tokenprovider.LoginResponse
+	lr.Body = strings.TrimSpace(parts[1])
+	lr.Body = strings.Trim(lr.Body, `"`)
+	if !a.TokenProvider.IsValidToken(lr) {
+		if err := a.AuthStore.DeleteToken(authstore.UserToken{Token: lr.Body}); err != nil {
 			log.Printf("deleting token: %v", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError),
 				http.StatusInternalServerError)
@@ -253,7 +253,7 @@ func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
 			http.StatusUnauthorized)
 		return
 	}
-	user, err := a.AuthStore.GetUser(tr.Body)
+	user, err := a.AuthStore.GetUser(lr.Body)
 	if err != nil {
 		log.Printf("getting user: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError),
@@ -264,7 +264,7 @@ func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
 }
 
 func (a *Api) Login(ctx context.Context,
-	ar *localhuma.LoginRequest) (*tokenprovider.TokenResponse, error) {
+	ar *tokenprovider.LoginRequest) (*tokenprovider.LoginResponse, error) {
 	parts := strings.Split(ar.Auth, " ")
 	if len(parts) != 2 || parts[0] != "Basic" {
 		return nil, huma.Error400BadRequest(
@@ -318,11 +318,11 @@ func (a *Api) Login(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error linking the token to the user.")
 	}
-	return &tokenprovider.TokenResponse{Body: token}, nil
+	return &tokenprovider.LoginResponse{Body: token}, nil
 }
 
-func (a *Api) GetQueryFields(ctx context.Context, in *localhuma.DeviceId) (
-	*struct{ Body deviceinfo.QueryFields }, error) {
+func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (
+	*deviceinfo.QueryFieldsResponse, error) {
 	ctxUser := ctx.Value("user")
 	user, ok := ctxUser.(authstore.UserInfo)
 	if !ok {
@@ -348,5 +348,5 @@ func (a *Api) GetQueryFields(ctx context.Context, in *localhuma.DeviceId) (
 		return nil, huma.Error500InternalServerError(
 			"Internal error while getting queryfields.")
 	}
-	return &struct{ Body deviceinfo.QueryFields }{queryFields}, nil
+	return &deviceinfo.QueryFieldsResponse{Body: queryFields}, nil
 }
