@@ -54,9 +54,7 @@ var OutsideTimeRange = time.Now().Add(-25 * time.Hour)
 var InsideTimeRange = time.Now().Add(-2 * time.Hour)
 var AlsoInsideTimeRange = time.Now().Add(-1 * time.Hour)
 var RegisteredCompanyDevices = []string{RegisteredDeviceId}
-var a = &api.Api{
-	AdminRole: AdminUserRole,
-}
+var a = &api.Api{}
 
 func TestLogin(t *testing.T) {
 	tests := map[string]struct {
@@ -77,7 +75,7 @@ func TestLogin(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
-						Role:     UserRole,
+						Role:     int(authstore.User),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -95,7 +93,7 @@ func TestLogin(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
-						Role:     UserRole,
+						Role:     int(authstore.User),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -123,7 +121,7 @@ func TestLogin(t *testing.T) {
 			defer a.TokenProvider.Close()
 			encodedDetails := base64.StdEncoding.EncodeToString(
 				[]byte(tc.username + ":" + tc.password))
-			resp := humaTest.Post("/login",
+			resp := humaTest.Post("/api/v1/login",
 				fmt.Sprintf("Authorization: Basic %s", encodedDetails))
 			if resp.Code != tc.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
@@ -168,7 +166,7 @@ func TestGetDeviceData(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
-						Role:     UserRole,
+						Role:     int(authstore.User),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -239,7 +237,7 @@ func TestGetDeviceData(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
-						Role:     UserRole,
+						Role:     int(authstore.User),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -269,7 +267,7 @@ func TestGetDeviceData(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
-						Role:     UserRole,
+						Role:     int(authstore.User),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -307,7 +305,7 @@ func TestGetDeviceData(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
-						Role:     UserRole,
+						Role:     int(authstore.User),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -382,7 +380,7 @@ func TestGetDeviceData(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
-						Role:     UserRole,
+						Role:     int(authstore.User),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -458,7 +456,7 @@ func TestGetDeviceData(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
-						Role:     UserRole,
+						Role:     int(authstore.User),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -534,7 +532,7 @@ func TestGetDeviceData(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
-						Role:     UserRole,
+						Role:     int(authstore.User),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -615,7 +613,7 @@ func TestGetDeviceData(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
-						Role:     UserRole,
+						Role:     int(authstore.User),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -681,7 +679,7 @@ func TestGetDeviceData(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
-						Role:     UserRole,
+						Role:     int(authstore.User),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -733,7 +731,7 @@ func TestGetDeviceData(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  OtherCompanyThanDevice,
-						Role:     UserRole,
+						Role:     int(authstore.User),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -793,7 +791,7 @@ func TestGetDeviceData(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  OtherCompanyThanDevice,
-						Role:     AdminUserRole,
+						Role:     int(authstore.Admin),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -933,7 +931,7 @@ func TestGetQueryFields(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
-						Role:     UserRole,
+						Role:     int(authstore.User),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -972,7 +970,7 @@ func TestGetQueryFields(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  OtherCompanyThanDevice,
-						Role:     UserRole,
+						Role:     int(authstore.User),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -1014,7 +1012,7 @@ func TestGetQueryFields(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  OtherCompanyThanDevice,
-						Role:     AdminUserRole,
+						Role:     int(authstore.Admin),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -1135,7 +1133,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
-						Role:     NetworkUserRole,
+						Role:     int(authstore.NetworkUser),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
