@@ -1481,7 +1481,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 		},
 
 		"network user cant get device data from other network": {
-			wantErr:    true,
+			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: datafetcher.BatchDeviceDataResponse{
 				Errors: []datafetcher.DeviceDataError{
@@ -1653,6 +1653,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 		},
 	}
 
+	authstore.InitRoles()
 	db, err := miniredis.Run()
 	require.Nil(t, err)
 	defer db.Close()

@@ -73,6 +73,7 @@ func Start(opts ApiOpts) error {
 		TokenProvider: tokenAuth,
 		AuthStore:     redis,
 	}
+	authstore.InitRoles()
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
 		config := huma.DefaultConfig("SensorData API", "1.0.0")
 		config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
@@ -197,17 +198,20 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		Start:       in.Start,
 		Stop:        in.Stop,
 	}
-	if authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyDevice) {
-		metadata.Company = deviceCompany
-		metadata.Network = deviceNetwork
-	} else {
-		if deviceCompany != user.Company {
+	if deviceCompany != user.Company {
+		if authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyCompany) {
+			metadata.Company = deviceCompany
+		} else {
 			log.Printf("user: %s requested deviceId: %s. User Company: %s, Device Company: %s",
 				user.Username, in.DeviceId, user.Company, deviceCompany)
 			return nil, huma.Error401Unauthorized(
 				"Unauthorized access to this device.")
 		}
-		if deviceNetwork != user.Network {
+	}
+	if deviceNetwork != user.Network {
+		if authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyNetwork) {
+			metadata.Network = deviceNetwork
+		} else {
 			log.Printf("user: %s requested deviceId: %s. User Network: %s, Device Network: %s",
 				user.Username, in.DeviceId, user.Network, deviceNetwork)
 			return nil, huma.Error401Unauthorized(
@@ -337,7 +341,7 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 	}
 	if user.Company != deviceCompany {
 		if !authstore.HasPermission(authstore.Role(user.Role),
-			authstore.GetAnyDevice) {
+			authstore.GetAnyCompany) {
 			return nil, huma.Error401Unauthorized("Access denied.")
 		}
 	}

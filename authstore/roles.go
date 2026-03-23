@@ -38,12 +38,16 @@ var AllRoles = []Role{User, NetworkUser, Admin}
 type Permission string
 
 const (
-	GetAnyDevice Permission = "get-any-device"
+	GetAnyCompany Permission = "get-any-company"
+	GetAnyNetwork Permission = "get-any-network"
 )
 
 var rolePermissions = map[Role][]Permission{
+	NetworkUser: {
+		GetAnyCompany,
+	},
 	Admin: {
-		GetAnyDevice,
+		GetAnyNetwork,
 	},
 }
 
