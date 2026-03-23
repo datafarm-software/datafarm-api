@@ -34,8 +34,10 @@ const RegisteredCompany = "company"
 const OtherCompanyThanDevice = "othercompany"
 const RegisteredNetwork = "Datafarm"
 const UserRole = "1"
+const NetworkUserRole = "2"
 const AdminUserRole = "3"
 const RegisteredDeviceId = "device1"
+const AnotherRegisteredDeviceId = "device2"
 const RegisteredQueryField = "temperature"
 const AnotherRegisteredQueryField = "humidity"
 const RegisteredSensor = "weather-sensor"
@@ -105,9 +107,7 @@ func TestLogin(t *testing.T) {
 	db, err := miniredis.Run()
 	require.Nil(t, err)
 	defer db.Close()
-	_, humaApi := humatest.New(t)
-	localhuma.RegisterHumaOperations(humaApi, a.VerifyToken, a.GetDeviceData, a.Login,
-		a.GetQueryFields)
+	humaTest := setupHuma(t)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			testingRedis, err := redis.NewTestingRedis(db.Addr())
@@ -123,7 +123,7 @@ func TestLogin(t *testing.T) {
 			defer a.TokenProvider.Close()
 			encodedDetails := base64.StdEncoding.EncodeToString(
 				[]byte(tc.username + ":" + tc.password))
-			resp := humaApi.Post("/login",
+			resp := humaTest.Post("/login",
 				fmt.Sprintf("Authorization: Basic %s", encodedDetails))
 			if resp.Code != tc.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
@@ -840,12 +840,7 @@ func TestGetDeviceData(t *testing.T) {
 	db, err := miniredis.Run()
 	require.Nil(t, err)
 	defer db.Close()
-	router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
-	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
-	humaApiMux := humamux.New(router, config)
-	humaTest := humatest.Wrap(t, humaApiMux)
-	localhuma.RegisterHumaOperations(humaTest, a.VerifyToken, a.GetDeviceData,
-		a.Login, a.GetQueryFields)
+	humaTest := setupHuma(t)
 	var qp string
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -887,6 +882,16 @@ func TestGetDeviceData(t *testing.T) {
 			}
 		})
 	}
+}
+
+func setupHuma(t *testing.T) humatest.TestAPI {
+	router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
+	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
+	humaApiMux := humamux.New(router, config)
+	humaTest := humatest.Wrap(t, humaApiMux)
+	localhuma.RegisterHumaOperations(humaTest, a.VerifyToken, a.GetDeviceData,
+		a.Login, a.GetQueryFields)
+	return humaTest
 }
 
 func makeQueryParams(dr datafetcher.DeviceDataRequest) string {
@@ -1085,6 +1090,155 @@ func TestGetQueryFields(t *testing.T) {
 				err = json.Unmarshal(body, &qf)
 				require.Nil(t, err)
 				if diff := cmp.Diff(tc.want, qf); diff != "" {
+					t.Fatalf("response mismatch (-want +got):\n%s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestBatchGetDeviceData(t *testing.T) {
+	tests := map[string]struct {
+		wantErr               bool
+		wantStatus            int
+		mockDataFetcher, want []datafetcher.DeviceData
+		mockAuthStore         authstore.Schema
+		mockDeviceInfo        deviceinfo.Schema
+		mockTokens            map[string]bool
+		token                 string
+		deviceRequests        []datafetcher.DeviceDataRequest
+	}{
+
+		"get multiple deviceIds' data": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField:        float64(23),
+						AnotherRegisteredQueryField: float64(80),
+					},
+				},
+				{
+					DeviceID:  AnotherRegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField:        float64(25),
+						AnotherRegisteredQueryField: float64(70),
+					},
+				},
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     NetworkUserRole,
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDataFetcher: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField:        23,
+						AnotherRegisteredQueryField: 80,
+					},
+				},
+				{
+					DeviceID:  AnotherRegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]any{
+						RegisteredQueryField:        25,
+						AnotherRegisteredQueryField: 70,
+					},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+					},
+					{
+						DeviceId:    AnotherRegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			deviceRequests: []datafetcher.DeviceDataRequest{
+				{
+					DeviceId:    RegisteredDeviceId,
+					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+					Start:       RelativeStart,
+				},
+				{
+					DeviceId:    AnotherRegisteredDeviceId,
+					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+					Start:       RelativeStart,
+				},
+			},
+		},
+	}
+
+	db, err := miniredis.Run()
+	require.Nil(t, err)
+	defer db.Close()
+	humaTest := setupHuma(t)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			a.TokenProvider = &tokenprovider.MockTokenProvider{
+				Tokens:    tc.mockTokens,
+				Increment: len(tc.mockTokens),
+			}
+			defer a.TokenProvider.Close()
+			testingRedis, err := redis.NewTestingRedis(db.Addr())
+			require.Nil(t, err)
+			defer testingRedis.Close()
+			a.DeviceInfo = testingRedis
+			a.AuthStore = testingRedis
+			a.DataFetcher, err = datafetcher.NewTestingInflux("../config.yml")
+			require.Nil(t, err)
+			defer a.DataFetcher.Close()
+			err = a.DataFetcher.PrepareDb(&tc.mockDeviceInfo, tc.mockDataFetcher)
+			require.Nil(t, err)
+			err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
+			require.Nil(t, err)
+			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
+			require.Nil(t, err)
+			route := "/batch/api/v1/device/sensordata"
+			resp := humaTest.Get(route,
+				fmt.Sprintf(`Authorization: Bearer %s`, tc.token), tc.deviceRequests)
+			if resp.Code != tc.wantStatus {
+				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
+			}
+			defer resp.Result().Body.Close()
+			if !tc.wantErr {
+				var dd []datafetcher.DeviceData
+				body := resp.Body.Bytes()
+				err = json.Unmarshal(body, &dd)
+				require.Nil(t, err)
+				if diff := cmp.Diff(tc.want, dd); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
 			}
