@@ -1963,6 +1963,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 		},
 	}
 
+	authstore.InitRoles()
 	db, err := miniredis.Run()
 	require.Nil(t, err)
 	defer db.Close()
