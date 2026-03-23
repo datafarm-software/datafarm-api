@@ -74,7 +74,6 @@ func Start(opts ApiOpts) error {
 		AuthStore:     redis,
 	}
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
-		router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
 		config := huma.DefaultConfig("SensorData API", "1.0.0")
 		config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 			"bearer": {
@@ -92,10 +91,11 @@ func Start(opts ApiOpts) error {
 				BearerFormat: "Basic",
 			},
 		}
-		config.Servers = append(config.Servers, &huma.Server{URL: "/api/v1"})
+		router := mux.NewRouter()
 		humaApi := humamux.New(router, config)
 		localhuma.RegisterHumaOperations(humaApi,
-			api.VerifyToken, api.GetDeviceData, api.Login, api.GetQueryFields,
+			api.VerifyToken, api.GetDeviceData, api.BatchGetDeviceData,
+			api.Login, api.GetQueryFields,
 		)
 		server := &http.Server{
 			Addr:    opts.Port,
@@ -346,4 +346,9 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 			"Internal error while getting queryfields.")
 	}
 	return &deviceinfo.QueryFieldsResponse{Body: queryFields}, nil
+}
+
+func (a *Api) BatchGetDeviceData(ctx context.Context,
+	in *datafetcher.BatchDeviceDataRequest) (*datafetcher.BatchDeviceDataResponse, error) {
+	return nil, fmt.Errorf("not implemented")
 }
