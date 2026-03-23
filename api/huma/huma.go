@@ -41,7 +41,7 @@ func RegisterHumaOperations(api huma.API,
 	registry := huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
 	operation := huma.Operation{
 		Method:      "GET",
-		Path:        "/device/data/{deviceId}",
+		Path:        "/device/{deviceId}/sensordata",
 		Middlewares: huma.Middlewares{verifyToken},
 		Security: []map[string][]string{
 			{"bearer": {}},
@@ -59,8 +59,8 @@ func RegisterHumaOperations(api huma.API,
 			},
 		},
 		Tags:        []string{"GET"},
-		Summary:     "Get Device Data",
-		Description: "Clients can use this route to request data from a specific sensor using its device id.",
+		Summary:     "Get Sensor Data",
+		Description: "Clients can use this route to request data from a sensor using its device id.",
 		RequestBody: &huma.RequestBody{},
 		Responses: map[string]*huma.Response{
 			"500": {
@@ -162,7 +162,7 @@ func RegisterHumaOperations(api huma.API,
 	huma.Register(api, operation, login)
 	operation = huma.Operation{
 		Method:      "GET",
-		Path:        "/device/queryfields/{deviceId}",
+		Path:        "/device/{deviceId}/queryfields",
 		Tags:        []string{"GET"},
 		Middlewares: huma.Middlewares{verifyToken},
 		Summary:     "Get DeviceId QueryFields",
