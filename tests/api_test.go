@@ -121,7 +121,7 @@ func TestLogin(t *testing.T) {
 			defer a.TokenProvider.Close()
 			encodedDetails := base64.StdEncoding.EncodeToString(
 				[]byte(tc.username + ":" + tc.password))
-			resp := humaTest.Post("/api/v1/login",
+			resp := humaTest.Post("/login",
 				fmt.Sprintf("Authorization: Basic %s", encodedDetails))
 			if resp.Code != tc.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
@@ -862,7 +862,7 @@ func TestGetDeviceData(t *testing.T) {
 			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
 			qp = makeQueryParams(tc.deviceRequest)
-			route := "/api/v1/device/" + tc.deviceId + "/sensordata" + qp
+			route := "/device/" + tc.deviceId + "/sensordata" + qp
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
 			if resp.Code != tc.wantStatus {
@@ -883,22 +883,12 @@ func TestGetDeviceData(t *testing.T) {
 }
 
 func setupHuma(t *testing.T) humatest.TestAPI {
-	router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
+	router := mux.NewRouter()
 	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
 	humaApiMux := humamux.New(router, config)
 	humaTest := humatest.Wrap(t, humaApiMux)
 	localhuma.RegisterHumaOperations(humaTest, a.VerifyToken, a.GetDeviceData,
-		a.Login, a.GetQueryFields)
-	return humaTest
-}
-
-func setupBatchHuma(t *testing.T) humatest.TestAPI {
-	router := mux.NewRouter().PathPrefix("/batch/api/v1").Subrouter()
-	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
-	humaApiMux := humamux.New(router, config)
-	humaTest := humatest.Wrap(t, humaApiMux)
-	localhuma.RegisterBatchHumaOperations(humaTest, a.VerifyToken,
-		a.BatchGetDeviceData)
+		a.BatchGetDeviceData, a.Login, a.GetQueryFields)
 	return humaTest
 }
 
@@ -1063,12 +1053,9 @@ func TestGetQueryFields(t *testing.T) {
 	db, err := miniredis.Run()
 	require.Nil(t, err)
 	defer db.Close()
-	router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
-	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
-	humaApiMux := humamux.New(router, config)
-	humaTest := humatest.Wrap(t, humaApiMux)
+	humaTest := setupHuma(t)
 	localhuma.RegisterHumaOperations(humaTest, a.VerifyToken, a.GetDeviceData,
-		a.Login, a.GetQueryFields)
+		a.BatchGetDeviceData, a.Login, a.GetQueryFields)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			a.TokenProvider = &tokenprovider.MockTokenProvider{
@@ -1085,7 +1072,7 @@ func TestGetQueryFields(t *testing.T) {
 			require.Nil(t, err)
 			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
-			route := "/api/v1/device/" + tc.deviceId + "/queryfields"
+			route := "/device/" + tc.deviceId + "/queryfields"
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
 			if resp.Code != tc.wantStatus {
@@ -1212,7 +1199,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 	db, err := miniredis.Run()
 	require.Nil(t, err)
 	defer db.Close()
-	humaTest := setupBatchHuma(t)
+	humaTest := setupHuma(t)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			a.TokenProvider = &tokenprovider.MockTokenProvider{
@@ -1234,7 +1221,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 			require.Nil(t, err)
 			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
-			route := "/batch/api/v1/device/sensordata"
+			route := "/batch/device/sensordata"
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token), tc.deviceRequests)
 			if resp.Code != tc.wantStatus {

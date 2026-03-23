@@ -23,8 +23,13 @@ type HumaHandler[I, O any] func(context.Context, *I) (*O, error)
 func RegisterHumaOperations(api huma.API,
 	verifyToken func(ctx huma.Context, next func(huma.Context)),
 	getDeviceData HumaHandler[datafetcher.DeviceDataRequest, datafetcher.DeviceDataResponse],
-	batchGetDeviceData HumaHandler[datafetcher.BatchDeviceDataRequest,
-		datafetcher.BatchDeviceDataResponse],
+	batchGetDeviceData HumaHandler[
+		struct {
+			Body []datafetcher.BatchDeviceDataRequest
+		},
+		struct {
+			Body datafetcher.BatchDeviceDataResponse
+		}],
 	login HumaHandler[tokenprovider.LoginRequest, tokenprovider.LoginResponse],
 	getQueryFields HumaHandler[deviceinfo.QueryFieldsRequest, deviceinfo.QueryFieldsResponse],
 ) {

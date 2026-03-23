@@ -18,12 +18,10 @@ type DeviceDataRequest struct {
 }
 
 type BatchDeviceDataRequest struct {
-	Body []struct {
-		DeviceId    string   `json:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-		QueryFields []string `json:"queryFields" required:"true"`
-		Start       string   `json:"start" required:"true"`
-		Stop        string   `json:"stop" required:"false"`
-	}
+	DeviceId    string   `json:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+	QueryFields []string `json:"queryFields" required:"true"`
+	Start       string   `json:"start" required:"true"`
+	Stop        string   `json:"stop" required:"false"`
 }
 
 type DeviceDataError struct {
@@ -32,10 +30,8 @@ type DeviceDataError struct {
 }
 
 type BatchDeviceDataResponse struct {
-	Body struct {
-		Result []DeviceData      `json:"result"`
-		Errors []DeviceDataError `json:"errors"`
-	}
+	Result []DeviceData      `json:"result"`
+	Errors []DeviceDataError `json:"errors"`
 }
 
 type DeviceData struct {
