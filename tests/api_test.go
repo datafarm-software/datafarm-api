@@ -869,7 +869,7 @@ func TestGetDeviceData(t *testing.T) {
 			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
 			qp = makeQueryParams(tc.deviceRequest)
-			route := "/api/v1/device/data/" + tc.deviceId + qp
+			route := "/api/v1/device/" + tc.deviceId + "/sensordata" + qp
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
 			if resp.Code != tc.wantStatus {
@@ -1072,7 +1072,7 @@ func TestGetQueryFields(t *testing.T) {
 			require.Nil(t, err)
 			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
-			route := "/api/v1/device/queryfields/" + tc.deviceId
+			route := "/api/v1/device/" + tc.deviceId + "/queryfields"
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
 			if resp.Code != tc.wantStatus {
