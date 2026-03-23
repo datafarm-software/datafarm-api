@@ -12,7 +12,7 @@ type Schema struct {
 type UserInfo struct {
 	Username string `redis:"username"`
 	Company  string `redis:"company"`
-	Role     string `redis:"role"`
+	Role     int    `redis:"role"`
 	Password string `redis:"password"`
 	Network  string `redis:"network"`
 }
