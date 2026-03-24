@@ -2065,7 +2065,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				DeviceIds: []string{
+				Body: []string{
 					RegisteredDeviceId,
 					AnotherRegisteredDeviceId,
 				},
@@ -2128,7 +2128,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				DeviceIds: []string{
+				Body: []string{
 					RegisteredDeviceId,
 					AnotherRegisteredDeviceId,
 				},
@@ -2191,7 +2191,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				DeviceIds: []string{
+				Body: []string{
 					RegisteredDeviceId,
 					AnotherRegisteredDeviceId,
 				},
@@ -2254,7 +2254,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				DeviceIds: []string{
+				Body: []string{
 					RegisteredDeviceId,
 					AnotherRegisteredDeviceId,
 				},
@@ -2316,7 +2316,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				Body: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
 			},
 		},
 
@@ -2375,7 +2375,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				Body: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
 			},
 		},
 
@@ -2436,28 +2436,14 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				Body: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
 			},
 		},
 
 		"one valid deviceId, one invalid deviceId": {
-			wantErr:    false,
-			wantStatus: http.StatusOK,
-			want: deviceinfo.BatchQueryFieldsResponse{
-				Errors: []deviceinfo.QueryFieldsError{
-					{
-						DeviceId: InvalidDeviceId,
-						Error:    "Invalid DeviceId.",
-					},
-				},
-				Results: []deviceinfo.QueryFields{
-					{
-						DeviceId: RegisteredDeviceId,
-						QueryFields: append(deviceinfo.GeneralQueryFields,
-							RegisteredQueryField),
-					},
-				},
-			},
+			wantErr:    true,
+			wantStatus: http.StatusUnprocessableEntity,
+			want:       deviceinfo.BatchQueryFieldsResponse{},
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{
 					{
@@ -2497,7 +2483,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				Body: []string{RegisteredDeviceId, InvalidDeviceId},
 			},
 		},
 
@@ -2507,7 +2493,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			token:      InvalidToken,
 			want:       deviceinfo.BatchQueryFieldsResponse{},
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				Body: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
 			},
 		},
 	}
@@ -2534,7 +2520,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			require.Nil(t, err)
 			route := "/batch/device/queryfields"
 			resp := humaTest.Post(route,
-				fmt.Sprintf(`Authorization: Bearer %s`, tc.token), &tc.queryFieldRequests)
+				fmt.Sprintf(`Authorization: Bearer %s`, tc.token), tc.queryFieldRequests.Body)
 			if resp.Code != tc.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
 			}

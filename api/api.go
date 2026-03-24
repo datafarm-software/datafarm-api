@@ -335,9 +335,10 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 		return nil, huma.Error500InternalServerError(
 			"Internal error finding user info.")
 	}
-	if user.Company == "" {
-		return nil, huma.Error500InternalServerError(
-			"Internal error, user info unexpectedly null.")
+	if !authstore.HasPermission(authstore.Role(user.Role),
+		authstore.GetAllQueryFields) {
+		return nil, huma.Error401Unauthorized(
+			"Access denied to QueryFields.")
 	}
 	deviceCompany, err := a.DeviceInfo.GetCompany(in.DeviceId)
 	if err != nil {
@@ -347,7 +348,20 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 	if user.Company != deviceCompany {
 		if !authstore.HasPermission(authstore.Role(user.Role),
 			authstore.GetAnyCompany) {
-			return nil, huma.Error401Unauthorized("Access denied.")
+			return nil, huma.Error401Unauthorized(
+				"Unauthorized access to this device.")
+		}
+	}
+	deviceNetwork, err := a.DeviceInfo.GetNetwork(in.DeviceId)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"Internal error checking device network.")
+	}
+	if user.Network != deviceNetwork {
+		if !authstore.HasPermission(authstore.Role(user.Role),
+			authstore.GetAnyNetwork) {
+			return nil, huma.Error401Unauthorized(
+				"Unauthorized access to this device.")
 		}
 	}
 	queryFields, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
@@ -404,9 +418,9 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 	var dataResp *deviceinfo.QueryFieldsResponse
 	var deviceErr deviceinfo.QueryFieldsError
 	var err error
-	errSlice := make([]deviceinfo.QueryFieldsError, 0, len(in.DeviceIds))
-	resultSlice := make([]deviceinfo.QueryFields, 0, len(in.DeviceIds))
-	for _, deviceId := range in.DeviceIds {
+	errSlice := make([]deviceinfo.QueryFieldsError, 0, len(in.Body))
+	resultSlice := make([]deviceinfo.QueryFields, 0, len(in.Body))
+	for _, deviceId := range in.Body {
 		qr = deviceinfo.QueryFieldsRequest{
 			DeviceId: deviceId,
 		}
