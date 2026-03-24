@@ -19,7 +19,7 @@ type QueryFieldsRequest struct {
 }
 
 type BatchQueryFieldsRequest struct {
-	DeviceIds []string `json:"deviceIds" doc:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$"`
+	Body []string `json:"deviceIds" doc:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$"`
 }
 
 type QueryFieldsError struct {
