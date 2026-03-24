@@ -161,7 +161,18 @@ func (a *Api) GetDeviceData(ctx context.Context,
 			return nil, huma.Error400BadRequest("Start time is greater than stop time.")
 		}
 	}
+	user, ok := ctx.Value("user").(authstore.UserInfo)
+	if !ok {
+		log.Printf("user role is not UserInfo")
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting user role.")
+	}
 	if in.QueryFields[0] == "all" {
+		if !authstore.HasPermission(authstore.Role(user.Role),
+			authstore.GetAllQueryFields) {
+			return nil, huma.Error500InternalServerError(
+				"Unauthorized for all queryfields.")
+		}
 		qf, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
 		if err != nil {
 			log.Printf("error getting query fields for: %s: %v", in.DeviceId, err)
@@ -183,12 +194,6 @@ func (a *Api) GetDeviceData(ctx context.Context,
 			in.DeviceId, err)
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting associated network for deviceId.")
-	}
-	user, ok := ctx.Value("user").(authstore.UserInfo)
-	if !ok {
-		log.Printf("user role is not UserInfo")
-		return nil, huma.Error500InternalServerError(
-			"Internal error getting user role.")
 	}
 	metadata := deviceinfo.DeviceInfo{
 		Company:     user.Company,

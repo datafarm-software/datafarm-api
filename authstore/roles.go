@@ -38,11 +38,15 @@ var AllRoles = []Role{User, NetworkUser, Admin}
 type Permission string
 
 const (
-	GetAnyCompany Permission = "get-any-company"
-	GetAnyNetwork Permission = "get-any-network"
+	GetAnyCompany     Permission = "get-any-company"
+	GetAnyNetwork     Permission = "get-any-network"
+	GetAllQueryFields Permission = "get-all-queryfields"
 )
 
 var rolePermissions = map[Role][]Permission{
+	User: {
+		GetAllQueryFields,
+	},
 	NetworkUser: {
 		GetAnyCompany,
 	},
@@ -51,10 +55,9 @@ var rolePermissions = map[Role][]Permission{
 	},
 }
 
-func InitRoles() error {
+func InitRoles() {
 	rolePermissions[NetworkUser] = append(rolePermissions[NetworkUser], rolePermissions[User]...)
 	rolePermissions[Admin] = append(rolePermissions[Admin], rolePermissions[NetworkUser]...)
-	return nil
 }
 
 func RoleAtLeast(userRole Role, minRequired Role) bool {
