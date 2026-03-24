@@ -390,8 +390,8 @@ func (a *Api) BatchGetDeviceData(ctx context.Context,
 		Body datafetcher.BatchDeviceDataResponse
 	}{
 		Body: datafetcher.BatchDeviceDataResponse{
-			Result: resultSlice,
-			Errors: errSlice,
+			Results: resultSlice,
+			Errors:  errSlice,
 		},
 	}, nil
 }

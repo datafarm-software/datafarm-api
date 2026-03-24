@@ -30,8 +30,8 @@ type DeviceDataError struct {
 }
 
 type BatchDeviceDataResponse struct {
-	Result []DeviceData      `json:"result"`
-	Errors []DeviceDataError `json:"errors"`
+	Results []DeviceData      `json:"results"`
+	Errors  []DeviceDataError `json:"errors"`
 }
 
 type DeviceData struct {
