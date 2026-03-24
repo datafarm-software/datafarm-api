@@ -26,6 +26,7 @@ type Redis struct {
 }
 
 func NewRedis(opts RedisOpts) (*Redis, error) {
+	authstore.InitRoles()
 	client := redis.NewClient(&redis.Options{
 		Addr:     opts.Addr,
 		Username: opts.Username,
