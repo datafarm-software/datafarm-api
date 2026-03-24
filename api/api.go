@@ -96,7 +96,7 @@ func Start(opts ApiOpts) error {
 		humaApi := humamux.New(router, config)
 		localhuma.RegisterHumaOperations(humaApi,
 			api.VerifyToken, api.GetDeviceData, api.BatchGetDeviceData,
-			api.Login, api.GetQueryFields, api.BatchGetQueryFields,
+			api.Login, api.GetQueryFields, api.BatchGetQueryFields, api.GetDeviceIds,
 		)
 		server := &http.Server{
 			Addr:    opts.Port,
@@ -441,4 +441,9 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 			Errors:  errSlice,
 		},
 	}, nil
+}
+
+func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
+	*deviceinfo.DeviceIdsResponse, error) {
+	return nil, nil
 }
