@@ -19,7 +19,7 @@ type QueryFieldsRequest struct {
 }
 
 type BatchQueryFieldsRequest struct {
-	DeviceIds []string `pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+	Body []string `doc:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$"`
 }
 
 type DeviceQueryFieldsError struct {
@@ -35,10 +35,6 @@ type BatchQueryFieldsResponse struct {
 type QueryFields struct {
 	DeviceId    string   `json:"deviceId"`
 	QueryFields []string `json:"queryFields"`
-}
-
-type DeviceIds struct {
-	Body []string
 }
 
 type DeviceToCompany struct {
@@ -59,8 +55,7 @@ type DeviceToQueryFields struct {
 type Schema struct {
 	DeviceCompanies []DeviceToCompany
 	DeviceNetworks  []DeviceToNetwork
-	// DeviceToSensors []DeviceToSensor
-	DeviceToQF []DeviceToQueryFields
+	DeviceToQF      []DeviceToQueryFields
 }
 
 type TestingDeviceInfoFetcher interface {

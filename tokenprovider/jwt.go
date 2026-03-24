@@ -117,7 +117,6 @@ func (j *jwtAuth) IsValidToken(tr LoginResponse) bool {
 			return j.getPublicKey(), nil
 		})
 	if err != nil {
-		log.Printf("token: %s\n", tr.Body)
 		log.Printf("token parsing error: %v", err)
 		return false
 	}

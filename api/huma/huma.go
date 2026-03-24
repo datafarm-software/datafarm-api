@@ -32,6 +32,12 @@ func RegisterHumaOperations(api huma.API,
 		}],
 	login HumaHandler[tokenprovider.LoginRequest, tokenprovider.LoginResponse],
 	getQueryFields HumaHandler[deviceinfo.QueryFieldsRequest, deviceinfo.QueryFieldsResponse],
+	batchGetQueryFields HumaHandler[
+		deviceinfo.BatchQueryFieldsRequest,
+		struct {
+			Body deviceinfo.BatchQueryFieldsResponse
+		},
+	],
 ) {
 	registry := huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
 	operation := huma.Operation{
@@ -230,7 +236,7 @@ func RegisterHumaOperations(api huma.API,
 			{"bearer": {}},
 		},
 		Tags:        []string{"POST"},
-		Summary:     "Get Batch Sensor Data",
+		Summary:     "Batch Get Sensor Data",
 		Description: "Clients can use this route to request data from multiple device ids.",
 		RequestBody: &huma.RequestBody{},
 		Responses: map[string]*huma.Response{
@@ -277,4 +283,59 @@ func RegisterHumaOperations(api huma.API,
 		},
 	}
 	huma.Register(api, operation, batchGetDeviceData)
+	operation = huma.Operation{
+		Method:      "POST",
+		Path:        "/batch/device/queryfields",
+		Middlewares: huma.Middlewares{verifyToken},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+		Tags:        []string{"POST"},
+		Summary:     "Batch Get DeviceId QueryFields",
+		Description: "Clients can use this route to request QueryFields from multiple device ids.",
+		RequestBody: &huma.RequestBody{},
+		Responses: map[string]*huma.Response{
+			"500": {
+				Description: "Internal Server Error",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Internal Server Error",
+							Status: 500,
+							Detail: "Internal error while getting queryfields for the device.",
+						},
+					}}},
+			"400": {
+				Description: "Bad Request",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Bad Request",
+							Status: 400,
+							Detail: "Invalid DeviceId.",
+						},
+					},
+				},
+			},
+			"401": {
+				Description: "Unauthorized",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Unauthorized",
+							Status: http.StatusUnauthorized,
+							Detail: "Unknown user.",
+						},
+					},
+				},
+			},
+		},
+	}
+	huma.Register(api, operation, batchGetQueryFields)
 }
