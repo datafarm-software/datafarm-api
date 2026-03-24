@@ -52,7 +52,7 @@ type QueryFields struct {
 }
 
 type DeviceIdsResponse struct {
-	Body []string `json:"deviceIds" doc:"deviceIds"`
+	Body []string `json:"deviceIds" doc:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$"`
 }
 
 type DeviceToCompany struct {
