@@ -396,8 +396,35 @@ func (a *Api) BatchGetDeviceData(ctx context.Context,
 	}, nil
 }
 
-func (a *Api) BatchGetQueryFields(context.Context, *deviceinfo.BatchQueryFieldsRequest) (*struct {
+func (a *Api) BatchGetQueryFields(ctx context.Context,
+	in *deviceinfo.BatchQueryFieldsRequest) (*struct {
 	Body deviceinfo.BatchQueryFieldsResponse
 }, error) {
-	return nil, nil
+	var qr deviceinfo.QueryFieldsRequest
+	var dataResp *deviceinfo.QueryFieldsResponse
+	var deviceErr deviceinfo.QueryFieldsError
+	var err error
+	errSlice := make([]deviceinfo.QueryFieldsError, 0, len(in.DeviceIds))
+	resultSlice := make([]deviceinfo.QueryFields, 0, len(in.DeviceIds))
+	for _, deviceId := range in.DeviceIds {
+		qr = deviceinfo.QueryFieldsRequest{
+			DeviceId: deviceId,
+		}
+		dataResp, err = a.GetQueryFields(ctx, &qr)
+		if err == nil {
+			resultSlice = append(resultSlice, dataResp.Body)
+		} else {
+			deviceErr.DeviceId = deviceId
+			deviceErr.Error = err.Error()
+			errSlice = append(errSlice, deviceErr)
+		}
+	}
+	return &struct {
+		Body deviceinfo.BatchQueryFieldsResponse
+	}{
+		Body: deviceinfo.BatchQueryFieldsResponse{
+			Results: resultSlice,
+			Errors:  errSlice,
+		},
+	}, nil
 }
