@@ -1304,7 +1304,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 			wantStatus: http.StatusOK,
 			want: datafetcher.BatchDeviceDataResponse{
 				Errors: []datafetcher.DeviceDataError{},
-				Result: []datafetcher.DeviceData{
+				Results: []datafetcher.DeviceData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -1398,7 +1398,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 			wantStatus: http.StatusOK,
 			want: datafetcher.BatchDeviceDataResponse{
 				Errors: []datafetcher.DeviceDataError{},
-				Result: []datafetcher.DeviceData{
+				Results: []datafetcher.DeviceData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -1492,7 +1492,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 			wantStatus: http.StatusOK,
 			want: datafetcher.BatchDeviceDataResponse{
 				Errors: []datafetcher.DeviceDataError{},
-				Result: []datafetcher.DeviceData{
+				Results: []datafetcher.DeviceData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -1586,7 +1586,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 			wantStatus: http.StatusOK,
 			want: datafetcher.BatchDeviceDataResponse{
 				Errors: []datafetcher.DeviceDataError{},
-				Result: []datafetcher.DeviceData{
+				Results: []datafetcher.DeviceData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -1689,7 +1689,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 						Error:    "Unauthorized access to this device.",
 					},
 				},
-				Result: []datafetcher.DeviceData{},
+				Results: []datafetcher.DeviceData{},
 			},
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{
@@ -1775,7 +1775,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 						Error:    "Unauthorized access to this device.",
 					},
 				},
-				Result: []datafetcher.DeviceData{},
+				Results: []datafetcher.DeviceData{},
 			},
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{
@@ -1857,7 +1857,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 						Error:    "Unauthorized access to this device.",
 					},
 				},
-				Result: []datafetcher.DeviceData{
+				Results: []datafetcher.DeviceData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -1987,6 +1987,500 @@ func TestBatchGetDeviceData(t *testing.T) {
 			defer resp.Result().Body.Close()
 			if !tc.wantErr {
 				var dd datafetcher.BatchDeviceDataResponse
+				body := resp.Body.Bytes()
+				err = json.Unmarshal(body, &dd)
+				require.Nil(t, err)
+				if diff := cmp.Diff(tc.want, dd); diff != "" {
+					t.Fatalf("response mismatch (-want +got):\n%s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestBatchGetQueryFields(t *testing.T) {
+	tests := map[string]struct {
+		wantErr            bool
+		wantStatus         int
+		want               deviceinfo.BatchQueryFieldsResponse
+		mockAuthStore      authstore.Schema
+		mockDeviceInfo     deviceinfo.Schema
+		mockTokens         map[string]bool
+		token              string
+		queryFieldRequests deviceinfo.BatchQueryFieldsRequest
+	}{
+
+		"get multiple deviceIds' queryfields": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: deviceinfo.BatchQueryFieldsResponse{
+				Errors: []deviceinfo.DeviceQueryFieldsError{},
+				Results: []deviceinfo.QueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: append(deviceinfo.GeneralQueryFields, RegisteredQueryField),
+					},
+					{
+						DeviceId: AnotherRegisteredDeviceId,
+						QueryFields: append(deviceinfo.GeneralQueryFields,
+							AnotherRegisteredQueryField),
+					},
+				},
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     int(authstore.User),
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+					{
+						DeviceId:    AnotherRegisteredDeviceId,
+						QueryFields: []string{AnotherRegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
+				DeviceIds: []string{
+					RegisteredDeviceId,
+					AnotherRegisteredDeviceId,
+				},
+			},
+		},
+
+		"admin user can get device queryfields from any company": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: deviceinfo.BatchQueryFieldsResponse{
+				Errors: []deviceinfo.DeviceQueryFieldsError{},
+				Results: []deviceinfo.QueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: append(deviceinfo.GeneralQueryFields, RegisteredQueryField),
+					},
+					{
+						DeviceId: AnotherRegisteredDeviceId,
+						QueryFields: append(deviceinfo.GeneralQueryFields,
+							AnotherRegisteredQueryField),
+					},
+				},
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  AnotherRegisteredCompany,
+						Role:     int(authstore.Admin),
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+					{
+						DeviceId:    AnotherRegisteredDeviceId,
+						QueryFields: []string{AnotherRegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
+				DeviceIds: []string{
+					RegisteredDeviceId,
+					AnotherRegisteredDeviceId,
+				},
+			},
+		},
+
+		"admin user can get device queryfields from any network": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: deviceinfo.BatchQueryFieldsResponse{
+				Errors: []deviceinfo.DeviceQueryFieldsError{},
+				Results: []deviceinfo.QueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: append(deviceinfo.GeneralQueryFields, RegisteredQueryField),
+					},
+					{
+						DeviceId: AnotherRegisteredDeviceId,
+						QueryFields: append(deviceinfo.GeneralQueryFields,
+							AnotherRegisteredQueryField),
+					},
+				},
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  AnotherRegisteredCompany,
+						Role:     int(authstore.Admin),
+						Password: RegisteredPassword,
+						Network:  AnotherRegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+					{
+						DeviceId:    AnotherRegisteredDeviceId,
+						QueryFields: []string{AnotherRegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
+				DeviceIds: []string{
+					RegisteredDeviceId,
+					AnotherRegisteredDeviceId,
+				},
+			},
+		},
+
+		"network user can get any device queryfields from within network": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: deviceinfo.BatchQueryFieldsResponse{
+				Errors: []deviceinfo.DeviceQueryFieldsError{},
+				Results: []deviceinfo.QueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: append(deviceinfo.GeneralQueryFields, RegisteredQueryField),
+					},
+					{
+						DeviceId: AnotherRegisteredDeviceId,
+						QueryFields: append(deviceinfo.GeneralQueryFields,
+							AnotherRegisteredQueryField),
+					},
+				},
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  AnotherRegisteredCompany,
+						Role:     int(authstore.NetworkUser),
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+					{
+						DeviceId:    AnotherRegisteredDeviceId,
+						QueryFields: []string{AnotherRegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
+				DeviceIds: []string{
+					RegisteredDeviceId,
+					AnotherRegisteredDeviceId,
+				},
+			},
+		},
+
+		"network user cant get device data from other network": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: deviceinfo.BatchQueryFieldsResponse{
+				Errors: []deviceinfo.DeviceQueryFieldsError{
+					{
+						DeviceId: RegisteredDeviceId,
+						Error:    "Unauthorized access to this device.",
+					},
+					{
+						DeviceId: AnotherRegisteredDeviceId,
+						Error:    "Unauthorized access to this device.",
+					},
+				},
+				Results: []deviceinfo.QueryFields{},
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Network:  AnotherRegisteredNetwork,
+						Role:     int(authstore.NetworkUser),
+						Password: RegisteredPassword,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+					},
+					{
+						DeviceId:    AnotherRegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
+				DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+			},
+		},
+
+		"user cant get device queryfields from other company": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: deviceinfo.BatchQueryFieldsResponse{
+				Errors: []deviceinfo.DeviceQueryFieldsError{
+					{
+						DeviceId: RegisteredDeviceId,
+						Error:    "Unauthorized access to this device.",
+					},
+					{
+						DeviceId: AnotherRegisteredDeviceId,
+						Error:    "Unauthorized access to this device.",
+					},
+				},
+				Results: []deviceinfo.QueryFields{},
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  AnotherRegisteredCompany,
+						Network:  AnotherRegisteredNetwork,
+						Role:     int(authstore.User),
+						Password: RegisteredPassword,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+					},
+					{
+						DeviceId:    AnotherRegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
+				DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+			},
+		},
+
+		"one successful request, one error": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: deviceinfo.BatchQueryFieldsResponse{
+				Errors: []deviceinfo.DeviceQueryFieldsError{
+					{
+						DeviceId: AnotherRegisteredDeviceId,
+						Error:    "Unauthorized access to this device.",
+					},
+				},
+				Results: []deviceinfo.QueryFields{
+					{
+						DeviceId: RegisteredDeviceId,
+						QueryFields: append(deviceinfo.GeneralQueryFields,
+							RegisteredQueryField),
+					},
+				},
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Network:  RegisteredNetwork,
+						Role:     int(authstore.User),
+						Password: RegisteredPassword,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+					{
+						DeviceId:    AnotherRegisteredDeviceId,
+						QueryFields: []string{AnotherRegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
+				DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+			},
+		},
+
+		"unknown token": {
+			wantErr:    true,
+			wantStatus: http.StatusUnauthorized,
+			token:      InvalidToken,
+			want:       deviceinfo.BatchQueryFieldsResponse{},
+			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
+				DeviceIds: []string{RegisteredDeviceId},
+			},
+		},
+	}
+
+	db, err := miniredis.Run()
+	require.Nil(t, err)
+	defer db.Close()
+	humaTest := setupHuma(t)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			a.TokenProvider = &tokenprovider.MockTokenProvider{
+				Tokens:    tc.mockTokens,
+				Increment: len(tc.mockTokens),
+			}
+			defer a.TokenProvider.Close()
+			testingRedis, err := redis.NewTestingRedis(db.Addr())
+			require.Nil(t, err)
+			defer testingRedis.Close()
+			a.DeviceInfo = testingRedis
+			a.AuthStore = testingRedis
+			err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
+			require.Nil(t, err)
+			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
+			require.Nil(t, err)
+			route := "/batch/device/queryfields"
+			resp := humaTest.Post(route,
+				fmt.Sprintf(`Authorization: Bearer %s`, tc.token), tc.queryFieldRequests)
+			if resp.Code != tc.wantStatus {
+				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
+			}
+			defer resp.Result().Body.Close()
+			if !tc.wantErr {
+				var dd deviceinfo.BatchQueryFieldsResponse
 				body := resp.Body.Bytes()
 				err = json.Unmarshal(body, &dd)
 				require.Nil(t, err)

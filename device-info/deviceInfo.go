@@ -18,6 +18,20 @@ type QueryFieldsRequest struct {
 	DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
 }
 
+type BatchQueryFieldsRequest struct {
+	DeviceIds []string `pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+}
+
+type DeviceQueryFieldsError struct {
+	DeviceId string `json:"deviceId"`
+	Error    string `json:"error"`
+}
+
+type BatchQueryFieldsResponse struct {
+	Results []QueryFields            `json:"results"`
+	Errors  []DeviceQueryFieldsError `json:"errors"`
+}
+
 type QueryFields struct {
 	DeviceId    string   `json:"deviceId"`
 	QueryFields []string `json:"queryFields"`
