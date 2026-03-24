@@ -9,6 +9,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
+	"github.com/datafarm-software/datafarm-api/datafetcher"
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
 	"github.com/datafarm-software/datafarm-api/tokenprovider"
 	"github.com/gorilla/mux"
@@ -35,13 +36,34 @@ func main() {
 	humaApi := humamux.New(router, config)
 	localhuma.RegisterHumaOperations(humaApi,
 		func(ctx huma.Context, next func(huma.Context)) {},
-		func(context.Context, *localhuma.DeviceInput) (*localhuma.DeviceOutput, error) {
+		func(ctx huma.Context, next func(huma.Context)) {},
+		func(context.Context, *datafetcher.DeviceDataRequest) (
+			*datafetcher.DeviceDataResponse, error) {
 			return nil, nil
 		},
-		func(context.Context, *localhuma.LoginRequest) (*tokenprovider.TokenResponse, error) {
+		func(context.Context, *struct {
+			Body []datafetcher.BatchDeviceDataRequest
+		}) (
+			*struct {
+				Body datafetcher.BatchDeviceDataResponse
+			}, error) {
 			return nil, nil
 		},
-		func(context.Context, *localhuma.DeviceId) (*deviceinfo.QueryFields, error) {
+		func(context.Context, *tokenprovider.LoginRequest) (
+			*tokenprovider.LoginResponse, error) {
+			return nil, nil
+		},
+		func(context.Context, *deviceinfo.QueryFieldsRequest) (
+			*deviceinfo.QueryFieldsResponse, error) {
+			return nil, nil
+		},
+		func(context.Context, *deviceinfo.BatchQueryFieldsRequest) (
+			*struct {
+				Body deviceinfo.BatchQueryFieldsResponse
+			}, error) {
+			return nil, nil
+		},
+		func(context.Context, *struct{}) (*deviceinfo.DeviceIdsResponse, error) {
 			return nil, nil
 		},
 	)
