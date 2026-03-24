@@ -38,6 +38,7 @@ func RegisterHumaOperations(api huma.API,
 			Body deviceinfo.BatchQueryFieldsResponse
 		},
 	],
+	getDeviceIds HumaHandler[struct{}, deviceinfo.DeviceIdsResponse],
 ) {
 	registry := huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
 	operation := huma.Operation{
@@ -338,4 +339,45 @@ func RegisterHumaOperations(api huma.API,
 		},
 	}
 	huma.Register(api, operation, batchGetQueryFields)
+	operation = huma.Operation{
+		Method:      "GET",
+		Path:        "/device/ids",
+		Middlewares: huma.Middlewares{verifyToken},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+		Tags:        []string{"GET"},
+		Summary:     "Get Client DeviceIds",
+		Description: "Clients can use this route to get the DeviceIds they have access to.",
+		RequestBody: &huma.RequestBody{},
+		Responses: map[string]*huma.Response{
+			"500": {
+				Description: "Internal Server Error",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Internal Server Error",
+							Status: 500,
+							Detail: "Internal error while getting deviceids.",
+						},
+					}}},
+			"401": {
+				Description: "Unauthorized",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Unauthorized",
+							Status: http.StatusUnauthorized,
+							Detail: "Unknown user.",
+						},
+					},
+				},
+			},
+		},
+	}
+	huma.Register(api, operation, getDeviceIds)
 }
