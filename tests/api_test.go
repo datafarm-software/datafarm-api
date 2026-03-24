@@ -1083,7 +1083,8 @@ func setupHuma(t *testing.T) humatest.TestAPI {
 	humaApiMux := humamux.New(router, config)
 	humaTest := humatest.Wrap(t, humaApiMux)
 	localhuma.RegisterHumaOperations(humaTest, a.VerifyToken, a.GetDeviceData,
-		a.BatchGetDeviceData, a.Login, a.GetQueryFields, a.BatchGetQueryFields)
+		a.BatchGetDeviceData, a.Login, a.GetQueryFields, a.BatchGetQueryFields,
+		a.GetDeviceIds)
 	return humaTest
 }
 
@@ -2542,7 +2543,7 @@ func TestGetDeviceIds(t *testing.T) {
 	tests := map[string]struct {
 		wantErr        bool
 		wantStatus     int
-		want           deviceinfo.DeviceIdsResponse
+		want           []string
 		mockAuthStore  authstore.Schema
 		mockDeviceInfo deviceinfo.Schema
 		mockTokens     map[string]bool
@@ -2552,15 +2553,101 @@ func TestGetDeviceIds(t *testing.T) {
 		"user gets deviceIds only in company, in network": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: deviceinfo.DeviceIdsResponse{
-				Body: []string{RegisteredDeviceId},
-			},
+			want:       []string{RegisteredDeviceId},
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{
 					{
 						Username: RegisteredUsername,
 						Company:  RegisteredCompany,
 						Role:     int(authstore.User),
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					{DeviceId: AnotherRegisteredDeviceId, Network: AnotherRegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+					{
+						DeviceId:    AnotherRegisteredDeviceId,
+						QueryFields: []string{AnotherRegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+		},
+
+		"network user gets deviceIds in network": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want:       []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     int(authstore.NetworkUser),
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+					{
+						DeviceId:    AnotherRegisteredDeviceId,
+						QueryFields: []string{AnotherRegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+		},
+
+		"admin gets all deviceIds": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want:       []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     int(authstore.Admin),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
@@ -2623,7 +2710,7 @@ func TestGetDeviceIds(t *testing.T) {
 			}
 			defer resp.Result().Body.Close()
 			if !tc.wantErr {
-				var dr deviceinfo.DeviceIdsResponse
+				var dr []string
 				body := resp.Body.Bytes()
 				err = json.Unmarshal(body, &dr)
 				require.Nil(t, err)

@@ -4,6 +4,20 @@ var GeneralQueryFields = []string{
 	"latitude", "longitude", "signal_strength", "rssi", "snr", "batv",
 }
 
+type Scope int
+
+const (
+	DevicesInCompanyInNetwork Scope = iota
+	DevicesInNetwork
+	AllDevices
+)
+
+type ScopeRestriction struct {
+	Scope   Scope
+	Company string
+	Network string
+}
+
 type DeviceInfo struct {
 	DeviceId, Company, Network   string
 	Start, Stop                  string
@@ -72,4 +86,5 @@ type DeviceInfoFetcher interface {
 	GetQueryFields(deviceId string) (QueryFields, error)
 	GetCompany(deviceId string) (string, error)
 	GetNetwork(deviceId string) (string, error)
+	GetDevices(ScopeRestriction) ([]string, error)
 }

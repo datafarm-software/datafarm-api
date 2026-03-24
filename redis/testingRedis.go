@@ -115,14 +115,19 @@ func (t *TestingRedis) PrepareAuthStore(mockDb authstore.Schema) error {
 func (t *TestingRedis) PrepareDeviceInfo(schema deviceinfo.Schema) error {
 	pfn := func(pipe redis.Pipeliner) error {
 		for _, d := range schema.DeviceCompanies {
+			pipe.SAdd(ctx, "allDevices", d.DeviceId)
+			pipe.SAdd(ctx, "companyDevices:"+d.Company, d.DeviceId)
 			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
 			pipe.HSet(ctx, "fieldUnit:"+d.DeviceId, "company", d.Company)
 		}
 		for _, d := range schema.DeviceNetworks {
+			pipe.SAdd(ctx, "allDevices", d.DeviceId)
+			pipe.SAdd(ctx, "networkIds:"+d.Network, d.DeviceId)
 			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
 			pipe.HSet(ctx, "fieldUnit:"+d.DeviceId, "network", d.Network)
 		}
 		for _, d := range schema.DeviceToQF {
+			pipe.SAdd(ctx, "allDevices", d.DeviceId)
 			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
 			pipe.SAdd(ctx, "queryFields:"+d.DeviceId, d.QueryFields)
 		}
@@ -232,4 +237,8 @@ func (t *TestingRedis) GetActiveTokens() []authstore.UserToken {
 			Username: u, Token: token, Expiration: ttl})
 	}
 	return userTokens
+}
+
+func (t *TestingRedis) GetDevices(sr deviceinfo.ScopeRestriction) ([]string, error) {
+	return t.redis.GetDevices(sr)
 }
