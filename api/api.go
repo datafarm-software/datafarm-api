@@ -163,9 +163,8 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	}
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
-		log.Printf("user role is not UserInfo")
 		return nil, huma.Error500InternalServerError(
-			"Internal error getting user role.")
+			"Internal error getting user.")
 	}
 	if in.QueryFields[0] == "all" {
 		if !authstore.HasPermission(authstore.Role(user.Role),
@@ -445,5 +444,32 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 
 func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	*deviceinfo.DeviceIdsResponse, error) {
-	return nil, nil
+	user, ok := ctx.Value("user").(authstore.UserInfo)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting user.")
+	}
+	sr := deviceinfo.ScopeRestriction{
+		Company: user.Company,
+		Network: user.Network,
+	}
+	switch authstore.Role(user.Role) {
+	case authstore.User:
+		sr.Scope = deviceinfo.DevicesInCompanyInNetwork
+	case authstore.NetworkUser:
+		sr.Scope = deviceinfo.DevicesInNetwork
+	case authstore.Admin:
+		sr.Scope = deviceinfo.AllDevices
+	default:
+		return nil, huma.Error500InternalServerError(
+			"Internal error determining devices scope.")
+	}
+	userDevices, err := a.DeviceInfo.GetDevices(sr)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting DeviceIds.")
+	}
+	return &deviceinfo.DeviceIdsResponse{
+		Body: userDevices,
+	}, nil
 }

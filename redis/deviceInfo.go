@@ -40,3 +40,16 @@ func (r *Redis) GetNetwork(deviceId string) (string, error) {
 	}
 	return network, nil
 }
+
+func (r *Redis) GetDevices(sr deviceinfo.ScopeRestriction) ([]string, error) {
+	var key string
+	switch sr.Scope {
+	case deviceinfo.DevicesInCompanyInNetwork:
+		key = "companyDevices:" + sr.Company
+	case deviceinfo.DevicesInNetwork:
+		key = "networkIds:" + sr.Network
+	case deviceinfo.AllDevices:
+		key = "allDevices"
+	}
+	return r.db.SMembers(ctx, key).Result()
+}
