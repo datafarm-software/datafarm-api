@@ -21,6 +21,7 @@ type HumaError struct {
 type HumaHandler[I, O any] func(context.Context, *I) (*O, error)
 
 func RegisterHumaOperations(api huma.API,
+	rateLimit func(ctx huma.Context, next func(huma.Context)),
 	verifyToken func(ctx huma.Context, next func(huma.Context)),
 	getDeviceData HumaHandler[datafetcher.DeviceDataRequest, datafetcher.DeviceDataResponse],
 	batchGetDeviceData HumaHandler[
@@ -44,7 +45,7 @@ func RegisterHumaOperations(api huma.API,
 	operation := huma.Operation{
 		Method:      "GET",
 		Path:        "/device/{deviceId}/sensordata",
-		Middlewares: huma.Middlewares{verifyToken},
+		Middlewares: huma.Middlewares{rateLimit, verifyToken},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -166,7 +167,7 @@ func RegisterHumaOperations(api huma.API,
 		Method:      "GET",
 		Path:        "/device/{deviceId}/queryfields",
 		Tags:        []string{"GET"},
-		Middlewares: huma.Middlewares{verifyToken},
+		Middlewares: huma.Middlewares{rateLimit, verifyToken},
 		Summary:     "Get DeviceId QueryFields",
 		Description: "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor might have a 'temperature' QueryField.",
 		RequestBody: &huma.RequestBody{},
@@ -232,7 +233,7 @@ func RegisterHumaOperations(api huma.API,
 	operation = huma.Operation{
 		Method:      "POST",
 		Path:        "/batch/device/sensordata",
-		Middlewares: huma.Middlewares{verifyToken},
+		Middlewares: huma.Middlewares{rateLimit, verifyToken},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -287,7 +288,7 @@ func RegisterHumaOperations(api huma.API,
 	operation = huma.Operation{
 		Method:      "POST",
 		Path:        "/batch/device/queryfields",
-		Middlewares: huma.Middlewares{verifyToken},
+		Middlewares: huma.Middlewares{rateLimit, verifyToken},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -342,7 +343,7 @@ func RegisterHumaOperations(api huma.API,
 	operation = huma.Operation{
 		Method:      "GET",
 		Path:        "/device/ids",
-		Middlewares: huma.Middlewares{verifyToken},
+		Middlewares: huma.Middlewares{rateLimit, verifyToken},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},

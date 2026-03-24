@@ -1082,9 +1082,9 @@ func setupHuma(t *testing.T) humatest.TestAPI {
 	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
 	humaApiMux := humamux.New(router, config)
 	humaTest := humatest.Wrap(t, humaApiMux)
-	localhuma.RegisterHumaOperations(humaTest, a.VerifyToken, a.GetDeviceData,
-		a.BatchGetDeviceData, a.Login, a.GetQueryFields, a.BatchGetQueryFields,
-		a.GetDeviceIds)
+	localhuma.RegisterHumaOperations(humaTest,
+		a.RateLimit, a.VerifyToken, a.GetDeviceData, a.BatchGetDeviceData,
+		a.Login, a.GetQueryFields, a.BatchGetQueryFields, a.GetDeviceIds)
 	return humaTest
 }
 

@@ -28,6 +28,8 @@ import (
 
 const EmptyPayloadLength int = 16
 
+var ctx context.Context
+
 var QUERYFIELD_REGEX = regexp.MustCompile(`^[a-zA-Z0-9_\-\s:]*$`)
 
 // var DEVICE_ID_REGEX = regexp.MustCompile(`\w{1,30}`)
@@ -67,6 +69,10 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("error initializing jwt authstore: %v", err)
 	}
+	ctx = context.Background()
+	go func() {
+		cleanupOldLimiters(ctx)
+	}()
 	api := &Api{
 		Port:       opts.Port,
 		DeviceInfo: redis, DataFetcher: df,
@@ -95,7 +101,7 @@ func Start(opts ApiOpts) error {
 		router := mux.NewRouter()
 		humaApi := humamux.New(router, config)
 		localhuma.RegisterHumaOperations(humaApi,
-			api.VerifyToken, api.GetDeviceData, api.BatchGetDeviceData,
+			api.RateLimit, api.VerifyToken, api.GetDeviceData, api.BatchGetDeviceData,
 			api.Login, api.GetQueryFields, api.BatchGetQueryFields, api.GetDeviceIds,
 		)
 		server := &http.Server{
@@ -112,7 +118,7 @@ func Start(opts ApiOpts) error {
 		})
 		hooks.OnStop(func() {
 			api.Close()
-			server.Shutdown(context.Background())
+			server.Shutdown(ctx)
 		})
 	})
 	cli.Run()
