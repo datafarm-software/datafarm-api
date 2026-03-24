@@ -37,6 +37,10 @@ type QueryFields struct {
 	QueryFields []string `json:"queryFields"`
 }
 
+type DeviceIdsResponse struct {
+	Body []string `json:"deviceIds" doc:"deviceIds"`
+}
+
 type DeviceToCompany struct {
 	DeviceId string
 	Company  string
