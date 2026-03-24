@@ -1587,7 +1587,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 					{
 						Username: RegisteredUsername,
 						Company:  AnotherRegisteredCompany,
-						Role:     int(authstore.NetworkUser),
+						Role:     int(authstore.User),
 						Password: RegisteredPassword,
 						Network:  RegisteredNetwork,
 					},
