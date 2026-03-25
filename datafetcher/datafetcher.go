@@ -35,9 +35,9 @@ type BatchDeviceDataResponse struct {
 }
 
 type DeviceData struct {
-	DeviceID   string         `json:"deviceId"`
-	Timestamp  time.Time      `json:"timestamp"`
-	SensorData map[string]any `json:"sensorData"`
+	DeviceID   string             `json:"deviceId"`
+	Timestamp  time.Time          `json:"timestamp"`
+	SensorData map[string]float64 `json:"sensorData"`
 }
 
 type TestingDataFetcher interface {
