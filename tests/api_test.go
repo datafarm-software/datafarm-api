@@ -156,8 +156,8 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField: float64(23),
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
 					},
 				},
 			},
@@ -179,7 +179,7 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField: 23,
 					},
 				},
@@ -216,9 +216,9 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField:        float64(23),
-						AnotherRegisteredQueryField: float64(80),
+					SensorData: map[string]float64{
+						RegisteredQueryField:        23,
+						AnotherRegisteredQueryField: 80,
 					},
 				},
 			},
@@ -240,7 +240,7 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        23,
 						AnotherRegisteredQueryField: 80,
 					},
@@ -281,9 +281,9 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField:        float64(23),
-						AnotherRegisteredQueryField: float64(80),
+					SensorData: map[string]float64{
+						RegisteredQueryField:        23,
+						AnotherRegisteredQueryField: 80,
 					},
 				},
 			},
@@ -305,7 +305,7 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        23,
 						AnotherRegisteredQueryField: 80,
 					},
@@ -346,9 +346,9 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField:        float64(23),
-						AnotherRegisteredQueryField: float64(80),
+					SensorData: map[string]float64{
+						RegisteredQueryField:        23,
+						AnotherRegisteredQueryField: 80,
 					},
 				},
 			},
@@ -370,7 +370,7 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        23,
 						AnotherRegisteredQueryField: 80,
 					},
@@ -483,15 +483,15 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField: float64(23),
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
 					},
 				},
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField: float64(25),
+					SensorData: map[string]float64{
+						RegisteredQueryField: 25,
 					},
 				},
 			},
@@ -513,14 +513,14 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField: 23,
 					},
 				},
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField: 25,
 					},
 				},
@@ -558,15 +558,15 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField: float64(23),
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
 					},
 				},
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField: float64(25),
+					SensorData: map[string]float64{
+						RegisteredQueryField: 25,
 					},
 				},
 			},
@@ -588,14 +588,14 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField: 23,
 					},
 				},
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField: 25,
 					},
 				},
@@ -632,17 +632,17 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField:        float64(23),
-						AnotherRegisteredQueryField: float64(80),
+					SensorData: map[string]float64{
+						RegisteredQueryField:        23,
+						AnotherRegisteredQueryField: 80,
 					},
 				},
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField:        float64(25),
-						AnotherRegisteredQueryField: float64(70),
+					SensorData: map[string]float64{
+						RegisteredQueryField:        25,
+						AnotherRegisteredQueryField: 70,
 					},
 				},
 			},
@@ -664,7 +664,7 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        23,
 						AnotherRegisteredQueryField: 80,
 					},
@@ -672,7 +672,7 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        25,
 						AnotherRegisteredQueryField: 70,
 					},
@@ -710,15 +710,15 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField: float64(23),
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
 					},
 				},
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField: float64(25),
+					SensorData: map[string]float64{
+						RegisteredQueryField: 25,
 					},
 				},
 			},
@@ -740,21 +740,21 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: OutsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField: 22,
 					},
 				},
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField: 23,
 					},
 				},
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField: 25,
 					},
 				},
@@ -791,15 +791,15 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField: float64(23),
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
 					},
 				},
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField: float64(25),
+					SensorData: map[string]float64{
+						RegisteredQueryField: 25,
 					},
 				},
 			},
@@ -821,21 +821,21 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: OutsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField: 22,
 					},
 				},
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField: 23,
 					},
 				},
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField: 25,
 					},
 				},
@@ -887,7 +887,7 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField: 23,
 					},
 				},
@@ -939,7 +939,7 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField: 23,
 					},
 				},
@@ -976,8 +976,8 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
-						RegisteredQueryField: float64(23),
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
 					},
 				},
 			},
@@ -999,7 +999,7 @@ func TestGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField: 23,
 					},
 				},
@@ -1308,17 +1308,17 @@ func TestBatchGetDeviceData(t *testing.T) {
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        float64(23),
-							AnotherRegisteredQueryField: float64(80),
+						SensorData: map[string]float64{
+							RegisteredQueryField:        23,
+							AnotherRegisteredQueryField: 80,
 						},
 					},
 					{
 						DeviceID:  AnotherRegisteredDeviceId,
 						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        float64(25),
-							AnotherRegisteredQueryField: float64(70),
+						SensorData: map[string]float64{
+							RegisteredQueryField:        25,
+							AnotherRegisteredQueryField: 70,
 						},
 					},
 				},
@@ -1341,7 +1341,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        23,
 						AnotherRegisteredQueryField: 80,
 					},
@@ -1349,7 +1349,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  AnotherRegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        25,
 						AnotherRegisteredQueryField: 70,
 					},
@@ -1402,17 +1402,17 @@ func TestBatchGetDeviceData(t *testing.T) {
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        float64(23),
-							AnotherRegisteredQueryField: float64(80),
+						SensorData: map[string]float64{
+							RegisteredQueryField:        23,
+							AnotherRegisteredQueryField: 80,
 						},
 					},
 					{
 						DeviceID:  AnotherRegisteredDeviceId,
 						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        float64(25),
-							AnotherRegisteredQueryField: float64(70),
+						SensorData: map[string]float64{
+							RegisteredQueryField:        25,
+							AnotherRegisteredQueryField: 70,
 						},
 					},
 				},
@@ -1435,7 +1435,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        23,
 						AnotherRegisteredQueryField: 80,
 					},
@@ -1443,7 +1443,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  AnotherRegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        25,
 						AnotherRegisteredQueryField: 70,
 					},
@@ -1496,17 +1496,17 @@ func TestBatchGetDeviceData(t *testing.T) {
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        float64(23),
-							AnotherRegisteredQueryField: float64(80),
+						SensorData: map[string]float64{
+							RegisteredQueryField:        23,
+							AnotherRegisteredQueryField: 80,
 						},
 					},
 					{
 						DeviceID:  AnotherRegisteredDeviceId,
 						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        float64(25),
-							AnotherRegisteredQueryField: float64(70),
+						SensorData: map[string]float64{
+							RegisteredQueryField:        25,
+							AnotherRegisteredQueryField: 70,
 						},
 					},
 				},
@@ -1529,7 +1529,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        23,
 						AnotherRegisteredQueryField: 80,
 					},
@@ -1537,7 +1537,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  AnotherRegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        25,
 						AnotherRegisteredQueryField: 70,
 					},
@@ -1590,17 +1590,17 @@ func TestBatchGetDeviceData(t *testing.T) {
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        float64(23),
-							AnotherRegisteredQueryField: float64(80),
+						SensorData: map[string]float64{
+							RegisteredQueryField:        23,
+							AnotherRegisteredQueryField: 80,
 						},
 					},
 					{
 						DeviceID:  AnotherRegisteredDeviceId,
 						Timestamp: AlsoInsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        float64(25),
-							AnotherRegisteredQueryField: float64(70),
+						SensorData: map[string]float64{
+							RegisteredQueryField:        25,
+							AnotherRegisteredQueryField: 70,
 						},
 					},
 				},
@@ -1623,7 +1623,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        23,
 						AnotherRegisteredQueryField: 80,
 					},
@@ -1631,7 +1631,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  AnotherRegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        25,
 						AnotherRegisteredQueryField: 70,
 					},
@@ -1709,7 +1709,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        23,
 						AnotherRegisteredQueryField: 80,
 					},
@@ -1717,7 +1717,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  AnotherRegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        25,
 						AnotherRegisteredQueryField: 70,
 					},
@@ -1795,7 +1795,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        23,
 						AnotherRegisteredQueryField: 80,
 					},
@@ -1803,7 +1803,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  AnotherRegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        25,
 						AnotherRegisteredQueryField: 70,
 					},
@@ -1861,9 +1861,9 @@ func TestBatchGetDeviceData(t *testing.T) {
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
-						SensorData: map[string]any{
-							RegisteredQueryField:        float64(23),
-							AnotherRegisteredQueryField: float64(80),
+						SensorData: map[string]float64{
+							RegisteredQueryField:        23,
+							AnotherRegisteredQueryField: 80,
 						},
 					},
 				},
@@ -1886,7 +1886,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        23,
 						AnotherRegisteredQueryField: 80,
 					},
@@ -1894,7 +1894,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 				{
 					DeviceID:  AnotherRegisteredDeviceId,
 					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]any{
+					SensorData: map[string]float64{
 						RegisteredQueryField:        25,
 						AnotherRegisteredQueryField: 70,
 					},

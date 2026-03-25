@@ -74,7 +74,11 @@ func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
 	if err != nil {
 		return nil, fmt.Errorf("error processing query result: %v", err)
 	}
-	return i.dataRows2DeviceData(dataRows), nil
+	dd, err := i.dataRows2DeviceData(dataRows)
+	if err != nil {
+		return nil, err
+	}
+	return dd, nil
 }
 
 func (i *InfluxDatafetcher) generateFluxQuery(metadata deviceinfo.DeviceInfo, queryRange string) string {
@@ -112,13 +116,23 @@ func (i *InfluxDatafetcher) extractValue(result *influxApi.QueryTableResult) ([]
 	return records, nil
 }
 
-func (i *InfluxDatafetcher) dataRows2DeviceData(data []DataRow) []DeviceData {
+func (i *InfluxDatafetcher) dataRows2DeviceData(data []DataRow) ([]DeviceData, error) {
 	var deviceDataSlice []DeviceData
+	var found, ok bool
+	var value float64
+	var timestampWithin10Seconds bool
 	for _, row := range data {
-		found := false
+		found = false
+		value, ok = row.Value.(float64)
+		if !ok {
+			return nil, fmt.Errorf("received sensordata that is not float 64")
+		}
 		for i, deviceData := range deviceDataSlice {
-			if deviceData.DeviceID == row.DeviceID && math.Abs(float64(deviceData.Timestamp.Sub(row.Time).Seconds())) <= 10 {
-				deviceDataSlice[i].SensorData[row.Field] = row.Value
+			timestampWithin10Seconds = math.Abs(float64(
+				deviceData.Timestamp.Sub(row.Time).Seconds())) <= 10
+			if deviceData.DeviceID == row.DeviceID &&
+				timestampWithin10Seconds {
+				deviceDataSlice[i].SensorData[row.Field] = value
 				found = true
 				break
 			}
@@ -127,12 +141,12 @@ func (i *InfluxDatafetcher) dataRows2DeviceData(data []DataRow) []DeviceData {
 			newDeviceData := DeviceData{
 				DeviceID:   row.DeviceID,
 				Timestamp:  row.Time,
-				SensorData: map[string]interface{}{row.Field: row.Value},
+				SensorData: map[string]float64{row.Field: value},
 			}
 			deviceDataSlice = append(deviceDataSlice, newDeviceData)
 		}
 	}
-	return deviceDataSlice
+	return deviceDataSlice, nil
 }
 
 func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string, error) {
@@ -243,10 +257,6 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, deviceData 
 	var deviceInfo deviceinfo.DeviceInfo
 	for _, dd := range deviceData {
 		for key, value := range dd.SensorData {
-			_, isStringValue := value.(string)
-			if isStringValue {
-				continue
-			}
 			fields[key] = value
 		}
 		deviceInfo, ok = deviceInfoMap[dd.DeviceID]
