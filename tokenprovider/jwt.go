@@ -1,4 +1,4 @@
-package authoriser
+package tokenprovider
 
 import (
 	"crypto/ecdsa"
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -89,28 +90,39 @@ func (j *jwtAuth) loadECDSAPrivateKey(fs fs.FS, filePath string) (*ecdsa.Private
 	return privKey, nil
 }
 
-func (j *jwtAuth) GetPublicKey() *ecdsa.PublicKey {
+func (j *jwtAuth) getPublicKey() *ecdsa.PublicKey {
 	return j.publicKey
 }
 
-func (j *jwtAuth) GenerateToken(userInfo UserInfo) (string, error) {
+func (j *jwtAuth) GenerateToken() (string, time.Duration, error) {
 	token := jwt.New(jwt.SigningMethodES256)
 	claims := token.Claims.(jwt.MapClaims)
-	var exp time.Time
-	if userInfo.Role == DemoViewer {
-		exp = time.Now().UTC().Add(THREE_HOURS)
-	} else {
-		exp = time.Now().UTC().Add(TWELVE_HOURS)
-	}
+	exp := time.Now().UTC().Add(THREE_HOURS)
 	claims["exp"] = jwt.NewNumericDate(exp)
 	claims["authorized"] = true
-	claims["company"] = userInfo.Company
-	claims["username"] = userInfo.Username
-	claims["network"] = userInfo.Network
-	claims["role"] = userInfo.Role
 	tokenString, err := token.SignedString(j.privateKey)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
-	return tokenString, nil
+	return tokenString, THREE_HOURS, nil
+}
+
+func (j *jwtAuth) IsValidToken(tr LoginResponse) bool {
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(tr.Body, claims,
+		func(token *jwt.Token) (any, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
+				return nil, nil
+			}
+			return j.getPublicKey(), nil
+		})
+	if err != nil {
+		log.Printf("token parsing error: %v", err)
+		return false
+	}
+	if !token.Valid {
+		log.Println("Invalid token provided")
+		return false
+	}
+	return true
 }

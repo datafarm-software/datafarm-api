@@ -2,9 +2,7 @@ package api
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -12,23 +10,29 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/geraud22/datafarm-api/authoriser"
-	"github.com/geraud22/datafarm-api/datafetcher"
-	"github.com/geraud22/datafarm-api/metadatafetcher"
-	"github.com/geraud22/datafarm-api/redis"
-	"github.com/golang-jwt/jwt"
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humamux"
+	"github.com/danielgtaylor/huma/v2/humacli"
+	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
+	"github.com/datafarm-software/datafarm-api/authstore"
+	"github.com/datafarm-software/datafarm-api/datafetcher"
+	df "github.com/datafarm-software/datafarm-api/datafetcher"
+	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
+	"github.com/datafarm-software/datafarm-api/tokenprovider"
+
+	"github.com/datafarm-software/datafarm-api/redis"
 	"github.com/gorilla/mux"
 )
 
 const EmptyPayloadLength int = 16
 
 var ctx context.Context
-var claimsKey string = "jwtClaims"
+
 var QUERYFIELD_REGEX = regexp.MustCompile(`^[a-zA-Z0-9_\-\s:]*$`)
-var DEVICE_ID_REGEX = regexp.MustCompile(`\w{1,30}`)
+
+// var DEVICE_ID_REGEX = regexp.MustCompile(`\w{1,30}`)
 var RELATIVETIME_REGEX = regexp.MustCompile(`-\d{1,3}(?:[hdwy]|mo?)`)
 var USERNAME_REGEX = regexp.MustCompile(`^[\w .@]{1,75}`)
 var UPPERCASE_REGEX = regexp.MustCompile(`[A-Z]`)
@@ -36,398 +40,442 @@ var LOWERCASE_REGEX = regexp.MustCompile(`[a-z]`)
 var NUMBER_REGEX = regexp.MustCompile(`[0-9]`)
 var SPECIAL_CHARS_REGEX = regexp.MustCompile(`[@$!%*?&#]`)
 
-type metadataFetcher interface {
-	Close() error
-	GetAttachedSensors(deviceId string) ([]string, error)
-	GetQueryFields(attachedSensors []string) ([]string, error)
-	GetCompany(deviceId string) (string, error)
-	GetNetwork(deviceId string) (string, error)
-}
-
-type dataFetcher interface {
-	GetData(metadata metadatafetcher.Metadata) (*datafetcher.ConsolidatedDeviceData, error)
-	FormatQueryRange(startTime, stopTime string) (interface{}, error)
-	Close() error
-}
-
-type tokenAuth interface {
-	Close() error
-	GenerateToken(userInfo authoriser.UserInfo) (string, error)
-	GetPublicKey() *ecdsa.PublicKey
-}
-
-type basicAuth interface {
-	Close() error
-	CheckCredentials(username, passw string) (authoriser.UserInfo, error)
-}
-
 type ApiOpts struct {
 	RedisOpts      redis.RedisOpts        `mapstructure:"Redis" validate:"required"`
 	InfluxOpts     datafetcher.InfluxOpts `mapstructure:"Influx" validate:"required"`
-	AdminRole      string                 `mapstructure:"adminRole" validate:"required,alphanum"`
 	Port           string                 `mapstructure:"port" validate:"required"`
 	PrivateKeyFile string                 `mapstructure:"privatekeyfile" validate:"required"`
 	PublicKeyFile  string                 `mapstructure:"publickeyfile" validate:"required"`
 }
 
 type Api struct {
-	port, adminRole string
-	wg              sync.WaitGroup
-	server          *http.Server
-	router          *mux.Router
-	metadataFetcher metadataFetcher
-	dataFetcher     dataFetcher
-	tokenAuth       tokenAuth
-	basicAuth       basicAuth
-	shutdownCtxFunc context.CancelFunc
+	Port          string
+	DeviceInfo    deviceinfo.DeviceInfoFetcher
+	DataFetcher   df.DataFetcher
+	TokenProvider tokenprovider.TokenProvider
+	AuthStore     authstore.AuthStore
 }
 
-func NewApi(opts ApiOpts) (*Api, error) {
+func Start(opts ApiOpts) error {
 	redis, err := redis.NewRedis(opts.RedisOpts)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	df, err := datafetcher.NewInfluxDatafetcher(opts.InfluxOpts)
 	if err != nil {
-		return nil, fmt.Errorf("error init influx: %v", err)
+		return fmt.Errorf("error init influx: %v", err)
 	}
-	tokenAuth, err := authoriser.NewJwtAuth(os.DirFS("."), opts.PrivateKeyFile, opts.PublicKeyFile)
+	tokenAuth, err := tokenprovider.NewJwtAuth(os.DirFS("."), opts.PrivateKeyFile, opts.PublicKeyFile)
 	if err != nil {
-		return nil, fmt.Errorf("error initializing jwt authoriser: %v", err)
+		return fmt.Errorf("error initializing jwt authstore: %v", err)
 	}
-	c, cancel := context.WithCancel(context.Background())
-	ctx = c
-	api := &Api{
-		shutdownCtxFunc: cancel,
-		router:          mux.NewRouter().PathPrefix("/api/v1").Subrouter(),
-		port:            opts.Port,
-		metadataFetcher: redis,
-		dataFetcher:     df,
-		tokenAuth:       tokenAuth,
-		basicAuth:       redis,
-	}
-	api.server = &http.Server{
-		Addr:    opts.Port,
-		Handler: api.router,
-	}
-	api.registerRoutes()
-	api.router.Use(api.verifyJwt)
-	api.adminRole = opts.AdminRole
-	return api, nil
-}
-
-func (a *Api) startGoRoutine(routineToBeExecuted func(ctx context.Context)) {
-	a.wg.Add(1)
+	ctx = context.Background()
 	go func() {
-		defer a.wg.Done()
-		routineToBeExecuted(ctx)
+		cleanupOldLimiters(ctx)
 	}()
+	api := &Api{
+		Port:       opts.Port,
+		DeviceInfo: redis, DataFetcher: df,
+		TokenProvider: tokenAuth,
+		AuthStore:     redis,
+	}
+	authstore.InitRoles()
+	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
+		config := huma.DefaultConfig("SensorData API", "1.0.0")
+		config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
+			"bearer": {
+				Type:         "http",
+				Scheme:       "bearer",
+				Name:         "Authorization",
+				In:           "header",
+				BearerFormat: "JWT",
+			},
+			"basic": {
+				Type:         "http",
+				Scheme:       "basic",
+				Name:         "Authorization",
+				In:           "header",
+				BearerFormat: "Basic",
+			},
+		}
+		router := mux.NewRouter()
+		humaApi := humamux.New(router, config)
+		localhuma.RegisterHumaOperations(humaApi,
+			api.RateLimit, api.VerifyToken, api.GetDeviceData, api.BatchGetDeviceData,
+			api.Login, api.GetQueryFields, api.BatchGetQueryFields, api.GetDeviceIds,
+		)
+		server := &http.Server{
+			Addr:    opts.Port,
+			Handler: router,
+		}
+		hooks.OnStart(func() {
+			log.Println("Server started on ", server.Addr)
+			if err := server.ListenAndServe(); err != nil {
+				if !errors.Is(err, http.ErrServerClosed) {
+					log.Fatalf("HTTP server error: %v", err)
+				}
+			}
+		})
+		hooks.OnStop(func() {
+			api.Close()
+			server.Shutdown(ctx)
+		})
+	})
+	cli.Run()
+	return nil
 }
 
-func (a *Api) Shutdown() {
-	if err := a.server.Shutdown(ctx); err != nil {
-		log.Fatalf("HTTP shutdown error: %v", err)
-	}
-	if err := a.metadataFetcher.Close(); err != nil {
+func (a *Api) Close() {
+	if err := a.DeviceInfo.Close(); err != nil {
 		log.Fatalf("error closing metadatafetcher: %v", err)
 	}
-	if err := a.dataFetcher.Close(); err != nil {
+	if err := a.DataFetcher.Close(); err != nil {
 		log.Fatalf("error closing datafetcher: %v", err)
 	}
-	if err := a.tokenAuth.Close(); err != nil {
+	if err := a.TokenProvider.Close(); err != nil {
 		log.Fatalf("error closing token auth: %v", err)
 	}
-	if err := a.basicAuth.Close(); err != nil {
+	if err := a.AuthStore.Close(); err != nil {
 		log.Fatalf("error closing basic auth: %v", err)
 	}
-	a.shutdownCtxFunc()
-	a.wg.Wait()
-	log.Println("All goroutines have finished.")
+	log.Println("Api shutdown.")
 }
 
-func (a *Api) StartHttpServer() {
-	a.startGoRoutine(func(ctx context.Context) {
-		if err := a.server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("HTTP server error: %v", err)
-		}
-		log.Println("Stopped serving new connections.")
-	})
-}
-
-func (a *Api) registerRoutes() {
-	a.router.Handle("/device/{deviceId}", http.HandlerFunc(a.GetDeviceData)).Methods("GET")
-	a.router.Handle("/login", http.HandlerFunc(a.Login)).Methods("GET", "POST")
-}
-
-func (a *Api) GetDeviceData(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		log.Println("error parsing form while loading dashboard: %v", err)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-	routeVars := mux.Vars(r)
-	deviceId := routeVars["deviceId"]
-	deviceId = strings.TrimSpace(deviceId)
-	if !DEVICE_ID_REGEX.MatchString(deviceId) {
-		log.Printf("deviceid failed the regex")
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-	startTime := r.FormValue("start")
-	startTime = strings.TrimSpace(startTime)
-	if !RELATIVETIME_REGEX.MatchString(startTime) {
-		if _, err := time.Parse(time.RFC3339Nano, startTime); err != nil {
-			log.Println("start time is invalid rfc")
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-	}
-	stopTime := r.FormValue("stop")
-	stopTime = strings.TrimSpace(stopTime)
-	if stopTime != "" {
-		if !RELATIVETIME_REGEX.MatchString(stopTime) {
-			if _, err := time.Parse(time.RFC3339Nano, stopTime); err != nil {
-				log.Println("stop time is invalid rfc")
-				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-				return
-			}
-		}
-	}
-	claims, ok := r.Context().Value(claimsKey).(jwt.MapClaims)
-	if !ok {
-		log.Println("no jwt claims")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
-	}
-	username, ok := claims["username"].(string)
-	if !ok {
-		log.Println("no username claim.")
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-	}
-	company, ok := claims["company"].(string)
-	if !ok {
-		log.Println("no company claims")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
-	}
-	network, ok := claims["network"].(string)
-	if !ok {
-		log.Println("no network claims")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
-	}
-	userRole, ok := claims["role"].(string)
-	if !ok {
-		log.Println("no role claim")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
-	}
-	formattedQueryRange, err := a.dataFetcher.FormatQueryRange(startTime, stopTime)
-	if err != nil {
-		log.Printf("error formatting query range: %v", err)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-	//TODO: allow users to ask for multiple queryfields at once
-	requestedQueryFields := r.URL.Query()["queryField"]
-	for _, qf := range requestedQueryFields {
-		if !QUERYFIELD_REGEX.MatchString(qf) {
-			log.Println("queryField failed the regex")
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-	}
-	queryFields := make([]string, 0)
-	if len(requestedQueryFields) < 1 {
-		log.Printf("%s: request did not specify a query field.", username)
-		http.Error(w, "No query field specified.", http.StatusBadRequest)
-	}
-	if requestedQueryFields[0] == "all" {
-		attachedSensors, err := a.metadataFetcher.GetAttachedSensors(deviceId)
-		if err != nil {
-			log.Printf("error getting attached sensors: %v", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-		qf, err := a.metadataFetcher.GetQueryFields(attachedSensors)
-		if err != nil {
-			log.Printf("error getting query fields: %v", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-		queryFields = qf
+func (a *Api) GetDeviceData(ctx context.Context,
+	in *datafetcher.DeviceDataRequest) (*datafetcher.DeviceDataResponse, error) {
+	in.Start = strings.TrimSpace(in.Start)
+	if RELATIVETIME_REGEX.MatchString(in.Start) {
+		in.Stop = ""
 	} else {
-		queryFields = append(queryFields, requestedQueryFields...)
-	}
-	metadata := metadatafetcher.Metadata{
-		Company:     company,
-		DeviceId:    deviceId,
-		Network:     network,
-		QueryRange:  formattedQueryRange,
-		QueryFields: queryFields,
-	}
-	if strings.ToLower(userRole) == a.adminRole {
-		company, err := a.metadataFetcher.GetCompany(deviceId)
+		rfcStart, err := time.Parse(time.RFC3339Nano, in.Start)
 		if err != nil {
-			log.Printf("error getting company for admin request: %v", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
+			log.Printf("parsing start: %v", err)
+			return nil, huma.Error400BadRequest("Start time is invalid rfc.")
 		}
-		//NOTE: if deviceId belongs to other company than admin is assigned to by default
-		if company != metadata.Company {
-			network, err := a.metadataFetcher.GetNetwork(deviceId)
-			if err != nil {
-				log.Printf("error getting network for admin request: %v", err)
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-			metadata.Company = company
-			metadata.Network = network
+		if rfcStart.UnixMilli() >= time.Now().UnixMilli() {
+			return nil, huma.Error400BadRequest("Start time is in the future.")
+		}
+		if in.Stop == "" {
+			return nil, huma.Error400BadRequest("No stop time provided.")
+		}
+		in.Stop = strings.TrimSpace(in.Stop)
+		rfcStop, err := time.Parse(time.RFC3339Nano, in.Stop)
+		if err != nil {
+			return nil, huma.Error400BadRequest("Stop time is invalid rfc.")
+		}
+		if rfcStart.UnixMilli() >= rfcStop.UnixMilli() {
+			return nil, huma.Error400BadRequest("Start time is greater than stop time.")
 		}
 	}
-	deviceData, err := a.dataFetcher.GetData(metadata)
+	user, ok := ctx.Value("user").(authstore.UserInfo)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting user.")
+	}
+	if in.QueryFields[0] == "all" {
+		if !authstore.HasPermission(authstore.Role(user.Role),
+			authstore.GetAllQueryFields) {
+			return nil, huma.Error500InternalServerError(
+				"Unauthorized for all queryfields.")
+		}
+		qf, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
+		if err != nil {
+			log.Printf("error getting query fields for: %s: %v", in.DeviceId, err)
+			return nil, huma.Error500InternalServerError(
+				"Internal error getting query fields for deviceId.")
+		}
+		in.QueryFields = qf.QueryFields
+	}
+	deviceCompany, err := a.DeviceInfo.GetCompany(in.DeviceId)
+	if err != nil {
+		log.Printf("error getting company for admin request on device: %s: %v",
+			in.DeviceId, err)
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting associated company for deviceId.")
+	}
+	deviceNetwork, err := a.DeviceInfo.GetNetwork(in.DeviceId)
+	if err != nil {
+		log.Printf("error getting network for admin request on deviceId: %s: %v",
+			in.DeviceId, err)
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting associated network for deviceId.")
+	}
+	metadata := deviceinfo.DeviceInfo{
+		Company:     user.Company,
+		DeviceId:    in.DeviceId,
+		Network:     user.Network,
+		QueryFields: in.QueryFields,
+		Start:       in.Start,
+		Stop:        in.Stop,
+	}
+	if deviceCompany != user.Company {
+		if authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyCompany) {
+			metadata.Company = deviceCompany
+		} else {
+			log.Printf("user: %s requested deviceId: %s. User Company: %s, Device Company: %s",
+				user.Username, in.DeviceId, user.Company, deviceCompany)
+			return nil, huma.Error401Unauthorized(
+				"Unauthorized access to this device.")
+		}
+	}
+	if deviceNetwork != user.Network {
+		if authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyNetwork) {
+			metadata.Network = deviceNetwork
+		} else {
+			log.Printf("user: %s requested deviceId: %s. User Network: %s, Device Network: %s",
+				user.Username, in.DeviceId, user.Network, deviceNetwork)
+			return nil, huma.Error401Unauthorized(
+				"Unauthorized access to this device.")
+		}
+	}
+	deviceData, err := a.DataFetcher.GetData(metadata)
 	if err != nil {
 		log.Printf("error getting data: %v", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
+		return nil, huma.Error500InternalServerError(
+			"Internal error fetching data.")
 	}
-	jsonData, err := json.Marshal(deviceData)
-	if err != nil {
-		log.Printf("error marshalling deviceData to json: %v", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	var bytesToReturn []byte
-	if len(jsonData) > EmptyPayloadLength {
-		bytesToReturn = jsonData
-	} else {
-		bytesToReturn = []byte(`{"payload": []}`)
-	}
-	if _, err := w.Write(bytesToReturn); err != nil {
-		log.Printf("Error writing response: %v", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
+	return &datafetcher.DeviceDataResponse{Body: deviceData}, nil
 }
 
-func (a *Api) verifyJwt(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/v1/login" {
-			next.ServeHTTP(w, r)
-			return
-		}
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			log.Println("no auth header provided")
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			log.Println("Invalid Authorization header format")
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-		tokenString := parts[1]
-		claims := jwt.MapClaims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
-				log.Println("wrong signing method used")
-				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-				return nil, nil
-			}
-			return a.tokenAuth.GetPublicKey(), nil
-		})
-		if err != nil {
-			log.Printf("token parsing error: %v", err)
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		}
-		if err := claims.Valid(); err != nil {
-			log.Printf("claims validation error: %v", err)
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		}
-		if !token.Valid {
-			log.Println("Invalid token provided")
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		}
-		ctx := context.WithValue(r.Context(), claimsKey, claims)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-func (a *Api) Login(w http.ResponseWriter, r *http.Request) {
+func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
+	r, w := humamux.Unwrap(ctx)
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		log.Println("no auth header provided")
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || parts[0] != "Basic" {
+	parts := strings.Split(authHeader, "Bearer")
+	if len(parts) != 2 {
 		log.Println("Invalid Authorization header format")
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
+	var lr tokenprovider.LoginResponse
+	lr.Body = strings.TrimSpace(parts[1])
+	lr.Body = strings.Trim(lr.Body, `"`)
+	if !a.TokenProvider.IsValidToken(lr) {
+		if err := a.AuthStore.DeleteToken(authstore.UserToken{Token: lr.Body}); err != nil {
+			log.Printf("deleting token: %v", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError),
+				http.StatusInternalServerError)
+		}
+		http.Error(w, http.StatusText(http.StatusUnauthorized),
+			http.StatusUnauthorized)
+		return
+	}
+	user, err := a.AuthStore.GetUser(lr.Body)
+	if err != nil {
+		log.Printf("getting user: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError),
+			http.StatusInternalServerError)
+	}
+	ctx = huma.WithValue(ctx, "user", user)
+	next(ctx)
+}
+
+func (a *Api) Login(ctx context.Context,
+	ar *tokenprovider.LoginRequest) (*tokenprovider.LoginResponse, error) {
+	parts := strings.Split(ar.Auth, " ")
+	if len(parts) != 2 || parts[0] != "Basic" {
+		return nil, huma.Error400BadRequest(
+			"Authorization header must follow the basic format: 'Basic base64(username:password)'")
+	}
 	authBytes, err := base64.StdEncoding.DecodeString(parts[1])
 	if err != nil {
-		log.Printf("error decoding given base64: %v", err)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
+		return nil, huma.Error500InternalServerError(
+			"Internal error decoding given base64.")
 	}
 	authInfo := strings.Split(string(authBytes), ":")
 	if len(authInfo) != 2 {
-		log.Println("Invalid Basic format provided")
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
+		return nil, huma.Error400BadRequest("Invalid Basic format provided.")
 	}
 	username := authInfo[0]
 	if ok := USERNAME_REGEX.MatchString(username); !ok {
-		log.Println("username regex failed")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
+		return nil, huma.Error400BadRequest("Username failed the regex.")
 	}
 	password := authInfo[1]
 	if ok := UPPERCASE_REGEX.MatchString(password); !ok {
-		log.Println("password doesn't contain uppercase character")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
+		return nil, huma.Error400BadRequest(
+			"Password failed the regex.")
 	}
 	if ok := LOWERCASE_REGEX.MatchString(password); !ok {
-		log.Println("password doesn't contain lowercase character")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
+		return nil, huma.Error400BadRequest(
+			"Password failed the regex.")
 	}
 	if ok := NUMBER_REGEX.MatchString(password); !ok {
-		log.Println("password doesn't contain number")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
+		return nil, huma.Error400BadRequest(
+			"Password failed the regex.")
 	}
 	if ok := SPECIAL_CHARS_REGEX.MatchString(password); !ok {
-		log.Println("password doesn't contain special character")
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		return
+		return nil, huma.Error400BadRequest(
+			"Password failed the regex.")
 	}
-	verifiedUserInfo, err := a.basicAuth.CheckCredentials(username, password)
+	if err = a.AuthStore.VerifyCredentials(username, password); err != nil {
+		log.Printf("error: %v", err)
+		return nil, huma.Error401Unauthorized("Bad credentials provided.")
+	}
+	token, expiry, err := a.TokenProvider.GenerateToken()
 	if err != nil {
-		log.Printf("error checking credentials: %v", err)
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
+		return nil, huma.Error500InternalServerError(
+			"Internal error generating an access token.")
 	}
-	token, err := a.tokenAuth.GenerateToken(verifiedUserInfo)
+	ut := authstore.UserToken{
+		Username:   username,
+		Token:      token,
+		Expiration: expiry,
+	}
+	if err = a.AuthStore.StoreToken(ut); err != nil {
+		return nil, huma.Error500InternalServerError(
+			"Internal error linking the token to the user.")
+	}
+	return &tokenprovider.LoginResponse{Body: token}, nil
+}
+
+func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (
+	*deviceinfo.QueryFieldsResponse, error) {
+	ctxUser := ctx.Value("user")
+	user, ok := ctxUser.(authstore.UserInfo)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error finding user info.")
+	}
+	if !authstore.HasPermission(authstore.Role(user.Role),
+		authstore.GetAllQueryFields) {
+		return nil, huma.Error401Unauthorized(
+			"Access denied to QueryFields.")
+	}
+	deviceCompany, err := a.DeviceInfo.GetCompany(in.DeviceId)
 	if err != nil {
-		log.Printf("error generating jwt: %v", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
+		return nil, huma.Error500InternalServerError(
+			"Internal error checking device company.")
 	}
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write([]byte(token + "\n")); err != nil {
-		log.Printf("error writing to response writer: %v", err)
-		return
+	if user.Company != deviceCompany {
+		if !authstore.HasPermission(authstore.Role(user.Role),
+			authstore.GetAnyCompany) {
+			return nil, huma.Error401Unauthorized(
+				"Unauthorized access to this device.")
+		}
 	}
+	deviceNetwork, err := a.DeviceInfo.GetNetwork(in.DeviceId)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"Internal error checking device network.")
+	}
+	if user.Network != deviceNetwork {
+		if !authstore.HasPermission(authstore.Role(user.Role),
+			authstore.GetAnyNetwork) {
+			return nil, huma.Error401Unauthorized(
+				"Unauthorized access to this device.")
+		}
+	}
+	queryFields, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"Internal error while getting queryfields.")
+	}
+	return &deviceinfo.QueryFieldsResponse{Body: queryFields}, nil
+}
+
+func (a *Api) BatchGetDeviceData(ctx context.Context,
+	in *struct {
+		Body []datafetcher.BatchDeviceDataRequest
+	}) (*struct {
+	Body datafetcher.BatchDeviceDataResponse
+}, error) {
+	var dr datafetcher.DeviceDataRequest
+	var dataResp *datafetcher.DeviceDataResponse
+	var deviceErr datafetcher.DeviceDataError
+	var err error
+	errSlice := make([]datafetcher.DeviceDataError, 0, len(in.Body))
+	resultSlice := make([]datafetcher.DeviceData, 0, len(in.Body))
+	for _, bdr := range in.Body {
+		dr = datafetcher.DeviceDataRequest{
+			DeviceId:    bdr.DeviceId,
+			QueryFields: bdr.QueryFields,
+			Start:       bdr.Start,
+			Stop:        bdr.Stop,
+		}
+		dataResp, err = a.GetDeviceData(ctx, &dr)
+		if err == nil {
+			resultSlice = append(resultSlice, dataResp.Body...)
+		} else {
+			deviceErr.DeviceId = bdr.DeviceId
+			deviceErr.Error = err.Error()
+			errSlice = append(errSlice, deviceErr)
+		}
+	}
+	return &struct {
+		Body datafetcher.BatchDeviceDataResponse
+	}{
+		Body: datafetcher.BatchDeviceDataResponse{
+			Results: resultSlice,
+			Errors:  errSlice,
+		},
+	}, nil
+}
+
+func (a *Api) BatchGetQueryFields(ctx context.Context,
+	in *deviceinfo.BatchQueryFieldsRequest) (*struct {
+	Body deviceinfo.BatchQueryFieldsResponse
+}, error) {
+	var qr deviceinfo.QueryFieldsRequest
+	var dataResp *deviceinfo.QueryFieldsResponse
+	var deviceErr deviceinfo.QueryFieldsError
+	var err error
+	errSlice := make([]deviceinfo.QueryFieldsError, 0, len(in.Body))
+	resultSlice := make([]deviceinfo.QueryFields, 0, len(in.Body))
+	for _, deviceId := range in.Body {
+		qr = deviceinfo.QueryFieldsRequest{
+			DeviceId: deviceId,
+		}
+		dataResp, err = a.GetQueryFields(ctx, &qr)
+		if err == nil {
+			resultSlice = append(resultSlice, dataResp.Body)
+		} else {
+			deviceErr.DeviceId = deviceId
+			deviceErr.Error = err.Error()
+			errSlice = append(errSlice, deviceErr)
+		}
+	}
+	return &struct {
+		Body deviceinfo.BatchQueryFieldsResponse
+	}{
+		Body: deviceinfo.BatchQueryFieldsResponse{
+			Results: resultSlice,
+			Errors:  errSlice,
+		},
+	}, nil
+}
+
+func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
+	*deviceinfo.DeviceIdsResponse, error) {
+	user, ok := ctx.Value("user").(authstore.UserInfo)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting user.")
+	}
+	sr := deviceinfo.ScopeRestriction{
+		Company: user.Company,
+		Network: user.Network,
+	}
+	switch authstore.Role(user.Role) {
+	case authstore.User:
+		sr.Scope = deviceinfo.DevicesInCompanyInNetwork
+	case authstore.NetworkUser:
+		sr.Scope = deviceinfo.DevicesInNetwork
+	case authstore.Admin:
+		sr.Scope = deviceinfo.AllDevices
+	default:
+		return nil, huma.Error500InternalServerError(
+			"Internal error determining devices scope.")
+	}
+	userDevices, err := a.DeviceInfo.GetDevices(sr)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting DeviceIds.")
+	}
+	return &deviceinfo.DeviceIdsResponse{
+		Body: userDevices,
+	}, nil
 }
