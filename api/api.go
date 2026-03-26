@@ -82,6 +82,7 @@ func Start(opts ApiOpts) error {
 	authstore.InitRoles()
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
 		config := huma.DefaultConfig("SensorData API", "1.0.0")
+		config.DocsPath = "/api/v1/docs"
 		config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 			"bearer": {
 				Type:         "http",
