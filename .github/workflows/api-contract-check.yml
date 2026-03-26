@@ -3,21 +3,27 @@ name: API Contract Check
 on:
   pull_request:
     branches: [huma]
-  workflow_dispatch:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
 
 jobs:
   check-api:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Generate OpenAPI
-        run: ./scripts/generate-openapi-spec.sh
+      - uses: actions/checkout@v6
+      - run: git fetch --depth=1 origin ${{ github.base_ref }}
 
-      - name: Run oasdiff changelog action
-        uses: oasdiff/oasdiff-action/changelog@main
+      - name: "Generate OpenAPI Spec"
+        if: ${{ !contains(join(github.event.pull_request.labels.*.name, ','), 'allow-breaking-change') }}
+        run: scripts/generate-openapi-spec.sh
+
+      - uses: oasdiff/oasdiff-action/breaking@v0.0.31
+        if: ${{ !contains(join(github.event.pull_request.labels.*.name, ','), 'allow-breaking-change') }}
         with:
-          old-spec: api/openapi.yaml
-          new-spec: api/openapi.generated.yaml
-          fail-on-breaking: true
+          base: "origin/${{ github.base_ref }}:api/openapi.yaml"
+          revision: "api/openapi.generated.yaml"
+          fail-on: true
