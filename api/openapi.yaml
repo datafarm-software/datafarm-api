@@ -765,7 +765,9 @@ components:
                     type: string
                 sensorData:
                     type: object
-                    additionalProperties: {}
+                    additionalProperties:
+                        type: number
+                        format: double
                 timestamp:
                     type: string
                     format: date-time
