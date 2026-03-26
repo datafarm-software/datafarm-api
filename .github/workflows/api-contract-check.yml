@@ -2,7 +2,7 @@ name: API Contract Check
 
 on:
   pull_request:
-    branches: [huma]
+    branches: [main]
     types:
       - opened
       - synchronize
@@ -26,4 +26,4 @@ jobs:
         with:
           base: "origin/${{ github.base_ref }}:api/openapi.yaml"
           revision: "api/openapi.generated.yaml"
-          fail-on: true
+          fail-on: 'WARN'

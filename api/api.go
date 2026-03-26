@@ -100,6 +100,9 @@ func Start(opts ApiOpts) error {
 		}
 		router := mux.NewRouter()
 		humaApi := humamux.New(router, config)
+		humaApi.OpenAPI().Servers = append(humaApi.OpenAPI().Servers, &huma.Server{
+			URL: "/api/v1",
+		})
 		localhuma.RegisterHumaOperations(humaApi,
 			api.RateLimit, api.VerifyToken, api.GetDeviceData, api.BatchGetDeviceData,
 			api.Login, api.GetQueryFields, api.BatchGetQueryFields, api.GetDeviceIds,
