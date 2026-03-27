@@ -40,6 +40,12 @@ type DeviceData struct {
 	SensorData map[string]float64 `json:"sensorData"`
 }
 
+type DataBoundary struct {
+	DeviceId string    `json:"deviceId"`
+	Start    time.Time `json:"start"`
+	Stop     time.Time `json:"stop"`
+}
+
 type TestingDataFetcher interface {
 	PrepareDb(*deviceinfo.Schema, []DeviceData) error
 }

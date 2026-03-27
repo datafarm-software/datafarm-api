@@ -2812,3 +2812,120 @@ func TestCheckOlderThanThirtyOneDays(t *testing.T) {
 		})
 	}
 }
+
+func TestGetDataBoundary(t *testing.T) {
+	tests := map[string]struct {
+		wantErr         bool
+		wantStatus      int
+		mockDataFetcher []datafetcher.DeviceData
+		want            datafetcher.DataBoundary
+		mockAuthStore   authstore.Schema
+		mockDeviceInfo  deviceinfo.Schema
+		mockTokens      map[string]bool
+		token           string
+		deviceId        string
+	}{
+
+		"user get deviceid data boundary": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: datafetcher.DataBoundary{
+				DeviceId: RegisteredDeviceId,
+				Start:    InsideTimeRange,
+				Stop:     AlsoInsideTimeRange,
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     int(authstore.User),
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDataFetcher: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+					},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+					},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token:    ValidToken,
+			deviceId: RegisteredDeviceId,
+		},
+	}
+	db, err := miniredis.Run()
+	require.Nil(t, err)
+	defer db.Close()
+	humaTest := setupHuma(t)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			a.TokenProvider = &tokenprovider.MockTokenProvider{
+				Tokens:    tc.mockTokens,
+				Increment: len(tc.mockTokens),
+			}
+			defer a.TokenProvider.Close()
+			testingRedis, err := redis.NewTestingRedis(db.Addr())
+			require.Nil(t, err)
+			defer testingRedis.Close()
+			a.DeviceInfo = testingRedis
+			a.AuthStore = testingRedis
+			a.DataFetcher, err = datafetcher.NewTestingInflux("../config.yml")
+			require.Nil(t, err)
+			defer a.DataFetcher.Close()
+			err = a.DataFetcher.PrepareDb(&tc.mockDeviceInfo, tc.mockDataFetcher)
+			require.Nil(t, err)
+			err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
+			require.Nil(t, err)
+			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
+			require.Nil(t, err)
+			route := "/device/" + tc.deviceId + "/databoundary"
+			resp := humaTest.Get(route,
+				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
+			if resp.Code != tc.wantStatus {
+				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
+			}
+			defer resp.Result().Body.Close()
+			if !tc.wantErr {
+				var got datafetcher.DataBoundary
+				body := resp.Body.Bytes()
+				err = json.Unmarshal(body, &got)
+				require.Nil(t, err)
+				if diff := cmp.Diff(tc.want, got); diff != "" {
+					t.Fatalf("response mismatch (-want +got):\n%s", diff)
+				}
+			}
+		})
+	}
+}
