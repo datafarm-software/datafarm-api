@@ -557,8 +557,25 @@ func TestGetDeviceData(t *testing.T) {
 			wantErr:    true,
 			wantStatus: http.StatusBadRequest,
 			token:      ValidToken,
-			want:       nil,
-			deviceId:   RegisteredDeviceId,
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     int(authstore.User),
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			want:     nil,
+			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
 				QueryFields: []string{RegisteredQueryField},
 				Start:       RelativeMoreThanThirtyOneDays,
@@ -569,8 +586,25 @@ func TestGetDeviceData(t *testing.T) {
 			wantErr:    true,
 			wantStatus: http.StatusBadRequest,
 			token:      ValidToken,
-			want:       nil,
-			deviceId:   RegisteredDeviceId,
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     int(authstore.User),
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			want:     nil,
+			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
 				QueryFields: []string{RegisteredQueryField},
 				Start:       MoreThanThirtyOneDays,
