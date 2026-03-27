@@ -102,7 +102,8 @@ func Start(opts ApiOpts) error {
 		router := mux.NewRouter()
 		humaApi := humamux.New(router, config)
 		localhuma.RegisterHumaOperations(humaApi,
-			api.RateLimit, api.VerifyToken, api.GetDeviceData, api.BatchGetDeviceData,
+			api.RateLimit, api.VerifyToken, api.CheckAccessToDevice,
+			api.GetDeviceData, api.BatchGetDeviceData,
 			api.Login, api.GetQueryFields, api.BatchGetQueryFields, api.GetDeviceIds,
 			api.GetDeviceDataBoundary,
 		)
@@ -340,6 +341,41 @@ func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
 	next(ctx)
 }
 
+func (a *Api) CheckAccessToDevice(ctx huma.Context, next func(huma.Context)) {
+	r, w := humamux.Unwrap(ctx)
+	deviceId := r.PathValue("deviceId")
+	normalCtx := r.Context()
+	ctxUser := normalCtx.Value("user")
+	user, ok := ctxUser.(authstore.UserInfo)
+	if !ok {
+		http.Error(w, "Internal error finding user info.", http.StatusInternalServerError)
+	}
+	if !authstore.HasPermission(authstore.Role(user.Role),
+		authstore.GetAllQueryFields) {
+		http.Error(w, "Access denied to QueryFields.", http.StatusUnauthorized)
+	}
+	deviceCompany, err := a.DeviceInfo.GetCompany(deviceId)
+	if err != nil {
+		http.Error(w, "Internal error checking device company.",
+			http.StatusInternalServerError)
+	}
+	if user.Company != deviceCompany {
+		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyCompany) {
+			http.Error(w, "Unauthorized access to this device.", http.StatusUnauthorized)
+		}
+	}
+	deviceNetwork, err := a.DeviceInfo.GetNetwork(deviceId)
+	if err != nil {
+		http.Error(w, "Internal error checking device network.", http.StatusInternalServerError)
+	}
+	if user.Network != deviceNetwork {
+		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyNetwork) {
+			http.Error(w, "Unauthorized access to this device.", http.StatusUnauthorized)
+		}
+	}
+	next(ctx)
+}
+
 func (a *Api) Login(ctx context.Context,
 	ar *tokenprovider.LoginRequest) (*tokenprovider.LoginResponse, error) {
 	parts := strings.Split(ar.Auth, " ")
@@ -400,41 +436,6 @@ func (a *Api) Login(ctx context.Context,
 
 func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (
 	*deviceinfo.QueryFieldsResponse, error) {
-	ctxUser := ctx.Value("user")
-	user, ok := ctxUser.(authstore.UserInfo)
-	if !ok {
-		return nil, huma.Error500InternalServerError(
-			"Internal error finding user info.")
-	}
-	if !authstore.HasPermission(authstore.Role(user.Role),
-		authstore.GetAllQueryFields) {
-		return nil, huma.Error401Unauthorized(
-			"Access denied to QueryFields.")
-	}
-	deviceCompany, err := a.DeviceInfo.GetCompany(in.DeviceId)
-	if err != nil {
-		return nil, huma.Error500InternalServerError(
-			"Internal error checking device company.")
-	}
-	if user.Company != deviceCompany {
-		if !authstore.HasPermission(authstore.Role(user.Role),
-			authstore.GetAnyCompany) {
-			return nil, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		}
-	}
-	deviceNetwork, err := a.DeviceInfo.GetNetwork(in.DeviceId)
-	if err != nil {
-		return nil, huma.Error500InternalServerError(
-			"Internal error checking device network.")
-	}
-	if user.Network != deviceNetwork {
-		if !authstore.HasPermission(authstore.Role(user.Role),
-			authstore.GetAnyNetwork) {
-			return nil, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		}
-	}
 	queryFields, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
 	if err != nil {
 		return nil, huma.Error500InternalServerError(
@@ -546,7 +547,9 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	}, nil
 }
 
-func (a *Api) GetDeviceDataBoundary(ctx context.Context, _ *struct{}) (
+func (a *Api) GetDeviceDataBoundary(ctx context.Context, in *struct {
+	DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+}) (
 	*struct{ Body datafetcher.DataBoundary }, error) {
 	return nil, nil
 }

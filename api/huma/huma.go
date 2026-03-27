@@ -23,6 +23,7 @@ type HumaHandler[I, O any] func(context.Context, *I) (*O, error)
 func RegisterHumaOperations(api huma.API,
 	rateLimit func(ctx huma.Context, next func(huma.Context)),
 	verifyToken func(ctx huma.Context, next func(huma.Context)),
+	checkAccessToDevice func(ctx huma.Context, next func(huma.Context)),
 	getDeviceData HumaHandler[datafetcher.DeviceDataRequest, datafetcher.DeviceDataResponse],
 	batchGetDeviceData HumaHandler[
 		struct {
@@ -40,7 +41,9 @@ func RegisterHumaOperations(api huma.API,
 		},
 	],
 	getDeviceIds HumaHandler[struct{}, deviceinfo.DeviceIdsResponse],
-	getDeviceDataBoundary HumaHandler[struct{}, struct{ Body datafetcher.DataBoundary }],
+	getDeviceDataBoundary HumaHandler[struct {
+		DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+	}, struct{ Body datafetcher.DataBoundary }],
 ) {
 	registry := huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
 	operation := huma.Operation{
@@ -168,7 +171,7 @@ func RegisterHumaOperations(api huma.API,
 		Method:      "GET",
 		Path:        "/device/{deviceId}/queryfields",
 		Tags:        []string{"GET"},
-		Middlewares: huma.Middlewares{rateLimit, verifyToken},
+		Middlewares: huma.Middlewares{rateLimit, verifyToken, checkAccessToDevice},
 		Summary:     "Get DeviceId QueryFields",
 		Description: "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor might have a 'temperature' QueryField.",
 		RequestBody: &huma.RequestBody{},
@@ -386,7 +389,7 @@ func RegisterHumaOperations(api huma.API,
 		Method:      "GET",
 		Path:        "/device/{deviceId}/databoundary",
 		Tags:        []string{"GET"},
-		Middlewares: huma.Middlewares{rateLimit, verifyToken},
+		Middlewares: huma.Middlewares{rateLimit, verifyToken, checkAccessToDevice},
 		Summary:     "Get DeviceId DataBoundary",
 		Description: "Clients can use this route to get the device's DataBoundary. A DataBoundary ccontains the oldest and most recent sensordata timestamps for the device.",
 		RequestBody: &huma.RequestBody{},

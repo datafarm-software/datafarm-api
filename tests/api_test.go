@@ -1144,8 +1144,9 @@ func setupHuma(t *testing.T) humatest.TestAPI {
 	humaApiMux := humamux.New(router, config)
 	humaTest := humatest.Wrap(t, humaApiMux)
 	localhuma.RegisterHumaOperations(humaTest,
-		a.RateLimit, a.VerifyToken, a.GetDeviceData, a.BatchGetDeviceData,
-		a.Login, a.GetQueryFields, a.BatchGetQueryFields, a.GetDeviceIds)
+		a.RateLimit, a.VerifyToken, a.CheckAccessToDevice, a.GetDeviceData, a.BatchGetDeviceData,
+		a.Login, a.GetQueryFields, a.BatchGetQueryFields, a.GetDeviceIds,
+		a.GetDeviceDataBoundary)
 	return humaTest
 }
 
