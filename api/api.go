@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -249,9 +250,48 @@ const MaxMinutes = 44640
 const MaxSeconds = 2678400
 const MaxHours = 744
 const MaxMonths = 1
+const LowerCaseO = 0x6f
 
 func CheckOlderThanThirtyOneDays(start string) bool {
 	start = strings.Replace(start, "-", "", 0)
+	var suffix string
+	if start[len(start)-1] == byte(LowerCaseO) {
+		suffix = "mo"
+		start = strings.Replace(start, "mo", "", 0)
+	} else {
+		suffix = string(start[len(start)-1])
+		start = start[:len(start)-1]
+	}
+	number, err := strconv.Atoi(start)
+	if err != nil {
+		log.Printf("number conversion error: %v", err)
+		return true
+	}
+	switch suffix {
+	case "s":
+		if number > MaxSeconds {
+			return true
+		}
+	case "m":
+		if number > MaxMinutes {
+			return true
+		}
+	case "h":
+		if number > MaxHours {
+			return true
+		}
+	case "days":
+		if number > MaxDays {
+			return true
+		}
+	case "mo":
+		if number > MaxMonths {
+			return true
+		}
+	default:
+		log.Printf("unknown suffix: %v", suffix)
+		return true
+	}
 	return false
 }
 

@@ -2764,6 +2764,9 @@ func TestCheckOlderThanThirtyOneDays(t *testing.T) {
 		"newer using seconds suffix": {input: "-2678400s", want: false},
 		"newer using hours suffix":   {input: "-744h", want: false},
 		"newer using months suffix":  {input: "-1mo", want: false},
+		"invalid suffix":             {input: "-1du", want: true},
+		"invalid prefix":             {input: "1s", want: true},
+		"no number":                  {input: "rtyu", want: true},
 	}
 
 	for name, tc := range tests {
