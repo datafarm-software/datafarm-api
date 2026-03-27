@@ -118,14 +118,20 @@ func (i *InfluxDatafetcher) extractValue(result *influxApi.QueryTableResult) ([]
 
 func (i *InfluxDatafetcher) dataRows2DeviceData(data []DataRow) ([]DeviceData, error) {
 	var deviceDataSlice []DeviceData
-	var found, ok bool
+	var found bool
 	var value float64
 	var timestampWithin10Seconds bool
 	for _, row := range data {
 		found = false
-		value, ok = row.Value.(float64)
-		if !ok {
-			return nil, fmt.Errorf("received sensordata that is not float 64")
+		switch v := row.Value.(type) {
+		case float64:
+			value = v
+		case int64:
+			value = float64(v)
+		case int:
+			value = float64(v)
+		default:
+			value = float64(0)
 		}
 		for i, deviceData := range deviceDataSlice {
 			timestampWithin10Seconds = math.Abs(float64(
