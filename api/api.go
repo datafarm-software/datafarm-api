@@ -251,13 +251,20 @@ const MaxSeconds = 2678400
 const MaxHours = 744
 const MaxMonths = 1
 const LowerCaseO = 0x6f
+const Hyphen = 0x2d
 
 func CheckOlderThanThirtyOneDays(start string) bool {
-	start = strings.Replace(start, "-", "", 0)
+	if len(start) < 1 {
+		return true
+	}
+	if start[0] != Hyphen {
+		return true
+	}
+	start = strings.ReplaceAll(start, "-", "")
 	var suffix string
 	if start[len(start)-1] == byte(LowerCaseO) {
 		suffix = "mo"
-		start = strings.Replace(start, "mo", "", 0)
+		start = strings.ReplaceAll(start, "mo", "")
 	} else {
 		suffix = string(start[len(start)-1])
 		start = start[:len(start)-1]
@@ -280,7 +287,7 @@ func CheckOlderThanThirtyOneDays(start string) bool {
 		if number > MaxHours {
 			return true
 		}
-	case "days":
+	case "d":
 		if number > MaxDays {
 			return true
 		}
