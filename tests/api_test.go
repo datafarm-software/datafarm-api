@@ -2748,3 +2748,30 @@ func TestGetDeviceIds(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckOlderThanThirtyOneDays(t *testing.T) {
+	tests := map[string]struct {
+		input string
+		want  bool
+	}{
+		"older using days suffix":    {input: "-32d", want: true},
+		"older using minutes suffix": {input: "-44641m", want: true},
+		"older using seconds suffix": {input: "-2678401s", want: true},
+		"older using hours suffix":   {input: "-745h", want: true},
+		"older using months suffix":  {input: "-2mo", want: true},
+		"newer using days suffix":    {input: "-31d", want: false},
+		"newer using minutes suffix": {input: "-44640m", want: false},
+		"newer using seconds suffix": {input: "-2678400s", want: false},
+		"newer using hours suffix":   {input: "-744h", want: false},
+		"newer using months suffix":  {input: "-1mo", want: false},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			older := api.CheckOlderThanThirtyOneDays(tc.input)
+			if tc.want != older {
+				t.Fatalf("want: %v, got: %v", tc.want, older)
+			}
+		})
+	}
+}
