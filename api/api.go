@@ -104,6 +104,7 @@ func Start(opts ApiOpts) error {
 		localhuma.RegisterHumaOperations(humaApi,
 			api.RateLimit, api.VerifyToken, api.GetDeviceData, api.BatchGetDeviceData,
 			api.Login, api.GetQueryFields, api.BatchGetQueryFields, api.GetDeviceIds,
+			api.GetDeviceDataBoundary,
 		)
 		server := &http.Server{
 			Addr:    opts.Port,
@@ -543,4 +544,9 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	return &deviceinfo.DeviceIdsResponse{
 		Body: userDevices,
 	}, nil
+}
+
+func (a *Api) GetDeviceDataBoundary(ctx context.Context, _ *struct{}) (
+	*struct{ Body datafetcher.DataBoundary }, error) {
+	return nil, nil
 }
