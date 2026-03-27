@@ -102,7 +102,7 @@ func Start(opts ApiOpts) error {
 		router := mux.NewRouter()
 		humaApi := humamux.New(router, config)
 		localhuma.RegisterHumaOperations(humaApi,
-			api.RateLimit, api.VerifyToken, api.CheckAccessToDevice,
+			api.RateLimit, api.VerifyToken, api.CheckAccessToDeviceMiddleware,
 			api.GetDeviceData, api.BatchGetDeviceData,
 			api.Login, api.GetQueryFields, api.BatchGetQueryFields, api.GetDeviceIds,
 			api.GetDeviceDataBoundary,
@@ -341,7 +341,7 @@ func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
 	next(ctx)
 }
 
-func (a *Api) CheckAccessToDevice(ctx huma.Context, next func(huma.Context)) {
+func (a *Api) CheckAccessToDeviceMiddleware(ctx huma.Context, next func(huma.Context)) {
 	r, w := humamux.Unwrap(ctx)
 	deviceId := r.PathValue("deviceId")
 	normalCtx := r.Context()
@@ -350,30 +350,35 @@ func (a *Api) CheckAccessToDevice(ctx huma.Context, next func(huma.Context)) {
 	if !ok {
 		http.Error(w, "Internal error finding user info.", http.StatusInternalServerError)
 	}
-	if !authstore.HasPermission(authstore.Role(user.Role),
-		authstore.GetAllQueryFields) {
-		http.Error(w, "Access denied to QueryFields.", http.StatusUnauthorized)
+	code, err := a.checkAccessToDevice(deviceId, user)
+	if err != nil {
+		http.Error(w, err.Error(), code)
 	}
+	next(ctx)
+}
+
+func (a *Api) checkAccessToDevice(deviceId string, user authstore.UserInfo) (int, error) {
 	deviceCompany, err := a.DeviceInfo.GetCompany(deviceId)
 	if err != nil {
-		http.Error(w, "Internal error checking device company.",
-			http.StatusInternalServerError)
+		return http.StatusInternalServerError, fmt.Errorf(
+			"Internal error checking device company.")
 	}
 	if user.Company != deviceCompany {
 		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyCompany) {
-			http.Error(w, "Unauthorized access to this device.", http.StatusUnauthorized)
+			return http.StatusUnauthorized, fmt.Errorf("Unauthorized access to this device.")
 		}
 	}
 	deviceNetwork, err := a.DeviceInfo.GetNetwork(deviceId)
 	if err != nil {
-		http.Error(w, "Internal error checking device network.", http.StatusInternalServerError)
+		return http.StatusInternalServerError, fmt.Errorf(
+			"Internal error checking device network.")
 	}
 	if user.Network != deviceNetwork {
 		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyNetwork) {
-			http.Error(w, "Unauthorized access to this device.", http.StatusUnauthorized)
+			return http.StatusUnauthorized, fmt.Errorf("Unauthorized access to this device.")
 		}
 	}
-	next(ctx)
+	return http.StatusOK, nil
 }
 
 func (a *Api) Login(ctx context.Context,
@@ -436,6 +441,15 @@ func (a *Api) Login(ctx context.Context,
 
 func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (
 	*deviceinfo.QueryFieldsResponse, error) {
+	user, ok := ctx.Value("user").(authstore.UserInfo)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting user.")
+	}
+	if !authstore.HasPermission(authstore.Role(user.Role),
+		authstore.GetAllQueryFields) {
+		return nil, huma.Error500InternalServerError("Access denied to QueryFields.")
+	}
 	queryFields, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
 	if err != nil {
 		return nil, huma.Error500InternalServerError(
@@ -486,6 +500,11 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 	in *deviceinfo.BatchQueryFieldsRequest) (*struct {
 	Body deviceinfo.BatchQueryFieldsResponse
 }, error) {
+	user, ok := ctx.Value("user").(authstore.UserInfo)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting user.")
+	}
 	var qr deviceinfo.QueryFieldsRequest
 	var dataResp *deviceinfo.QueryFieldsResponse
 	var deviceErr deviceinfo.QueryFieldsError
@@ -495,6 +514,13 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 	for _, deviceId := range in.Body {
 		qr = deviceinfo.QueryFieldsRequest{
 			DeviceId: deviceId,
+		}
+		_, err = a.checkAccessToDevice(deviceId, user)
+		if err != nil {
+			deviceErr.DeviceId = deviceId
+			deviceErr.Error = err.Error()
+			errSlice = append(errSlice, deviceErr)
+			continue
 		}
 		dataResp, err = a.GetQueryFields(ctx, &qr)
 		if err == nil {

@@ -45,6 +45,10 @@ type DataBoundary struct {
 	Start    time.Time `json:"start"`
 	Stop     time.Time `json:"stop"`
 }
+type DataBoundaryRequest struct {
+	DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+}
+type DataBoundaryResponse struct{ Body DataBoundary }
 
 type TestingDataFetcher interface {
 	PrepareDb(*deviceinfo.Schema, []DeviceData) error

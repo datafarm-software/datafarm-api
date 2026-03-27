@@ -41,9 +41,7 @@ func RegisterHumaOperations(api huma.API,
 		},
 	],
 	getDeviceIds HumaHandler[struct{}, deviceinfo.DeviceIdsResponse],
-	getDeviceDataBoundary HumaHandler[struct {
-		DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-	}, struct{ Body datafetcher.DataBoundary }],
+	getDeviceDataBoundary HumaHandler[datafetcher.DataBoundaryRequest, datafetcher.DataBoundaryResponse],
 ) {
 	registry := huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
 	operation := huma.Operation{
