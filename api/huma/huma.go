@@ -389,7 +389,7 @@ func RegisterHumaOperations(api huma.API,
 		Tags:        []string{"GET"},
 		Middlewares: huma.Middlewares{rateLimit, verifyToken, checkAccessToDevice},
 		Summary:     "Get DeviceId DataBoundary",
-		Description: "Clients can use this route to get the device's DataBoundary. A DataBoundary ccontains the oldest and most recent sensordata timestamps for the device.",
+		Description: "Clients can use this route to get the device's DataBoundary. A DataBoundary contains the oldest and most recent sensordata timestamps for the device.",
 		RequestBody: &huma.RequestBody{},
 		Security: []map[string][]string{
 			{"bearer": {}},

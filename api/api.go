@@ -337,23 +337,30 @@ func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError),
 			http.StatusInternalServerError)
 	}
-	ctx = huma.WithValue(ctx, "user", user)
+	newCtx := (context.WithValue(r.Context(), "user", user))
+	r = r.WithContext(newCtx)
 	next(ctx)
 }
 
 func (a *Api) CheckAccessToDeviceMiddleware(ctx huma.Context, next func(huma.Context)) {
 	r, w := humamux.Unwrap(ctx)
 	deviceId := r.PathValue("deviceId")
-	normalCtx := r.Context()
-	ctxUser := normalCtx.Value("user")
+	if deviceId == "" {
+		http.Error(w, "No DeviceId found.", http.StatusBadRequest)
+		return
+	}
+	ctxUser := r.Context().Value("user")
 	user, ok := ctxUser.(authstore.UserInfo)
 	if !ok {
 		http.Error(w, "Internal error finding user info.", http.StatusInternalServerError)
+		return
 	}
 	code, err := a.checkAccessToDevice(deviceId, user)
 	if err != nil {
 		http.Error(w, err.Error(), code)
 	}
+	newCtx := (context.WithValue(r.Context(), "user", user))
+	r = r.WithContext(newCtx)
 	next(ctx)
 }
 
@@ -573,9 +580,7 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	}, nil
 }
 
-func (a *Api) GetDeviceDataBoundary(ctx context.Context, in *struct {
-	DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-}) (
-	*struct{ Body datafetcher.DataBoundary }, error) {
+func (a *Api) GetDeviceDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
+	*datafetcher.DataBoundaryResponse, error) {
 	return nil, nil
 }
