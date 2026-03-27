@@ -44,7 +44,9 @@ const RegisteredSensor = "weather-sensor"
 const ValidToken = "someToken0"
 const InvalidToken = "invalidToken0"
 const RelativeStart = "-6h"
+const RelativeMoreThanThirtyOneDays = "-32d"
 
+var MoreThanThirtyOneDays = time.Now().Add(-31 * 24 * time.Hour).Format(time.RFC3339)
 var Start = time.Now().Add(-24 * time.Hour).Format(time.RFC3339)
 var StartGreaterThanStop = time.Now().Add(1 * time.Hour).Format(time.RFC3339)
 var FutureStart = time.Now().Add(1 * time.Hour).Format(time.RFC3339)
@@ -548,6 +550,31 @@ func TestGetDeviceData(t *testing.T) {
 				QueryFields: []string{RegisteredQueryField},
 				Start:       Start,
 				Stop:        StopInFuture,
+			},
+		},
+
+		"relative start time more than 31 days in the past": {
+			wantErr:    true,
+			wantStatus: http.StatusBadRequest,
+			token:      ValidToken,
+			want:       nil,
+			deviceId:   RegisteredDeviceId,
+			deviceRequest: datafetcher.DeviceDataRequest{
+				QueryFields: []string{RegisteredQueryField},
+				Start:       RelativeMoreThanThirtyOneDays,
+			},
+		},
+
+		"start time more than 31 days in the past": {
+			wantErr:    true,
+			wantStatus: http.StatusBadRequest,
+			token:      ValidToken,
+			want:       nil,
+			deviceId:   RegisteredDeviceId,
+			deviceRequest: datafetcher.DeviceDataRequest{
+				QueryFields: []string{RegisteredQueryField},
+				Start:       MoreThanThirtyOneDays,
+				Stop:        Stop,
 			},
 		},
 
