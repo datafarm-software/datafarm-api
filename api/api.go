@@ -341,28 +341,32 @@ func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
 	next(ctx)
 }
 
-func (a *Api) checkAccessToDevice(deviceId string, user authstore.UserInfo) (int, error) {
+func (a *Api) checkAccessToDevice(deviceId string, user authstore.UserInfo) (
+	deviceinfo.DeviceInfo, int, error) {
+	di := deviceinfo.DeviceInfo{DeviceId: deviceId}
 	deviceCompany, err := a.DeviceInfo.GetCompany(deviceId)
 	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf(
+		return di, http.StatusInternalServerError, fmt.Errorf(
 			"Internal error checking device company.")
 	}
 	if user.Company != deviceCompany {
 		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyCompany) {
-			return http.StatusUnauthorized, fmt.Errorf("Unauthorized access to this device.")
+			return di, http.StatusUnauthorized, fmt.Errorf("Unauthorized access to this device.")
 		}
 	}
 	deviceNetwork, err := a.DeviceInfo.GetNetwork(deviceId)
 	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf(
+		return di, http.StatusInternalServerError, fmt.Errorf(
 			"Internal error checking device network.")
 	}
 	if user.Network != deviceNetwork {
 		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyNetwork) {
-			return http.StatusUnauthorized, fmt.Errorf("Unauthorized access to this device.")
+			return di, http.StatusUnauthorized, fmt.Errorf("Unauthorized access to this device.")
 		}
 	}
-	return http.StatusOK, nil
+	di.Company = deviceCompany
+	di.Network = deviceNetwork
+	return di, http.StatusOK, nil
 }
 
 func (a *Api) Login(ctx context.Context,
@@ -430,7 +434,7 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
-	code, err := a.checkAccessToDevice(in.DeviceId, user)
+	_, code, err := a.checkAccessToDevice(in.DeviceId, user)
 	if err != nil {
 		switch code {
 		case http.StatusUnauthorized:
@@ -563,7 +567,7 @@ func (a *Api) GetDeviceDataBoundary(ctx context.Context, in *datafetcher.DataBou
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
-	code, err := a.checkAccessToDevice(in.DeviceId, user)
+	di, code, err := a.checkAccessToDevice(in.DeviceId, user)
 	if err != nil {
 		switch code {
 		case http.StatusUnauthorized:
@@ -578,12 +582,7 @@ func (a *Api) GetDeviceDataBoundary(ctx context.Context, in *datafetcher.DataBou
 		authstore.GetDataBoundary) {
 		return nil, huma.Error500InternalServerError("Access denied to DataBoundary.")
 	}
-	deviceInfo := deviceinfo.DeviceInfo{
-		Company:  user.Company,
-		DeviceId: in.DeviceId,
-		Network:  user.Network,
-	}
-	dataBoundary, err := a.DataFetcher.GetDataBoundary(deviceInfo)
+	dataBoundary, err := a.DataFetcher.GetDataBoundary(di)
 	if err != nil {
 		log.Printf("%s getting data boundary: %v", user.Username, err)
 		return nil, huma.Error500InternalServerError(
