@@ -150,7 +150,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	if RELATIVETIME_REGEX.MatchString(in.Start) {
 		older := CheckOlderThanNinetyDays(in.Start)
 		if older {
-			return nil, huma.Error400BadRequest("Relative start time older than 31 days.")
+			return nil, huma.Error400BadRequest("Relative start time older than 90 days.")
 		}
 		in.Stop = ""
 	} else {
@@ -159,8 +159,8 @@ func (a *Api) GetDeviceData(ctx context.Context,
 			log.Printf("parsing start: %v", err)
 			return nil, huma.Error400BadRequest("Start time is invalid rfc.")
 		}
-		if rfcStart.UnixMilli() <= time.Now().Add(-31*24*time.Hour).UnixMilli() {
-			return nil, huma.Error400BadRequest("Start time is greater than 31 days.")
+		if rfcStart.UnixMilli() <= time.Now().Add(-90*24*time.Hour).UnixMilli() {
+			return nil, huma.Error400BadRequest("Start time is greater than 90 days.")
 		}
 		if rfcStart.UnixMilli() >= time.Now().UnixMilli() {
 			return nil, huma.Error400BadRequest("Start time is in the future.")
@@ -216,7 +216,13 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error fetching data.")
 	}
-	return &datafetcher.DeviceDataResponse{Body: deviceData}, nil
+	if len(deviceData) < 1 {
+		return &datafetcher.DeviceDataResponse{Status: http.StatusNoContent}, nil
+	}
+	return &datafetcher.DeviceDataResponse{
+		Status: http.StatusOK,
+		Body:   deviceData,
+	}, nil
 }
 
 const MaxDays = 90

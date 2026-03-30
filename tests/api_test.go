@@ -933,8 +933,8 @@ func TestGetDeviceData(t *testing.T) {
 		},
 
 		"no data in requested range": {
-			wantErr:    false,
-			wantStatus: http.StatusOK,
+			wantErr:    true,
+			wantStatus: http.StatusNoContent,
 			want:       nil,
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{

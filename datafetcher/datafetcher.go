@@ -7,7 +7,8 @@ import (
 )
 
 type DeviceDataResponse struct {
-	Body []DeviceData
+	Status int
+	Body   []DeviceData
 }
 
 type DeviceDataRequest struct {

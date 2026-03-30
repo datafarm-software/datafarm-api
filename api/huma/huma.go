@@ -67,6 +67,20 @@ func RegisterHumaOperations(api huma.API,
 		Description: "Clients can use this route to request data from a sensor using its device id.",
 		RequestBody: &huma.RequestBody{},
 		Responses: map[string]*huma.Response{
+			"204": {
+				Description: "No Content",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "No Content",
+							Status: http.StatusNoContent,
+							Detail: "No Data in Time Range.",
+						},
+					},
+				},
+			},
 			"500": {
 				Description: "Internal Server Error",
 				Content: map[string]*huma.MediaType{
