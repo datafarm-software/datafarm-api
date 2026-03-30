@@ -558,5 +558,30 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 
 func (a *Api) GetDeviceDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
 	*datafetcher.DataBoundaryResponse, error) {
-	return nil, nil
+	user, ok := ctx.Value("user").(authstore.UserInfo)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting user.")
+	}
+	code, err := a.checkAccessToDevice(in.DeviceId, user)
+	if err != nil {
+		switch code {
+		case http.StatusUnauthorized:
+			return nil, huma.Error401Unauthorized(
+				"Unauthorized access to this device.")
+		default:
+			return nil, huma.Error500InternalServerError(
+				"Internal error checking acess to DeviceId.")
+		}
+	}
+	if !authstore.HasPermission(authstore.Role(user.Role),
+		authstore.GetDataBoundary) {
+		return nil, huma.Error500InternalServerError("Access denied to DataBoundary.")
+	}
+	dataBoundary, err := a.DataFetcher.GetDataBoundary(in.DeviceId)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting DataBoundary.")
+	}
+	return &datafetcher.DataBoundaryResponse{Body: dataBoundary}, nil
 }

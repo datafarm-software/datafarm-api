@@ -41,11 +41,13 @@ const (
 	GetAnyCompany     Permission = "get-any-company"
 	GetAnyNetwork     Permission = "get-any-network"
 	GetAllQueryFields Permission = "get-all-queryfields"
+	GetDataBoundary   Permission = "get-data-boundary"
 )
 
 var rolePermissions = map[Role][]Permission{
 	User: {
 		GetAllQueryFields,
+		GetDataBoundary,
 	},
 	NetworkUser: {
 		GetAnyCompany,

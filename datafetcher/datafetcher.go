@@ -57,5 +57,6 @@ type TestingDataFetcher interface {
 type DataFetcher interface {
 	TestingDataFetcher
 	GetData(metadata deviceinfo.DeviceInfo) ([]DeviceData, error)
+	GetDataBoundary(deviceId string) (DataBoundary, error)
 	Close() error
 }
