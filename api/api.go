@@ -182,6 +182,20 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
+	di, code, err := a.checkAccessToDevice(in.DeviceId, user)
+	if err != nil {
+		switch code {
+		case http.StatusUnauthorized:
+			return nil, huma.Error401Unauthorized(
+				"Unauthorized access to this device.")
+		default:
+			return nil, huma.Error500InternalServerError(
+				"Internal error checking acess to DeviceId.")
+		}
+	}
+	di.Start = in.Start
+	di.Stop = in.Stop
+	di.QueryFields = in.QueryFields
 	if in.QueryFields[0] == "all" {
 		if !authstore.HasPermission(authstore.Role(user.Role),
 			authstore.GetAllQueryFields) {
@@ -194,51 +208,9 @@ func (a *Api) GetDeviceData(ctx context.Context,
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting query fields for deviceId.")
 		}
-		in.QueryFields = qf.QueryFields
+		di.QueryFields = qf.QueryFields
 	}
-	deviceCompany, err := a.DeviceInfo.GetCompany(in.DeviceId)
-	if err != nil {
-		log.Printf("error getting company for admin request on device: %s: %v",
-			in.DeviceId, err)
-		return nil, huma.Error500InternalServerError(
-			"Internal error getting associated company for deviceId.")
-	}
-	deviceNetwork, err := a.DeviceInfo.GetNetwork(in.DeviceId)
-	if err != nil {
-		log.Printf("error getting network for admin request on deviceId: %s: %v",
-			in.DeviceId, err)
-		return nil, huma.Error500InternalServerError(
-			"Internal error getting associated network for deviceId.")
-	}
-	deviceInfo := deviceinfo.DeviceInfo{
-		Company:     user.Company,
-		DeviceId:    in.DeviceId,
-		Network:     user.Network,
-		QueryFields: in.QueryFields,
-		Start:       in.Start,
-		Stop:        in.Stop,
-	}
-	if deviceCompany != user.Company {
-		if authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyCompany) {
-			deviceInfo.Company = deviceCompany
-		} else {
-			log.Printf("user: %s requested deviceId: %s. User Company: %s, Device Company: %s",
-				user.Username, in.DeviceId, user.Company, deviceCompany)
-			return nil, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		}
-	}
-	if deviceNetwork != user.Network {
-		if authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyNetwork) {
-			deviceInfo.Network = deviceNetwork
-		} else {
-			log.Printf("user: %s requested deviceId: %s. User Network: %s, Device Network: %s",
-				user.Username, in.DeviceId, user.Network, deviceNetwork)
-			return nil, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		}
-	}
-	deviceData, err := a.DataFetcher.GetData(deviceInfo)
+	deviceData, err := a.DataFetcher.GetData(di)
 	if err != nil {
 		log.Printf("error getting data: %v", err)
 		return nil, huma.Error500InternalServerError(

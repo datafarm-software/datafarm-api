@@ -19,9 +19,9 @@ type ScopeRestriction struct {
 }
 
 type DeviceInfo struct {
-	DeviceId, Company, Network   string
-	Start, Stop                  string
-	QueryFields, AttachedSensors []string
+	DeviceId, Company, Network string
+	Start, Stop                string
+	QueryFields                []string
 }
 
 type QueryFieldsResponse struct {
