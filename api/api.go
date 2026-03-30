@@ -148,7 +148,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	in *datafetcher.DeviceDataRequest) (*datafetcher.DeviceDataResponse, error) {
 	in.Start = strings.TrimSpace(in.Start)
 	if RELATIVETIME_REGEX.MatchString(in.Start) {
-		older := CheckOlderThanThirtyOneDays(in.Start)
+		older := CheckOlderThanNinetyDays(in.Start)
 		if older {
 			return nil, huma.Error400BadRequest("Relative start time older than 31 days.")
 		}
@@ -247,15 +247,15 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	return &datafetcher.DeviceDataResponse{Body: deviceData}, nil
 }
 
-const MaxDays = 31
-const MaxMinutes = 44640
-const MaxSeconds = 2678400
-const MaxHours = 744
-const MaxMonths = 1
+const MaxDays = 91
+const MaxMinutes = 129600
+const MaxSeconds = 7776000
+const MaxHours = 2160
+const MaxMonths = 3
 const LowerCaseO = 0x6f
 const Hyphen = 0x2d
 
-func CheckOlderThanThirtyOneDays(start string) bool {
+func CheckOlderThanNinetyDays(start string) bool {
 	if len(start) < 1 {
 		return true
 	}

@@ -44,9 +44,9 @@ const RegisteredSensor = "weather-sensor"
 const ValidToken = "someToken0"
 const InvalidToken = "invalidToken0"
 const RelativeStart = "-6h"
-const RelativeMoreThanThirtyOneDays = "-32d"
+const RelativeMoreThanNinetyDays = "-91d"
 
-var MoreThanThirtyOneDays = time.Now().Add(-31 * 24 * time.Hour).Format(time.RFC3339)
+var MoreThanNinetyDays = time.Now().Add(-91 * 24 * time.Hour).Format(time.RFC3339)
 var Start = time.Now().Add(-24 * time.Hour).Format(time.RFC3339)
 var StartGreaterThanStop = time.Now().Add(1 * time.Hour).Format(time.RFC3339)
 var FutureStart = time.Now().Add(1 * time.Hour).Format(time.RFC3339)
@@ -553,7 +553,7 @@ func TestGetDeviceData(t *testing.T) {
 			},
 		},
 
-		"relative start time more than 31 days in the past": {
+		"relative start time more than 90 days in the past": {
 			wantErr:    true,
 			wantStatus: http.StatusBadRequest,
 			token:      ValidToken,
@@ -578,11 +578,11 @@ func TestGetDeviceData(t *testing.T) {
 			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
 				QueryFields: []string{RegisteredQueryField},
-				Start:       RelativeMoreThanThirtyOneDays,
+				Start:       RelativeMoreThanNinetyDays,
 			},
 		},
 
-		"start time more than 31 days in the past": {
+		"start time more than 90 days in the past": {
 			wantErr:    true,
 			wantStatus: http.StatusBadRequest,
 			token:      ValidToken,
@@ -607,7 +607,7 @@ func TestGetDeviceData(t *testing.T) {
 			deviceId: RegisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
 				QueryFields: []string{RegisteredQueryField},
-				Start:       MoreThanThirtyOneDays,
+				Start:       MoreThanNinetyDays,
 				Stop:        Stop,
 			},
 		},
@@ -2784,21 +2784,21 @@ func TestGetDeviceIds(t *testing.T) {
 	}
 }
 
-func TestCheckOlderThanThirtyOneDays(t *testing.T) {
+func TestCheckOlderThanNinetyDays(t *testing.T) {
 	tests := map[string]struct {
 		input string
 		want  bool
 	}{
-		"older using days suffix":    {input: "-32d", want: true},
-		"older using minutes suffix": {input: "-44641m", want: true},
-		"older using seconds suffix": {input: "-2678401s", want: true},
-		"older using hours suffix":   {input: "-745h", want: true},
-		"older using months suffix":  {input: "-2mo", want: true},
-		"newer using days suffix":    {input: "-31d", want: false},
-		"newer using minutes suffix": {input: "-44640m", want: false},
-		"newer using seconds suffix": {input: "-2678400s", want: false},
-		"newer using hours suffix":   {input: "-744h", want: false},
-		"newer using months suffix":  {input: "-1mo", want: false},
+		"older using days suffix":    {input: "-92d", want: true},
+		"older using minutes suffix": {input: "-129601m", want: true},
+		"older using seconds suffix": {input: "-7776001s", want: true},
+		"older using hours suffix":   {input: "-2161h", want: true},
+		"older using months suffix":  {input: "-4mo", want: true},
+		"newer using days suffix":    {input: "-90d", want: false},
+		"newer using minutes suffix": {input: "-129600m", want: false},
+		"newer using seconds suffix": {input: "-7776000s", want: false},
+		"newer using hours suffix":   {input: "-2160h", want: false},
+		"newer using months suffix":  {input: "-3mo", want: false},
 		"invalid suffix":             {input: "-1du", want: true},
 		"invalid prefix":             {input: "1s", want: true},
 		"no number":                  {input: "rtyu", want: true},
@@ -2806,7 +2806,7 @@ func TestCheckOlderThanThirtyOneDays(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			older := api.CheckOlderThanThirtyOneDays(tc.input)
+			older := api.CheckOlderThanNinetyDays(tc.input)
 			if tc.want != older {
 				t.Fatalf("want: %v, got: %v", tc.want, older)
 			}
