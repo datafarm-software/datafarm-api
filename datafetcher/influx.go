@@ -183,8 +183,9 @@ func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
 	fmt.Fprintf(&queryBuilder, `data = from(bucket: "%s") `, deviceInfo.Network)
 	fmt.Fprintf(&queryBuilder, "|> range(start: 0) ")
 	fmt.Fprintf(&queryBuilder, `
-		|> filter(fn: (r) => r._measurement == "%s" and r.deviceID == "%s") `,
+		|> filter(fn: (r) => r._measurement == "%s" and r.deviceID == "%s" and r._field == "batv") `,
 		deviceInfo.Company, deviceInfo.DeviceId)
+	fmt.Fprintf(&queryBuilder, `|> group() `)
 	fmt.Fprintf(&queryBuilder, `
 		firstTime = data |> first()
 		lastTime = data |> last()

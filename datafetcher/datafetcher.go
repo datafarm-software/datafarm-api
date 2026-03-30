@@ -14,7 +14,7 @@ type DeviceDataResponse struct {
 type DeviceDataRequest struct {
 	DeviceId    string   `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
 	QueryFields []string `query:"queryField,explode" json:"queryFields" required:"true" doc:"If all QueryFields desired, set ?queryField=all. Multiple QueryFields supported using format: ?queryField=temperature&queryField=humidity."`
-	Start       string   `query:"start" json:"start" required:"true"`
+	Start       string   `query:"start" json:"start" required:"true" docs:"User specified timestamps are included in returned data."`
 	Stop        string   `query:"stop" json:"stop" required:"false"`
 }
 
