@@ -1,8 +1,11 @@
 package authstore
 
 import (
+	"errors"
 	"time"
 )
+
+var NotLoggedIn = errors.New("not logged in.")
 
 type Schema struct {
 	UserInfo   []UserInfo
@@ -35,4 +38,6 @@ type AuthStore interface {
 	GetUser(token string) (UserInfo, error)
 	StoreToken(UserToken) error
 	DeleteToken(UserToken) error
+	//NOTE: could return err: NotLoggedIn
+	GetToken(username string) (UserToken, error)
 }

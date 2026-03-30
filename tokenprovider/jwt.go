@@ -10,6 +10,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/datafarm-software/datafarm-api/authstore"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -94,7 +95,7 @@ func (j *jwtAuth) getPublicKey() *ecdsa.PublicKey {
 	return j.publicKey
 }
 
-func (j *jwtAuth) GenerateToken() (string, time.Duration, error) {
+func (j *jwtAuth) GenerateToken(username string) (authstore.UserToken, error) {
 	token := jwt.New(jwt.SigningMethodES256)
 	claims := token.Claims.(jwt.MapClaims)
 	exp := time.Now().UTC().Add(THREE_HOURS)
@@ -102,9 +103,13 @@ func (j *jwtAuth) GenerateToken() (string, time.Duration, error) {
 	claims["authorized"] = true
 	tokenString, err := token.SignedString(j.privateKey)
 	if err != nil {
-		return "", 0, err
+		return authstore.UserToken{}, err
 	}
-	return tokenString, THREE_HOURS, nil
+	return authstore.UserToken{
+		Username:   username,
+		Expiration: THREE_HOURS,
+		Token:      tokenString,
+	}, nil
 }
 
 func (j *jwtAuth) IsValidToken(tr LoginResponse) bool {

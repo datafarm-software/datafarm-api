@@ -114,3 +114,25 @@ func (r *Redis) GetUser(token string) (authstore.UserInfo, error) {
 	err = r.db.HGetAll(ctx, "user:"+userId).Scan(&userInfo)
 	return userInfo, err
 }
+
+func (r *Redis) GetToken(username string) (authstore.UserToken, error) {
+	var ut authstore.UserToken
+	token, err := r.db.Get(ctx, "userToken:"+username).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return ut, authstore.NotLoggedIn
+		}
+		return ut, fmt.Errorf("unexpected error: %v", err)
+	}
+	expiry, err := r.db.TTL(ctx, "userToken:"+username).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return ut, authstore.NotLoggedIn
+		}
+		return ut, fmt.Errorf("unexpected ttl error: %v", err)
+	}
+	ut.Username = username
+	ut.Token = token
+	ut.Expiration = expiry
+	return ut, nil
+}

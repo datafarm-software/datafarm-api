@@ -62,6 +62,7 @@ func TestLogin(t *testing.T) {
 	tests := map[string]struct {
 		wantErr            bool
 		wantStatus         int
+		wantToken          string
 		username, password string
 		mockAuthStore      authstore.Schema
 		mockDeviceInfo     deviceinfo.Schema
@@ -70,6 +71,7 @@ func TestLogin(t *testing.T) {
 		"successfully login": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
+			wantToken:  ValidToken,
 			username:   RegisteredUsername,
 			password:   RegisteredPassword,
 			mockAuthStore: authstore.Schema{
@@ -132,6 +134,10 @@ func TestLogin(t *testing.T) {
 				tokens := a.AuthStore.GetActiveTokens()
 				if len(tokens) != 1 {
 					t.Fatalf("expected a stored user token, got len: %d", len(tokens))
+				}
+				if tokens[0].Token != ValidToken {
+					t.Fatalf("expected token: %s, got token: %v",
+						ValidToken, tokens[0].Token)
 				}
 			}
 		})

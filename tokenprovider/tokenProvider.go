@@ -1,6 +1,8 @@
 package tokenprovider
 
-import "time"
+import (
+	"github.com/datafarm-software/datafarm-api/authstore"
+)
 
 type LoginRequest struct {
 	Auth string `header:"Authorization" required:"true" hidden:"true"`
@@ -11,6 +13,6 @@ type LoginResponse struct {
 
 type TokenProvider interface {
 	Close() error
-	GenerateToken() (string, time.Duration, error)
+	GenerateToken(username string) (authstore.UserToken, error)
 	IsValidToken(LoginResponse) bool
 }

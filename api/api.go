@@ -379,24 +379,29 @@ func (a *Api) Login(ctx context.Context,
 			"Password failed the regex.")
 	}
 	if err = a.AuthStore.VerifyCredentials(username, password); err != nil {
-		log.Printf("error: %v", err)
+		log.Printf("verifyCredentials error: %v", err)
 		return nil, huma.Error401Unauthorized("Bad credentials provided.")
 	}
-	token, expiry, err := a.TokenProvider.GenerateToken()
+	ut, err := a.AuthStore.GetToken(username)
+	if err != nil {
+		if !errors.Is(err, authstore.NotLoggedIn) {
+			return nil, huma.Error500InternalServerError(
+				"Internal error checking if user is logged in.")
+		}
+	}
+	if ut.Token != "" {
+		return &tokenprovider.LoginResponse{Body: ut.Token}, nil
+	}
+	ut, err = a.TokenProvider.GenerateToken(username)
 	if err != nil {
 		return nil, huma.Error500InternalServerError(
 			"Internal error generating an access token.")
-	}
-	ut := authstore.UserToken{
-		Username:   username,
-		Token:      token,
-		Expiration: expiry,
 	}
 	if err = a.AuthStore.StoreToken(ut); err != nil {
 		return nil, huma.Error500InternalServerError(
 			"Internal error linking the token to the user.")
 	}
-	return &tokenprovider.LoginResponse{Body: token}, nil
+	return &tokenprovider.LoginResponse{Body: ut.Token}, nil
 }
 
 func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (

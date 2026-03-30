@@ -242,3 +242,7 @@ func (t *TestingRedis) GetActiveTokens() []authstore.UserToken {
 func (t *TestingRedis) GetDevices(sr deviceinfo.ScopeRestriction) ([]string, error) {
 	return t.redis.GetDevices(sr)
 }
+
+func (t *TestingRedis) GetToken(username string) (authstore.UserToken, error) {
+	return t.redis.GetToken(username)
+}
