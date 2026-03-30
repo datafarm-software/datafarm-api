@@ -102,7 +102,7 @@ func Start(opts ApiOpts) error {
 		router := mux.NewRouter()
 		humaApi := humamux.New(router, config)
 		localhuma.RegisterHumaOperations(humaApi,
-			api.RateLimit, api.VerifyToken, api.CheckAccessToDeviceMiddleware,
+			api.RateLimit, api.VerifyToken,
 			api.GetDeviceData, api.BatchGetDeviceData,
 			api.Login, api.GetQueryFields, api.BatchGetQueryFields, api.GetDeviceIds,
 			api.GetDeviceDataBoundary,
@@ -337,30 +337,7 @@ func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError),
 			http.StatusInternalServerError)
 	}
-	newCtx := (context.WithValue(r.Context(), "user", user))
-	r = r.WithContext(newCtx)
-	next(ctx)
-}
-
-func (a *Api) CheckAccessToDeviceMiddleware(ctx huma.Context, next func(huma.Context)) {
-	r, w := humamux.Unwrap(ctx)
-	deviceId := r.PathValue("deviceId")
-	if deviceId == "" {
-		http.Error(w, "No DeviceId found.", http.StatusBadRequest)
-		return
-	}
-	ctxUser := r.Context().Value("user")
-	user, ok := ctxUser.(authstore.UserInfo)
-	if !ok {
-		http.Error(w, "Internal error finding user info.", http.StatusInternalServerError)
-		return
-	}
-	code, err := a.checkAccessToDevice(deviceId, user)
-	if err != nil {
-		http.Error(w, err.Error(), code)
-	}
-	newCtx := (context.WithValue(r.Context(), "user", user))
-	r = r.WithContext(newCtx)
+	ctx = huma.WithValue(ctx, "user", user)
 	next(ctx)
 }
 
@@ -453,6 +430,17 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
+	code, err := a.checkAccessToDevice(in.DeviceId, user)
+	if err != nil {
+		switch code {
+		case http.StatusUnauthorized:
+			return nil, huma.Error401Unauthorized(
+				"Unauthorized access to DeviceId.")
+		default:
+			return nil, huma.Error500InternalServerError(
+				"Internal error checking acess to DeviceId.")
+		}
+	}
 	if !authstore.HasPermission(authstore.Role(user.Role),
 		authstore.GetAllQueryFields) {
 		return nil, huma.Error500InternalServerError("Access denied to QueryFields.")
@@ -507,11 +495,6 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 	in *deviceinfo.BatchQueryFieldsRequest) (*struct {
 	Body deviceinfo.BatchQueryFieldsResponse
 }, error) {
-	user, ok := ctx.Value("user").(authstore.UserInfo)
-	if !ok {
-		return nil, huma.Error500InternalServerError(
-			"Internal error getting user.")
-	}
 	var qr deviceinfo.QueryFieldsRequest
 	var dataResp *deviceinfo.QueryFieldsResponse
 	var deviceErr deviceinfo.QueryFieldsError
@@ -521,13 +504,6 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 	for _, deviceId := range in.Body {
 		qr = deviceinfo.QueryFieldsRequest{
 			DeviceId: deviceId,
-		}
-		_, err = a.checkAccessToDevice(deviceId, user)
-		if err != nil {
-			deviceErr.DeviceId = deviceId
-			deviceErr.Error = err.Error()
-			errSlice = append(errSlice, deviceErr)
-			continue
 		}
 		dataResp, err = a.GetQueryFields(ctx, &qr)
 		if err == nil {
