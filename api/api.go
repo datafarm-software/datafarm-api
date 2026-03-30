@@ -210,7 +210,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting associated network for deviceId.")
 	}
-	metadata := deviceinfo.DeviceInfo{
+	deviceInfo := deviceinfo.DeviceInfo{
 		Company:     user.Company,
 		DeviceId:    in.DeviceId,
 		Network:     user.Network,
@@ -220,7 +220,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	}
 	if deviceCompany != user.Company {
 		if authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyCompany) {
-			metadata.Company = deviceCompany
+			deviceInfo.Company = deviceCompany
 		} else {
 			log.Printf("user: %s requested deviceId: %s. User Company: %s, Device Company: %s",
 				user.Username, in.DeviceId, user.Company, deviceCompany)
@@ -230,7 +230,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	}
 	if deviceNetwork != user.Network {
 		if authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyNetwork) {
-			metadata.Network = deviceNetwork
+			deviceInfo.Network = deviceNetwork
 		} else {
 			log.Printf("user: %s requested deviceId: %s. User Network: %s, Device Network: %s",
 				user.Username, in.DeviceId, user.Network, deviceNetwork)
@@ -238,7 +238,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 				"Unauthorized access to this device.")
 		}
 	}
-	deviceData, err := a.DataFetcher.GetData(metadata)
+	deviceData, err := a.DataFetcher.GetData(deviceInfo)
 	if err != nil {
 		log.Printf("error getting data: %v", err)
 		return nil, huma.Error500InternalServerError(
@@ -578,8 +578,14 @@ func (a *Api) GetDeviceDataBoundary(ctx context.Context, in *datafetcher.DataBou
 		authstore.GetDataBoundary) {
 		return nil, huma.Error500InternalServerError("Access denied to DataBoundary.")
 	}
-	dataBoundary, err := a.DataFetcher.GetDataBoundary(in.DeviceId)
+	deviceInfo := deviceinfo.DeviceInfo{
+		Company:  user.Company,
+		DeviceId: in.DeviceId,
+		Network:  user.Network,
+	}
+	dataBoundary, err := a.DataFetcher.GetDataBoundary(deviceInfo)
 	if err != nil {
+		log.Printf("%s getting data boundary: %v", user.Username, err)
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting DataBoundary.")
 	}
