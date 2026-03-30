@@ -188,6 +188,9 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		case http.StatusUnauthorized:
 			return nil, huma.Error401Unauthorized(
 				"Unauthorized access to this device.")
+		case http.StatusNotFound:
+			return nil, huma.Error404NotFound(
+				"Device Not Found.")
 		default:
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking acess to DeviceId.")
@@ -324,6 +327,10 @@ func (a *Api) checkAccessToDevice(deviceId string, user authstore.UserInfo) (
 	di := deviceinfo.DeviceInfo{DeviceId: deviceId}
 	deviceCompany, err := a.DeviceInfo.GetCompany(deviceId)
 	if err != nil {
+		if errors.Is(err, deviceinfo.NotFound) {
+			return di, http.StatusNotFound, fmt.Errorf(
+				"Device not found.")
+		}
 		return di, http.StatusInternalServerError, fmt.Errorf(
 			"Internal error checking device company.")
 	}
@@ -334,6 +341,10 @@ func (a *Api) checkAccessToDevice(deviceId string, user authstore.UserInfo) (
 	}
 	deviceNetwork, err := a.DeviceInfo.GetNetwork(deviceId)
 	if err != nil {
+		if errors.Is(err, deviceinfo.NotFound) {
+			return di, http.StatusNotFound, fmt.Errorf(
+				"Device not found.")
+		}
 		return di, http.StatusInternalServerError, fmt.Errorf(
 			"Internal error checking device network.")
 	}
@@ -423,6 +434,9 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 		case http.StatusUnauthorized:
 			return nil, huma.Error401Unauthorized(
 				"Unauthorized access to this device.")
+		case http.StatusNotFound:
+			return nil, huma.Error404NotFound(
+				"Device Not Found.")
 		default:
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking acess to DeviceId.")
@@ -556,6 +570,9 @@ func (a *Api) GetDeviceDataBoundary(ctx context.Context, in *datafetcher.DataBou
 		case http.StatusUnauthorized:
 			return nil, huma.Error401Unauthorized(
 				"Unauthorized access to this device.")
+		case http.StatusNotFound:
+			return nil, huma.Error404NotFound(
+				"Device Not Found.")
 		default:
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking acess to DeviceId.")

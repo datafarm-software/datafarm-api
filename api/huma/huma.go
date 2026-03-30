@@ -121,6 +121,20 @@ func RegisterHumaOperations(api huma.API,
 					},
 				},
 			},
+			"404": {
+				Description: "Not Found",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Not Found",
+							Status: http.StatusUnauthorized,
+							Detail: "Device Not Found.",
+						},
+					},
+				},
+			},
 		},
 	}
 	huma.Register(api, operation, getDeviceData)
