@@ -247,7 +247,7 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	return &datafetcher.DeviceDataResponse{Body: deviceData}, nil
 }
 
-const MaxDays = 91
+const MaxDays = 90
 const MaxMinutes = 129600
 const MaxSeconds = 7776000
 const MaxHours = 2160
@@ -266,7 +266,7 @@ func CheckOlderThanNinetyDays(start string) bool {
 	var suffix string
 	if start[len(start)-1] == byte(LowerCaseO) {
 		suffix = "mo"
-		start = strings.ReplaceAll(start, "mo", "")
+		start = strings.ReplaceAll(start, suffix, "")
 	} else {
 		suffix = string(start[len(start)-1])
 		start = start[:len(start)-1]

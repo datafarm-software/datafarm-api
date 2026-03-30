@@ -2789,7 +2789,7 @@ func TestCheckOlderThanNinetyDays(t *testing.T) {
 		input string
 		want  bool
 	}{
-		"older using days suffix":    {input: "-92d", want: true},
+		"older using days suffix":    {input: "-91d", want: true},
 		"older using minutes suffix": {input: "-129601m", want: true},
 		"older using seconds suffix": {input: "-7776001s", want: true},
 		"older using hours suffix":   {input: "-2161h", want: true},
