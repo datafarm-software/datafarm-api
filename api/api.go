@@ -435,7 +435,7 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 		switch code {
 		case http.StatusUnauthorized:
 			return nil, huma.Error401Unauthorized(
-				"Unauthorized access to DeviceId.")
+				"Unauthorized access to this device.")
 		default:
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking acess to DeviceId.")
