@@ -40,8 +40,10 @@ func RegisterHumaOperations(api huma.API,
 		},
 	],
 	getDeviceIds HumaHandler[struct{}, deviceinfo.DeviceIdsResponse],
+	getDeviceDataBoundary HumaHandler[datafetcher.DataBoundaryRequest, datafetcher.DataBoundaryResponse],
 ) {
 	registry := huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
+
 	operation := huma.Operation{
 		Method:      "GET",
 		Path:        "/device/{deviceId}/sensordata",
@@ -66,6 +68,9 @@ func RegisterHumaOperations(api huma.API,
 		Description: "Clients can use this route to request data from a sensor using its device id.",
 		RequestBody: &huma.RequestBody{},
 		Responses: map[string]*huma.Response{
+			"204": {
+				Description: "No Content",
+			},
 			"500": {
 				Description: "Internal Server Error",
 				Content: map[string]*huma.MediaType{
@@ -106,14 +111,29 @@ func RegisterHumaOperations(api huma.API,
 					},
 				},
 			},
+			"404": {
+				Description: "Not Found",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Not Found",
+							Status: http.StatusUnauthorized,
+							Detail: "Device Not Found.",
+						},
+					},
+				},
+			},
 		},
 	}
 	huma.Register(api, operation, getDeviceData)
+
 	operation = huma.Operation{
 		Method:      "POST",
 		Path:        "/login",
 		Tags:        []string{"POST"},
-		Summary:     "Login.",
+		Summary:     "Login",
 		Description: "Clients can use this route to login and receive an active session token.",
 		Security: []map[string][]string{
 			{"basic": {}},
@@ -163,6 +183,7 @@ func RegisterHumaOperations(api huma.API,
 		},
 	}
 	huma.Register(api, operation, login)
+
 	operation = huma.Operation{
 		Method:      "GET",
 		Path:        "/device/{deviceId}/queryfields",
@@ -227,9 +248,24 @@ func RegisterHumaOperations(api huma.API,
 					},
 				},
 			},
+			"404": {
+				Description: "Not Found",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Not Found",
+							Status: http.StatusUnauthorized,
+							Detail: "Device Not Found.",
+						},
+					},
+				},
+			},
 		},
 	}
 	huma.Register(api, operation, getQueryFields)
+
 	operation = huma.Operation{
 		Method:      "POST",
 		Path:        "/batch/device/sensordata",
@@ -285,6 +321,7 @@ func RegisterHumaOperations(api huma.API,
 		},
 	}
 	huma.Register(api, operation, batchGetDeviceData)
+
 	operation = huma.Operation{
 		Method:      "POST",
 		Path:        "/batch/device/queryfields",
@@ -337,9 +374,24 @@ func RegisterHumaOperations(api huma.API,
 					},
 				},
 			},
+			"404": {
+				Description: "Not Found",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Not Found",
+							Status: http.StatusUnauthorized,
+							Detail: "Device Not Found.",
+						},
+					},
+				},
+			},
 		},
 	}
 	huma.Register(api, operation, batchGetQueryFields)
+
 	operation = huma.Operation{
 		Method:      "GET",
 		Path:        "/device/ids",
@@ -381,4 +433,86 @@ func RegisterHumaOperations(api huma.API,
 		},
 	}
 	huma.Register(api, operation, getDeviceIds)
+
+	operation = huma.Operation{
+		Method:      "GET",
+		Path:        "/device/{deviceId}/databoundary",
+		Tags:        []string{"GET"},
+		Middlewares: huma.Middlewares{rateLimit, verifyToken},
+		Summary:     "Get DeviceId DataBoundary",
+		Description: "Clients can use this route to get the device's DataBoundary. A DataBoundary contains the oldest and most recent sensordata timestamps for the device.",
+		RequestBody: &huma.RequestBody{},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+		Parameters: []*huma.Param{
+			{
+				Name:        "deviceId",
+				In:          "path",
+				Description: "Device Id to get DataBoundary information from.",
+				Required:    true,
+				Schema: &huma.Schema{
+					Type:    "string",
+					Pattern: `^\w{1,30}$`,
+				},
+			},
+		},
+		Responses: map[string]*huma.Response{
+			"500": {
+				Description: "Internal Server Error",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Internal Server Error",
+							Status: http.StatusInternalServerError,
+							Detail: "Internal error getting DataBoundary.",
+						},
+					}}},
+			"400": {
+				Description: "Bad Request",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Bad Request",
+							Status: http.StatusBadRequest,
+							Detail: "No auth header provided.",
+						},
+					},
+				},
+			},
+			"401": {
+				Description: "Unauthorized",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Unauthorized",
+							Status: http.StatusUnauthorized,
+							Detail: "Unknown user.",
+						},
+					},
+				},
+			},
+			"404": {
+				Description: "Not Found",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Not Found",
+							Status: http.StatusUnauthorized,
+							Detail: "Device Not Found.",
+						},
+					},
+				},
+			},
+		},
+	}
+	huma.Register(api, operation, getDeviceDataBoundary)
 }

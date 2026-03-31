@@ -66,6 +66,10 @@ func main() {
 		func(context.Context, *struct{}) (*deviceinfo.DeviceIdsResponse, error) {
 			return nil, nil
 		},
+		func(context.Context, *datafetcher.DataBoundaryRequest) (
+			*datafetcher.DataBoundaryResponse, error) {
+			return nil, nil
+		},
 	)
 	doc := humaApi.OpenAPI()
 	out, err := yaml.Marshal(doc)

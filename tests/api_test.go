@@ -37,6 +37,7 @@ const RegisteredNetwork = "Datafarm"
 const AnotherRegisteredNetwork = "Datafarm2"
 const RegisteredDeviceId = "device1"
 const AnotherRegisteredDeviceId = "device2"
+const UnregisteredDeviceId = "unregistered1"
 const InvalidDeviceId = "!+)$"
 const RegisteredQueryField = "temperature"
 const AnotherRegisteredQueryField = "humidity"
@@ -44,7 +45,9 @@ const RegisteredSensor = "weather-sensor"
 const ValidToken = "someToken0"
 const InvalidToken = "invalidToken0"
 const RelativeStart = "-6h"
+const RelativeMoreThanNinetyDays = "-91d"
 
+var MoreThanNinetyDays = time.Now().Add(-91 * 24 * time.Hour).Format(time.RFC3339)
 var Start = time.Now().Add(-24 * time.Hour).Format(time.RFC3339)
 var StartGreaterThanStop = time.Now().Add(1 * time.Hour).Format(time.RFC3339)
 var FutureStart = time.Now().Add(1 * time.Hour).Format(time.RFC3339)
@@ -60,6 +63,7 @@ func TestLogin(t *testing.T) {
 	tests := map[string]struct {
 		wantErr            bool
 		wantStatus         int
+		wantToken          string
 		username, password string
 		mockAuthStore      authstore.Schema
 		mockDeviceInfo     deviceinfo.Schema
@@ -68,6 +72,7 @@ func TestLogin(t *testing.T) {
 		"successfully login": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
+			wantToken:  ValidToken,
 			username:   RegisteredUsername,
 			password:   RegisteredPassword,
 			mockAuthStore: authstore.Schema{
@@ -130,6 +135,10 @@ func TestLogin(t *testing.T) {
 				tokens := a.AuthStore.GetActiveTokens()
 				if len(tokens) != 1 {
 					t.Fatalf("expected a stored user token, got len: %d", len(tokens))
+				}
+				if tokens[0].Token != ValidToken {
+					t.Fatalf("expected token: %s, got token: %v",
+						ValidToken, tokens[0].Token)
 				}
 			}
 		})
@@ -551,6 +560,65 @@ func TestGetDeviceData(t *testing.T) {
 			},
 		},
 
+		"relative start time more than 90 days in the past": {
+			wantErr:    true,
+			wantStatus: http.StatusBadRequest,
+			token:      ValidToken,
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     int(authstore.User),
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			want:     nil,
+			deviceId: RegisteredDeviceId,
+			deviceRequest: datafetcher.DeviceDataRequest{
+				QueryFields: []string{RegisteredQueryField},
+				Start:       RelativeMoreThanNinetyDays,
+			},
+		},
+
+		"start time more than 90 days in the past": {
+			wantErr:    true,
+			wantStatus: http.StatusBadRequest,
+			token:      ValidToken,
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     int(authstore.User),
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			want:     nil,
+			deviceId: RegisteredDeviceId,
+			deviceRequest: datafetcher.DeviceDataRequest{
+				QueryFields: []string{RegisteredQueryField},
+				Start:       MoreThanNinetyDays,
+				Stop:        Stop,
+			},
+		},
+
 		"get multiple data points within time range": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
@@ -866,8 +934,8 @@ func TestGetDeviceData(t *testing.T) {
 		},
 
 		"no data in requested range": {
-			wantErr:    false,
-			wantStatus: http.StatusOK,
+			wantErr:    true,
+			wantStatus: http.StatusNoContent,
 			want:       nil,
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{
@@ -911,6 +979,58 @@ func TestGetDeviceData(t *testing.T) {
 			},
 			token:    ValidToken,
 			deviceId: RegisteredDeviceId,
+			deviceRequest: datafetcher.DeviceDataRequest{
+				QueryFields: []string{RegisteredQueryField},
+				Start:       "-1h",
+			},
+		},
+
+		"device doesnt exist": {
+			wantErr:    true,
+			wantStatus: http.StatusNotFound,
+			want:       nil,
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     int(authstore.User),
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDataFetcher: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+					},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token:    ValidToken,
+			deviceId: UnregisteredDeviceId,
 			deviceRequest: datafetcher.DeviceDataRequest{
 				QueryFields: []string{RegisteredQueryField},
 				Start:       "-1h",
@@ -1084,7 +1204,8 @@ func setupHuma(t *testing.T) humatest.TestAPI {
 	humaTest := humatest.Wrap(t, humaApiMux)
 	localhuma.RegisterHumaOperations(humaTest,
 		a.RateLimit, a.VerifyToken, a.GetDeviceData, a.BatchGetDeviceData,
-		a.Login, a.GetQueryFields, a.BatchGetQueryFields, a.GetDeviceIds)
+		a.Login, a.GetQueryFields, a.BatchGetQueryFields, a.GetDeviceIds,
+		a.GetDeviceDataBoundary)
 	return humaTest
 }
 
@@ -2715,6 +2836,279 @@ func TestGetDeviceIds(t *testing.T) {
 				err = json.Unmarshal(body, &dr)
 				require.Nil(t, err)
 				if diff := cmp.Diff(tc.want, dr); diff != "" {
+					t.Fatalf("response mismatch (-want +got):\n%s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestCheckOlderThanNinetyDays(t *testing.T) {
+	tests := map[string]struct {
+		input string
+		want  bool
+	}{
+		"older using days suffix":    {input: "-91d", want: true},
+		"older using minutes suffix": {input: "-129601m", want: true},
+		"older using seconds suffix": {input: "-7776001s", want: true},
+		"older using hours suffix":   {input: "-2161h", want: true},
+		"older using months suffix":  {input: "-4mo", want: true},
+		"newer using days suffix":    {input: "-90d", want: false},
+		"newer using minutes suffix": {input: "-129600m", want: false},
+		"newer using seconds suffix": {input: "-7776000s", want: false},
+		"newer using hours suffix":   {input: "-2160h", want: false},
+		"newer using months suffix":  {input: "-3mo", want: false},
+		"invalid suffix":             {input: "-1du", want: true},
+		"invalid prefix":             {input: "1s", want: true},
+		"no number":                  {input: "rtyu", want: true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			older := api.CheckOlderThanNinetyDays(tc.input)
+			if tc.want != older {
+				t.Fatalf("want: %v, got: %v", tc.want, older)
+			}
+		})
+	}
+}
+
+func TestGetDataBoundary(t *testing.T) {
+	tests := map[string]struct {
+		wantErr         bool
+		wantStatus      int
+		mockDataFetcher []datafetcher.DeviceData
+		want            datafetcher.DataBoundary
+		mockAuthStore   authstore.Schema
+		mockDeviceInfo  deviceinfo.Schema
+		mockTokens      map[string]bool
+		token           string
+		deviceId        string
+	}{
+
+		"user get deviceid data boundary": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: datafetcher.DataBoundary{
+				DeviceId: RegisteredDeviceId,
+				Start:    InsideTimeRange,
+				Stop:     AlsoInsideTimeRange,
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     int(authstore.User),
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDataFetcher: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+					},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+					},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token:    ValidToken,
+			deviceId: RegisteredDeviceId,
+		},
+
+		"network user get deviceid data boundary": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: datafetcher.DataBoundary{
+				DeviceId: RegisteredDeviceId,
+				Start:    InsideTimeRange,
+				Stop:     AlsoInsideTimeRange,
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  AnotherRegisteredCompany,
+						Role:     int(authstore.NetworkUser),
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDataFetcher: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+					},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+					},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token:    ValidToken,
+			deviceId: RegisteredDeviceId,
+		},
+
+		"admin user get deviceid data boundary": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: datafetcher.DataBoundary{
+				DeviceId: RegisteredDeviceId,
+				Start:    InsideTimeRange,
+				Stop:     AlsoInsideTimeRange,
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  AnotherRegisteredCompany,
+						Role:     int(authstore.Admin),
+						Password: RegisteredPassword,
+						Network:  AnotherRegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDataFetcher: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+					},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+					},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token:    ValidToken,
+			deviceId: RegisteredDeviceId,
+		},
+
+		"unknown token": {
+			wantErr:    true,
+			wantStatus: http.StatusUnauthorized,
+			token:      InvalidToken,
+			want:       datafetcher.DataBoundary{},
+			deviceId:   RegisteredDeviceId,
+		},
+	}
+	db, err := miniredis.Run()
+	require.Nil(t, err)
+	defer db.Close()
+	humaTest := setupHuma(t)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			a.TokenProvider = &tokenprovider.MockTokenProvider{
+				Tokens:    tc.mockTokens,
+				Increment: len(tc.mockTokens),
+			}
+			defer a.TokenProvider.Close()
+			testingRedis, err := redis.NewTestingRedis(db.Addr())
+			require.Nil(t, err)
+			defer testingRedis.Close()
+			a.DeviceInfo = testingRedis
+			a.AuthStore = testingRedis
+			a.DataFetcher, err = datafetcher.NewTestingInflux("../config.yml")
+			require.Nil(t, err)
+			defer a.DataFetcher.Close()
+			err = a.DataFetcher.PrepareDb(&tc.mockDeviceInfo, tc.mockDataFetcher)
+			require.Nil(t, err)
+			err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
+			require.Nil(t, err)
+			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
+			require.Nil(t, err)
+			route := "/device/" + tc.deviceId + "/databoundary"
+			resp := humaTest.Get(route,
+				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
+			if resp.Code != tc.wantStatus {
+				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
+			}
+			defer resp.Result().Body.Close()
+			if !tc.wantErr {
+				var got datafetcher.DataBoundary
+				body := resp.Body.Bytes()
+				err = json.Unmarshal(body, &got)
+				require.Nil(t, err)
+				if diff := cmp.Diff(tc.want, got); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
 			}

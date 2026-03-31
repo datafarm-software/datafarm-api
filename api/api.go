@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -105,8 +106,10 @@ func Start(opts ApiOpts) error {
 			URL: "/api/v1",
 		})
 		localhuma.RegisterHumaOperations(humaApi,
-			api.RateLimit, api.VerifyToken, api.GetDeviceData, api.BatchGetDeviceData,
+			api.RateLimit, api.VerifyToken,
+			api.GetDeviceData, api.BatchGetDeviceData,
 			api.Login, api.GetQueryFields, api.BatchGetQueryFields, api.GetDeviceIds,
+			api.GetDeviceDataBoundary,
 		)
 		server := &http.Server{
 			Addr:    opts.Port,
@@ -149,12 +152,19 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	in *datafetcher.DeviceDataRequest) (*datafetcher.DeviceDataResponse, error) {
 	in.Start = strings.TrimSpace(in.Start)
 	if RELATIVETIME_REGEX.MatchString(in.Start) {
+		older := CheckOlderThanNinetyDays(in.Start)
+		if older {
+			return nil, huma.Error400BadRequest("Relative start time older than 90 days.")
+		}
 		in.Stop = ""
 	} else {
 		rfcStart, err := time.Parse(time.RFC3339Nano, in.Start)
 		if err != nil {
 			log.Printf("parsing start: %v", err)
 			return nil, huma.Error400BadRequest("Start time is invalid rfc.")
+		}
+		if rfcStart.UnixMilli() <= time.Now().Add(-90*24*time.Hour).UnixMilli() {
+			return nil, huma.Error400BadRequest("Start time is greater than 90 days.")
 		}
 		if rfcStart.UnixMilli() >= time.Now().UnixMilli() {
 			return nil, huma.Error400BadRequest("Start time is in the future.")
@@ -176,6 +186,23 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
+	di, code, err := a.checkAccessToDevice(in.DeviceId, user)
+	if err != nil {
+		switch code {
+		case http.StatusUnauthorized:
+			return nil, huma.Error401Unauthorized(
+				"Unauthorized access to this device.")
+		case http.StatusNotFound:
+			return nil, huma.Error404NotFound(
+				"Device Not Found.")
+		default:
+			return nil, huma.Error500InternalServerError(
+				"Internal error checking acess to DeviceId.")
+		}
+	}
+	di.Start = in.Start
+	di.Stop = in.Stop
+	di.QueryFields = in.QueryFields
 	if in.QueryFields[0] == "all" {
 		if !authstore.HasPermission(authstore.Role(user.Role),
 			authstore.GetAllQueryFields) {
@@ -188,57 +215,78 @@ func (a *Api) GetDeviceData(ctx context.Context,
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting query fields for deviceId.")
 		}
-		in.QueryFields = qf.QueryFields
+		di.QueryFields = qf.QueryFields
 	}
-	deviceCompany, err := a.DeviceInfo.GetCompany(in.DeviceId)
-	if err != nil {
-		log.Printf("error getting company for admin request on device: %s: %v",
-			in.DeviceId, err)
-		return nil, huma.Error500InternalServerError(
-			"Internal error getting associated company for deviceId.")
-	}
-	deviceNetwork, err := a.DeviceInfo.GetNetwork(in.DeviceId)
-	if err != nil {
-		log.Printf("error getting network for admin request on deviceId: %s: %v",
-			in.DeviceId, err)
-		return nil, huma.Error500InternalServerError(
-			"Internal error getting associated network for deviceId.")
-	}
-	metadata := deviceinfo.DeviceInfo{
-		Company:     user.Company,
-		DeviceId:    in.DeviceId,
-		Network:     user.Network,
-		QueryFields: in.QueryFields,
-		Start:       in.Start,
-		Stop:        in.Stop,
-	}
-	if deviceCompany != user.Company {
-		if authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyCompany) {
-			metadata.Company = deviceCompany
-		} else {
-			log.Printf("user: %s requested deviceId: %s. User Company: %s, Device Company: %s",
-				user.Username, in.DeviceId, user.Company, deviceCompany)
-			return nil, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		}
-	}
-	if deviceNetwork != user.Network {
-		if authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyNetwork) {
-			metadata.Network = deviceNetwork
-		} else {
-			log.Printf("user: %s requested deviceId: %s. User Network: %s, Device Network: %s",
-				user.Username, in.DeviceId, user.Network, deviceNetwork)
-			return nil, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		}
-	}
-	deviceData, err := a.DataFetcher.GetData(metadata)
+	deviceData, err := a.DataFetcher.GetData(di)
 	if err != nil {
 		log.Printf("error getting data: %v", err)
 		return nil, huma.Error500InternalServerError(
 			"Internal error fetching data.")
 	}
-	return &datafetcher.DeviceDataResponse{Body: deviceData}, nil
+	if len(deviceData) < 1 {
+		return &datafetcher.DeviceDataResponse{Status: http.StatusNoContent}, nil
+	}
+	return &datafetcher.DeviceDataResponse{
+		Status: http.StatusOK,
+		Body:   deviceData,
+	}, nil
+}
+
+const MaxDays = 90
+const MaxMinutes = 129600
+const MaxSeconds = 7776000
+const MaxHours = 2160
+const MaxMonths = 3
+const LowerCaseO = 0x6f
+const Hyphen = 0x2d
+
+func CheckOlderThanNinetyDays(start string) bool {
+	if len(start) < 1 {
+		return true
+	}
+	if start[0] != Hyphen {
+		return true
+	}
+	start = strings.ReplaceAll(start, "-", "")
+	var suffix string
+	if start[len(start)-1] == byte(LowerCaseO) {
+		suffix = "mo"
+		start = strings.ReplaceAll(start, suffix, "")
+	} else {
+		suffix = string(start[len(start)-1])
+		start = start[:len(start)-1]
+	}
+	number, err := strconv.Atoi(start)
+	if err != nil {
+		log.Printf("number conversion error: %v", err)
+		return true
+	}
+	switch suffix {
+	case "s":
+		if number > MaxSeconds {
+			return true
+		}
+	case "m":
+		if number > MaxMinutes {
+			return true
+		}
+	case "h":
+		if number > MaxHours {
+			return true
+		}
+	case "d":
+		if number > MaxDays {
+			return true
+		}
+	case "mo":
+		if number > MaxMonths {
+			return true
+		}
+	default:
+		log.Printf("unknown suffix: %v", suffix)
+		return true
+	}
+	return false
 }
 
 func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
@@ -276,6 +324,42 @@ func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
 	}
 	ctx = huma.WithValue(ctx, "user", user)
 	next(ctx)
+}
+
+func (a *Api) checkAccessToDevice(deviceId string, user authstore.UserInfo) (
+	deviceinfo.DeviceInfo, int, error) {
+	di := deviceinfo.DeviceInfo{DeviceId: deviceId}
+	deviceCompany, err := a.DeviceInfo.GetCompany(deviceId)
+	if err != nil {
+		if errors.Is(err, deviceinfo.NotFound) {
+			return di, http.StatusNotFound, fmt.Errorf(
+				"Device not found.")
+		}
+		return di, http.StatusInternalServerError, fmt.Errorf(
+			"Internal error checking device company.")
+	}
+	if user.Company != deviceCompany {
+		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyCompany) {
+			return di, http.StatusUnauthorized, fmt.Errorf("Unauthorized access to this device.")
+		}
+	}
+	deviceNetwork, err := a.DeviceInfo.GetNetwork(deviceId)
+	if err != nil {
+		if errors.Is(err, deviceinfo.NotFound) {
+			return di, http.StatusNotFound, fmt.Errorf(
+				"Device not found.")
+		}
+		return di, http.StatusInternalServerError, fmt.Errorf(
+			"Internal error checking device network.")
+	}
+	if user.Network != deviceNetwork {
+		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyNetwork) {
+			return di, http.StatusUnauthorized, fmt.Errorf("Unauthorized access to this device.")
+		}
+	}
+	di.Company = deviceCompany
+	di.Network = deviceNetwork
+	return di, http.StatusOK, nil
 }
 
 func (a *Api) Login(ctx context.Context,
@@ -316,62 +400,55 @@ func (a *Api) Login(ctx context.Context,
 			"Password failed the regex.")
 	}
 	if err = a.AuthStore.VerifyCredentials(username, password); err != nil {
-		log.Printf("error: %v", err)
+		log.Printf("verifyCredentials error: %v", err)
 		return nil, huma.Error401Unauthorized("Bad credentials provided.")
 	}
-	token, expiry, err := a.TokenProvider.GenerateToken()
+	ut, err := a.AuthStore.GetToken(username)
+	if err != nil {
+		if !errors.Is(err, authstore.NotLoggedIn) {
+			return nil, huma.Error500InternalServerError(
+				"Internal error checking if user is logged in.")
+		}
+	}
+	if ut.Token != "" {
+		return &tokenprovider.LoginResponse{Body: ut.Token}, nil
+	}
+	ut, err = a.TokenProvider.GenerateToken(username)
 	if err != nil {
 		return nil, huma.Error500InternalServerError(
 			"Internal error generating an access token.")
-	}
-	ut := authstore.UserToken{
-		Username:   username,
-		Token:      token,
-		Expiration: expiry,
 	}
 	if err = a.AuthStore.StoreToken(ut); err != nil {
 		return nil, huma.Error500InternalServerError(
 			"Internal error linking the token to the user.")
 	}
-	return &tokenprovider.LoginResponse{Body: token}, nil
+	return &tokenprovider.LoginResponse{Body: ut.Token}, nil
 }
 
 func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (
 	*deviceinfo.QueryFieldsResponse, error) {
-	ctxUser := ctx.Value("user")
-	user, ok := ctxUser.(authstore.UserInfo)
+	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
 		return nil, huma.Error500InternalServerError(
-			"Internal error finding user info.")
+			"Internal error getting user.")
+	}
+	_, code, err := a.checkAccessToDevice(in.DeviceId, user)
+	if err != nil {
+		switch code {
+		case http.StatusUnauthorized:
+			return nil, huma.Error401Unauthorized(
+				"Unauthorized access to this device.")
+		case http.StatusNotFound:
+			return nil, huma.Error404NotFound(
+				"Device Not Found.")
+		default:
+			return nil, huma.Error500InternalServerError(
+				"Internal error checking acess to DeviceId.")
+		}
 	}
 	if !authstore.HasPermission(authstore.Role(user.Role),
 		authstore.GetAllQueryFields) {
-		return nil, huma.Error401Unauthorized(
-			"Access denied to QueryFields.")
-	}
-	deviceCompany, err := a.DeviceInfo.GetCompany(in.DeviceId)
-	if err != nil {
-		return nil, huma.Error500InternalServerError(
-			"Internal error checking device company.")
-	}
-	if user.Company != deviceCompany {
-		if !authstore.HasPermission(authstore.Role(user.Role),
-			authstore.GetAnyCompany) {
-			return nil, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		}
-	}
-	deviceNetwork, err := a.DeviceInfo.GetNetwork(in.DeviceId)
-	if err != nil {
-		return nil, huma.Error500InternalServerError(
-			"Internal error checking device network.")
-	}
-	if user.Network != deviceNetwork {
-		if !authstore.HasPermission(authstore.Role(user.Role),
-			authstore.GetAnyNetwork) {
-			return nil, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		}
+		return nil, huma.Error500InternalServerError("Access denied to QueryFields.")
 	}
 	queryFields, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
 	if err != nil {
@@ -482,4 +559,38 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	return &deviceinfo.DeviceIdsResponse{
 		Body: userDevices,
 	}, nil
+}
+
+func (a *Api) GetDeviceDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
+	*datafetcher.DataBoundaryResponse, error) {
+	user, ok := ctx.Value("user").(authstore.UserInfo)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting user.")
+	}
+	di, code, err := a.checkAccessToDevice(in.DeviceId, user)
+	if err != nil {
+		switch code {
+		case http.StatusUnauthorized:
+			return nil, huma.Error401Unauthorized(
+				"Unauthorized access to this device.")
+		case http.StatusNotFound:
+			return nil, huma.Error404NotFound(
+				"Device Not Found.")
+		default:
+			return nil, huma.Error500InternalServerError(
+				"Internal error checking acess to DeviceId.")
+		}
+	}
+	if !authstore.HasPermission(authstore.Role(user.Role),
+		authstore.GetDataBoundary) {
+		return nil, huma.Error500InternalServerError("Access denied to DataBoundary.")
+	}
+	dataBoundary, err := a.DataFetcher.GetDataBoundary(di)
+	if err != nil {
+		log.Printf("%s getting data boundary: %v", user.Username, err)
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting DataBoundary.")
+	}
+	return &datafetcher.DataBoundaryResponse{Body: dataBoundary}, nil
 }

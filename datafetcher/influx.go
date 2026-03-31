@@ -118,14 +118,20 @@ func (i *InfluxDatafetcher) extractValue(result *influxApi.QueryTableResult) ([]
 
 func (i *InfluxDatafetcher) dataRows2DeviceData(data []DataRow) ([]DeviceData, error) {
 	var deviceDataSlice []DeviceData
-	var found, ok bool
+	var found bool
 	var value float64
 	var timestampWithin10Seconds bool
 	for _, row := range data {
 		found = false
-		value, ok = row.Value.(float64)
-		if !ok {
-			return nil, fmt.Errorf("received sensordata that is not float 64")
+		switch v := row.Value.(type) {
+		case float64:
+			value = v
+		case int64:
+			value = float64(v)
+		case int:
+			value = float64(v)
+		default:
+			value = float64(0)
 		}
 		for i, deviceData := range deviceDataSlice {
 			timestampWithin10Seconds = math.Abs(float64(
@@ -168,6 +174,36 @@ func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string
 		return fmt.Sprintf("start: %s, stop: %s", startTime, stopTime), nil
 	}
 	return fmt.Sprintf("start: %s", startTime), nil
+}
+
+func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
+	DataBoundary, error) {
+	dataBoundary := DataBoundary{DeviceId: deviceInfo.DeviceId}
+	queryBuilder := strings.Builder{}
+	fmt.Fprintf(&queryBuilder, `data = from(bucket: "%s") `, deviceInfo.Network)
+	fmt.Fprintf(&queryBuilder, "|> range(start: 0) ")
+	fmt.Fprintf(&queryBuilder, `
+		|> filter(fn: (r) => r._measurement == "%s" and r.deviceID == "%s" and r._field == "batv") `,
+		deviceInfo.Company, deviceInfo.DeviceId)
+	fmt.Fprintf(&queryBuilder, `|> group() `)
+	fmt.Fprintf(&queryBuilder, `
+		firstTime = data |> first()
+		lastTime = data |> last()
+		union(tables: [firstTime, lastTime])`)
+	result, err := i.queryApi.Query(context.Background(), queryBuilder.String())
+	if err != nil {
+		return dataBoundary, fmt.Errorf("error querying influxdb: %v", err)
+	}
+	dataRows, err := i.extractValue(result)
+	if err != nil {
+		return dataBoundary, fmt.Errorf("error processing query result: %v", err)
+	}
+	if len(dataRows) != 2 {
+		return dataBoundary, fmt.Errorf("dataBoundary dataRows returned is not 2, instead: %d", len(dataRows))
+	}
+	dataBoundary.Start = dataRows[0].Time
+	dataBoundary.Stop = dataRows[1].Time
+	return dataBoundary, nil
 }
 
 func (i *InfluxDatafetcher) PrepareDb(*deviceinfo.Schema, []DeviceData) error {
@@ -300,4 +336,9 @@ func deviceInfoMap(allDevicesInfo *deviceinfo.Schema) map[string]deviceinfo.Devi
 func (t *TestingInflux) GetData(metadata deviceinfo.DeviceInfo) (
 	[]DeviceData, error) {
 	return t.influx.GetData(metadata)
+}
+
+func (t *TestingInflux) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
+	DataBoundary, error) {
+	return t.influx.GetDataBoundary(deviceInfo)
 }

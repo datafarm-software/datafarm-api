@@ -1,5 +1,7 @@
 package deviceinfo
 
+import "errors"
+
 var GeneralQueryFields = []string{
 	"latitude", "longitude", "signal_strength", "rssi", "snr", "batv",
 }
@@ -12,6 +14,8 @@ const (
 	AllDevices
 )
 
+var NotFound = errors.New("not found")
+
 type ScopeRestriction struct {
 	Scope   Scope
 	Company string
@@ -19,9 +23,9 @@ type ScopeRestriction struct {
 }
 
 type DeviceInfo struct {
-	DeviceId, Company, Network   string
-	Start, Stop                  string
-	QueryFields, AttachedSensors []string
+	DeviceId, Company, Network string
+	Start, Stop                string
+	QueryFields                []string
 }
 
 type QueryFieldsResponse struct {
@@ -84,7 +88,9 @@ type DeviceInfoFetcher interface {
 	TestingDeviceInfoFetcher
 	Close() error
 	GetQueryFields(deviceId string) (QueryFields, error)
+	//NOTE: could return err: NotFound
 	GetCompany(deviceId string) (string, error)
+	//NOTE: could return err: NotFound
 	GetNetwork(deviceId string) (string, error)
 	GetDevices(ScopeRestriction) ([]string, error)
 }

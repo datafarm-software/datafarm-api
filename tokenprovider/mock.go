@@ -2,7 +2,6 @@ package tokenprovider
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/datafarm-software/datafarm-api/authstore"
 )
@@ -16,14 +15,18 @@ func (m *MockTokenProvider) Close() error {
 	return nil
 }
 
-func (m *MockTokenProvider) GenerateToken() (string, time.Duration, error) {
+func (m *MockTokenProvider) GenerateToken(username string) (authstore.UserToken, error) {
 	token := fmt.Sprintf("someToken%d", m.Increment)
 	m.Increment++
 	if m.Tokens == nil {
 		m.Tokens = make(map[string]bool)
 	}
 	m.Tokens[token] = true
-	return token, THREE_HOURS, nil
+	return authstore.UserToken{
+		Username:   username,
+		Token:      token,
+		Expiration: THREE_HOURS,
+	}, nil
 }
 
 func (m *MockTokenProvider) IsValidToken(t LoginResponse) bool {

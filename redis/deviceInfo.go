@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
+	"github.com/redis/go-redis/v9"
 )
 
 const TestingDb = 13
@@ -28,6 +29,9 @@ func (r *Redis) GetQueryFields(deviceId string) (deviceinfo.QueryFields, error) 
 func (r *Redis) GetCompany(deviceId string) (string, error) {
 	company, err := r.db.HGet(ctx, "fieldUnit:"+deviceId, "company").Result()
 	if err != nil {
+		if err == redis.Nil {
+			return "", deviceinfo.NotFound
+		}
 		return "", err
 	}
 	return company, nil
