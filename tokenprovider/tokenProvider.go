@@ -8,7 +8,7 @@ type LoginRequest struct {
 	Auth string `header:"Authorization" required:"true" hidden:"true"`
 }
 type LoginResponse struct {
-	Body string `doc:"Access token for API resources."`
+	Body string `doc:"Access token for API resources. Three Hour Expiry."`
 }
 
 type TokenProvider interface {
