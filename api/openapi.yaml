@@ -844,7 +844,7 @@ paths:
                         application/json:
                             schema:
                                 type: string
-                                description: Access token for API resources.
+                                description: Access token for API resources. Three Hour Expiry.
                 "400":
                     description: Bad Request
                     content:
