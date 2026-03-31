@@ -189,7 +189,8 @@ func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
 	fmt.Fprintf(&queryBuilder, `
 		firstTime = data |> first()
 		lastTime = data |> last()
-		union(tables: [firstTime, lastTime])`)
+		union(tables: [firstTime, lastTime])
+		  |> sort(columns: ["_time"], desc: false)`)
 	result, err := i.queryApi.Query(context.Background(), queryBuilder.String())
 	if err != nil {
 		return dataBoundary, fmt.Errorf("error querying influxdb: %v", err)
