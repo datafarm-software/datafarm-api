@@ -34,7 +34,7 @@ var ctx context.Context
 var QUERYFIELD_REGEX = regexp.MustCompile(`^[a-zA-Z0-9_\-\s:]*$`)
 
 // var DEVICE_ID_REGEX = regexp.MustCompile(`\w{1,30}`)
-var RELATIVETIME_REGEX = regexp.MustCompile(`-\d{1,3}(?:[hdwy]|mo?)`)
+var RELATIVETIME_REGEX = regexp.MustCompile(`-\d{1,3}(?:[hdw]|mo?)`)
 var USERNAME_REGEX = regexp.MustCompile(`^[\w .@]{1,75}`)
 var UPPERCASE_REGEX = regexp.MustCompile(`[A-Z]`)
 var LOWERCASE_REGEX = regexp.MustCompile(`[a-z]`)
