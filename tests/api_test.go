@@ -3194,7 +3194,7 @@ func TestCsvGetSensorData(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			setupGetSensorDataTest(t, tc.gsdt, db)
 			qp = makeQueryParams(tc.gsdt.deviceRequest)
-			route := "/device/" + tc.gsdt.deviceId + "/sensordata" + qp
+			route := "/device/" + tc.gsdt.deviceId + "/sensordata/csv" + qp
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.gsdt.token),
 				"Content-Type: text/csv",

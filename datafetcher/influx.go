@@ -254,7 +254,7 @@ func (t *TestingInflux) Close() error {
 	org, err := orgApi.FindOrganizationByName(ctx, TestOrg)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			return nil
+			return t.influx.Close()
 		}
 		return fmt.Errorf("finding org: %v", err)
 	}
@@ -275,7 +275,13 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, deviceData 
 	orgApi := t.influx.db.OrganizationsAPI()
 	org, err := orgApi.CreateOrganizationWithName(ctx, TestOrg)
 	if err != nil {
-		return fmt.Errorf("org api: %v", err)
+		if !strings.Contains(err.Error(), "exists") {
+			return fmt.Errorf("org api: %v", err)
+		}
+		org, err = orgApi.FindOrganizationByName(ctx, TestOrg)
+		if err != nil {
+			return fmt.Errorf("getting existing org: %v", err)
+		}
 	}
 	bucketsApi := t.influx.db.BucketsAPI()
 	uniqueNetworks := make([]string, 0, len(allDevicesInfo.DeviceNetworks))
@@ -285,7 +291,11 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, deviceData 
 		}
 		uniqueNetworks = append(uniqueNetworks, dd.Network)
 		if _, err = bucketsApi.CreateBucketWithName(ctx, org, dd.Network); err != nil {
-			break
+			if strings.Contains(err.Error(), "exists") {
+				err = nil
+			} else {
+				break
+			}
 		}
 	}
 	if err != nil {
