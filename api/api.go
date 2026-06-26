@@ -107,7 +107,7 @@ func Start(opts ApiOpts) error {
 		})
 		localhuma.RegisterHumaOperations(humaApi,
 			api.RateLimit, api.VerifyToken,
-			api.GetDeviceData, api.BatchGetDeviceData,
+			api.GetDeviceData, api.CsvGetDeviceData, api.BatchGetDeviceData,
 			api.Login, api.GetQueryFields, api.BatchGetQueryFields, api.GetDeviceIds,
 			api.GetDeviceDataBoundary,
 		)
@@ -230,6 +230,11 @@ func (a *Api) GetDeviceData(ctx context.Context,
 		Status: http.StatusOK,
 		Body:   deviceData,
 	}, nil
+}
+
+func (a *Api) CsvGetDeviceData(ctx context.Context,
+	in *datafetcher.DeviceDataRequest) (*struct{ Body string }, error) {
+	return nil, fmt.Errorf("not implemented")
 }
 
 const MaxDays = 90
