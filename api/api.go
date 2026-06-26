@@ -82,7 +82,7 @@ func Start(opts ApiOpts) error {
 	}
 	authstore.InitRoles()
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
-		config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
+		config := huma.DefaultConfig("DataFarm SensorData API", "1.0.4")
 		config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 			"bearer": {
 				Type:         "http",
