@@ -3196,17 +3196,16 @@ func TestCsvGetSensorData(t *testing.T) {
 			qp = makeQueryParams(tc.gsdt.deviceRequest)
 			route := "/device/" + tc.gsdt.deviceId + "/sensordata" + qp
 			resp := humaTest.Get(route,
-				fmt.Sprintf(`Authorization: Bearer %s`, tc.gsdt.token))
+				fmt.Sprintf(`Authorization: Bearer %s`, tc.gsdt.token),
+				"Content-Type: text/csv",
+			)
 			if resp.Code != tc.gsdt.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.gsdt.wantStatus, resp.Code)
 			}
 			defer resp.Result().Body.Close()
 			if !tc.gsdt.wantErr {
-				var dd []datafetcher.DeviceData
-				body := resp.Body.Bytes()
-				err = json.Unmarshal(body, &dd)
-				require.Nil(t, err)
-				if diff := cmp.Diff(tc.want, dd); diff != "" {
+				body := resp.Body.String()
+				if diff := cmp.Diff(tc.want, body); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
 			}
