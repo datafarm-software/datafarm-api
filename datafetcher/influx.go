@@ -253,6 +253,9 @@ func (t *TestingInflux) Close() error {
 	orgApi := t.influx.db.OrganizationsAPI()
 	org, err := orgApi.FindOrganizationByName(ctx, TestOrg)
 	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return nil
+		}
 		return fmt.Errorf("finding org: %v", err)
 	}
 	if err = orgApi.DeleteOrganization(ctx, org); err != nil {
