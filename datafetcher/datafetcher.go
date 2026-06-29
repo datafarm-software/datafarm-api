@@ -1,14 +1,17 @@
 package datafetcher
 
 import (
+	"errors"
 	"time"
 
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
 )
 
+var EmptyDeviceData = errors.New("empty device data")
+
 type DeviceDataResponse struct {
 	Status int
-	Body   []DeviceData
+	Body   DeviceDataSlice
 }
 
 type DeviceDataRequest struct {
@@ -31,7 +34,7 @@ type DeviceDataError struct {
 }
 
 type BatchDeviceDataResponse struct {
-	Results []DeviceData      `json:"results"`
+	Results DeviceDataSlice   `json:"results"`
 	Errors  []DeviceDataError `json:"errors"`
 }
 
@@ -39,6 +42,10 @@ type DeviceDataSlice []DeviceData
 
 func (d DeviceDataSlice) CsvHeaders() ([]string, error) {
 	uniqueColumns := make([]string, 0, len(d))
+	if len(d) < 1 {
+		return nil, EmptyDeviceData
+	}
+	uniqueColumns = append(uniqueColumns, d[0].DeviceID)
 	queryFieldSeen := make(map[string]bool)
 	for _, dd := range d {
 		for qf, _ := range dd.SensorData {

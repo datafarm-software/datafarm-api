@@ -13,6 +13,7 @@ func TestDeviceDataSliceCsvHeaders(t *testing.T) {
 		input   datafetcher.DeviceDataSlice
 		want    []string
 	}{
+
 		"successfully convert a device data slice queryfields to csv headers": {
 			want: []string{
 				RegisteredDeviceId, RegisteredQueryField, AnotherRegisteredQueryField},
@@ -25,7 +26,7 @@ func TestDeviceDataSliceCsvHeaders(t *testing.T) {
 				{
 					DeviceID:   RegisteredDeviceId,
 					Timestamp:  AlsoInsideTimeRange,
-					SensorData: map[string]float64{RegisteredQueryField: 25},
+					SensorData: map[string]float64{AnotherRegisteredQueryField: 25},
 				},
 			},
 		},
