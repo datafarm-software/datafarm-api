@@ -3132,7 +3132,9 @@ func TestCsvGetSensorData(t *testing.T) {
 	}{
 
 		"successfully get deviceid data": {
-			want: "some csv",
+			want: fmt.Sprintf("%s,%s\n%s,%d",
+				RegisteredDeviceId, RegisteredQueryField,
+				InsideTimeRange.Format(time.DateTime), 23),
 			gsdt: GetSensorDataTest{wantErr: false,
 				wantStatus: http.StatusOK,
 				mockAuthStore: authstore.Schema{

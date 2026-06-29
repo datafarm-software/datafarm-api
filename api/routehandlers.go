@@ -56,7 +56,7 @@ func formatTimestamp(in *datafetcher.DeviceDataRequest) error {
 
 func (a *Api) getDeviceData(
 	ctx context.Context, in *datafetcher.DeviceDataRequest) (
-	deviceData []datafetcher.DeviceData, err error) {
+	deviceData datafetcher.DeviceDataSlice, err error) {
 	if err = formatTimestamp(in); err != nil {
 		return nil, err
 	}
@@ -122,7 +122,11 @@ func (a *Api) GetDeviceData(ctx context.Context,
 
 func (a *Api) CsvGetDeviceData(ctx context.Context,
 	in *datafetcher.DeviceDataRequest) (*struct{ Body string }, error) {
-	return nil, fmt.Errorf("not implemented")
+	_, err := a.getDeviceData(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return nil, fmt.Errorf("not implemented fully")
 }
 
 const MaxDays = 90
@@ -362,7 +366,7 @@ func (a *Api) BatchGetDeviceData(ctx context.Context,
 	var deviceErr datafetcher.DeviceDataError
 	var err error
 	errSlice := make([]datafetcher.DeviceDataError, 0, len(in.Body))
-	resultSlice := make([]datafetcher.DeviceData, 0, len(in.Body))
+	resultSlice := make(datafetcher.DeviceDataSlice, 0, len(in.Body))
 	for _, bdr := range in.Body {
 		dr = datafetcher.DeviceDataRequest{
 			DeviceId:    bdr.DeviceId,

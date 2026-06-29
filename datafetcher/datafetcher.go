@@ -35,6 +35,22 @@ type BatchDeviceDataResponse struct {
 	Errors  []DeviceDataError `json:"errors"`
 }
 
+type DeviceDataSlice []DeviceData
+
+func (d DeviceDataSlice) CsvHeaders() ([]string, error) {
+	uniqueColumns := make([]string, 0, len(d))
+	queryFieldSeen := make(map[string]bool)
+	for _, dd := range d {
+		for qf, _ := range dd.SensorData {
+			if !queryFieldSeen[qf] {
+				uniqueColumns = append(uniqueColumns, qf)
+				queryFieldSeen[qf] = true
+			}
+		}
+	}
+	return uniqueColumns, nil
+}
+
 type DeviceData struct {
 	DeviceID   string             `json:"deviceId"`
 	Timestamp  time.Time          `json:"timestamp"`
@@ -52,12 +68,12 @@ type DataBoundaryRequest struct {
 type DataBoundaryResponse struct{ Body DataBoundary }
 
 type TestingDataFetcher interface {
-	PrepareDb(*deviceinfo.Schema, []DeviceData) error
+	PrepareDb(*deviceinfo.Schema, DeviceDataSlice) error
 }
 
 type DataFetcher interface {
 	TestingDataFetcher
-	GetData(metadata deviceinfo.DeviceInfo) ([]DeviceData, error)
+	GetData(metadata deviceinfo.DeviceInfo) (DeviceDataSlice, error)
 	GetDataBoundary(metadata deviceinfo.DeviceInfo) (DataBoundary, error)
 	Close() error
 }

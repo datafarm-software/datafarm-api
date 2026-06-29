@@ -60,7 +60,7 @@ func (i *InfluxDatafetcher) Close() error {
 }
 
 func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
-	[]DeviceData, error) {
+	DeviceDataSlice, error) {
 	formattedQueryRange, err := i.formatQueryRange(metadata.Start, metadata.Stop)
 	if err != nil {
 		return nil, err
@@ -207,7 +207,7 @@ func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
 	return dataBoundary, nil
 }
 
-func (i *InfluxDatafetcher) PrepareDb(*deviceinfo.Schema, []DeviceData) error {
+func (i *InfluxDatafetcher) PrepareDb(*deviceinfo.Schema, DeviceDataSlice) error {
 	return nil
 }
 
@@ -264,7 +264,7 @@ func (t *TestingInflux) Close() error {
 	return t.influx.Close()
 }
 
-func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, deviceData []DeviceData) error {
+func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, deviceData DeviceDataSlice) error {
 	if allDevicesInfo == nil {
 		return nil
 	}
@@ -348,7 +348,7 @@ func deviceInfoMap(allDevicesInfo *deviceinfo.Schema) map[string]deviceinfo.Devi
 }
 
 func (t *TestingInflux) GetData(metadata deviceinfo.DeviceInfo) (
-	[]DeviceData, error) {
+	DeviceDataSlice, error) {
 	return t.influx.GetData(metadata)
 }
 
