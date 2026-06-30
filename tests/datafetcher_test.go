@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -8,7 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestCsvInfo(t *testing.T) {
+func TestDeviceDataSliceCsvInfo(t *testing.T) {
 	tests := map[string]struct {
 		wantErr bool
 		input   datafetcher.DeviceDataSlice
@@ -123,15 +124,15 @@ func TestDeviceDataSliceCsv(t *testing.T) {
 	tests := map[string]struct {
 		wantErr bool
 		input   datafetcher.DeviceDataSlice
-		want    []string
+		want    string
 	}{
 
 		"single deviceid, single queryfield to csv": {
-			want: []string{
-				"", RegisteredQueryField, RegisteredDeviceId,
-				InsideTimeRange.Format(time.DateTime), "24",
-				AlsoInsideTimeRange.Format(time.DateTime), "25",
-			},
+			want: fmt.Sprintf(",%s\n%s,\n%s,%s\n%s,%s\n",
+				RegisteredQueryField, RegisteredDeviceId,
+				InsideTimeRange.Format(time.DateTime), "24.000",
+				AlsoInsideTimeRange.Format(time.DateTime), "25.000",
+			),
 			input: datafetcher.DeviceDataSlice{
 				{
 					DeviceID:   RegisteredDeviceId,
@@ -179,7 +180,7 @@ func TestDeviceDataSliceCsv(t *testing.T) {
 		// },
 	}
 
-	var got []string
+	var got string
 	var err error
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -189,7 +190,7 @@ func TestDeviceDataSliceCsv(t *testing.T) {
 			}
 			if !tc.wantErr {
 				if diff := cmp.Diff(tc.want, got); diff != "" {
-					t.Fatalf("headers mismatch: %v\n", diff)
+					t.Fatalf("csv string mismatch: %v\n", diff)
 				}
 			}
 		})

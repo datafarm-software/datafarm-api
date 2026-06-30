@@ -1,8 +1,10 @@
 package datafetcher
 
 import (
+	"encoding/csv"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
@@ -69,28 +71,69 @@ func (d DeviceDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
 	return csvInfo, nil
 }
 
-func (d DeviceDataSlice) Csv() (csvStr []string, err error) {
-	// 	if len(d) < 1 {
-	// 		return csvStr, EmptyDeviceData
-	// 	}
-	// 	headers, err := d.CsvInfo()
-	// 	if err != nil {
-	// 		return csvStr, fmt.Errorf("csvheaders: %v", err)
-	// 	}
-	// 	var str strings.Builder
-	// 	writer := csv.NewWriter(&str)
-	// 	if err := writer.Write(headers); err != nil {
-	// 		return csvStr, fmt.Errorf("headers: %v", err)
-	// 	}
-	// for _, inv := range s.Invites {
-	// 	if err := writer.Write(inv.ToRow()); err != nil {
-	// 		err = fmt.Errorf("writing invite row: %v", err)
-	// 		break
-	// 	}
-	// }
-	// writer.Flush()
-	// return str.String(), err
-	return csvStr, fmt.Errorf("not implemented")
+func (d DeviceDataSlice) Csv() (csvStr string, err error) {
+	if len(d) < 1 {
+		return csvStr, EmptyDeviceData
+	}
+	csvInfo, err := d.CsvInfo()
+	if err != nil {
+		return csvStr, fmt.Errorf("csvheaders: %v", err)
+	}
+	var str strings.Builder
+	writer := csv.NewWriter(&str)
+	blankStartingColumn := []string{""}
+	blankStartingColumn = append(blankStartingColumn, csvInfo.Headers...)
+	if err := writer.Write(blankStartingColumn); err != nil {
+		return csvStr, fmt.Errorf("writing headers: %v", err)
+	}
+	var deviceData DeviceData
+OuterLoop:
+	for deviceId, indexes := range csvInfo.DeviceIdIndexes {
+		err = writeDeviceIdRow(string(deviceId), len(csvInfo.Headers), writer)
+		if err != nil {
+			err = fmt.Errorf("writing deviceid row: %v", err)
+			break
+		}
+		for _, i := range indexes {
+			if len(d) <= i {
+				err = fmt.Errorf(
+					"deviceid: %s, gave index out of range: len(%d) <= %i",
+					deviceId, len(d), i)
+				break OuterLoop
+			}
+			deviceData = d[i]
+			err = writeDataRow(csvInfo.Headers, deviceData, writer)
+			if err != nil {
+				err = fmt.Errorf("writing row: %v", err)
+				break OuterLoop
+			}
+		}
+	}
+	writer.Flush()
+	return str.String(), err
+}
+
+func writeDeviceIdRow(deviceId string, columnCount int, writer *csv.Writer) (err error) {
+	deviceIdRow := []string{string(deviceId)}
+	for range columnCount {
+		deviceIdRow = append(deviceIdRow, "")
+	}
+	return writer.Write(deviceIdRow)
+}
+
+func writeDataRow(queryFieldColumns []string, deviceData DeviceData, writer *csv.Writer) error {
+	row := []string{deviceData.Timestamp.Format(time.DateTime)}
+	var v float64
+	var ok bool
+	for _, qf := range queryFieldColumns {
+		v, ok = deviceData.SensorData[qf]
+		if !ok {
+			row = append(row, "")
+		} else {
+			row = append(row, fmt.Sprintf("%.3f", v))
+		}
+	}
+	return writer.Write(row)
 }
 
 type DeviceData struct {
