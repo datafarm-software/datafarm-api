@@ -1,7 +1,10 @@
 package datafetcher
 
 import (
+	"encoding/csv"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
@@ -38,9 +41,17 @@ type BatchDeviceDataResponse struct {
 	Errors  []DeviceDataError `json:"errors"`
 }
 
+type DeviceId string
+type Indexes []uint
+
+type CsvInfo struct {
+	Headers         []string
+	DeviceIdIndexes map[DeviceId]Indexes
+}
+
 type DeviceDataSlice []DeviceData
 
-func (d DeviceDataSlice) CsvHeaders() ([]string, error) {
+func (d DeviceDataSlice) CsvInfo() ([]string, error) {
 	uniqueColumns := make([]string, 0, len(d))
 	if len(d) < 1 {
 		return nil, EmptyDeviceData
@@ -55,6 +66,30 @@ func (d DeviceDataSlice) CsvHeaders() ([]string, error) {
 		}
 	}
 	return uniqueColumns, nil
+}
+
+func (d DeviceDataSlice) Csv() (csvStr []string, err error) {
+	if len(d) < 1 {
+		return csvStr, EmptyDeviceData
+	}
+	headers, err := d.CsvInfo()
+	if err != nil {
+		return csvStr, fmt.Errorf("csvheaders: %v", err)
+	}
+	var str strings.Builder
+	writer := csv.NewWriter(&str)
+	if err := writer.Write(headers); err != nil {
+		return csvStr, fmt.Errorf("headers: %v", err)
+	}
+	// for _, inv := range s.Invites {
+	// 	if err := writer.Write(inv.ToRow()); err != nil {
+	// 		err = fmt.Errorf("writing invite row: %v", err)
+	// 		break
+	// 	}
+	// }
+	// writer.Flush()
+	// return str.Stringe), err
+	return csvStr, fmt.Errorf("not implemented")
 }
 
 type DeviceData struct {

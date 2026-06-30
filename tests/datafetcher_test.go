@@ -2,20 +2,26 @@ package tests
 
 import (
 	"testing"
+	"time"
 
 	"github.com/datafarm-software/datafarm-api/datafetcher"
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestDeviceDataSliceCsvHeaders(t *testing.T) {
+func TestCsvInfo(t *testing.T) {
 	tests := map[string]struct {
 		wantErr bool
 		input   datafetcher.DeviceDataSlice
-		want    []string
+		want    datafetcher.CsvInfo
 	}{
 
-		"successfully convert a device data slice queryfields to csv headers": {
-			want: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+		"single deviceid, single queryfield to csv info": {
+			want: datafetcher.CsvInfo{
+				Headers: []string{RegisteredQueryField},
+				DeviceIdIndexes: map[datafetcher.DeviceId]datafetcher.Indexes{
+					RegisteredDeviceId: {0, 1},
+				},
+			},
 			input: datafetcher.DeviceDataSlice{
 				{
 					DeviceID:   RegisteredDeviceId,
@@ -25,13 +31,40 @@ func TestDeviceDataSliceCsvHeaders(t *testing.T) {
 				{
 					DeviceID:   RegisteredDeviceId,
 					Timestamp:  AlsoInsideTimeRange,
-					SensorData: map[string]float64{AnotherRegisteredQueryField: 25},
+					SensorData: map[string]float64{RegisteredQueryField: 25},
+				},
+			},
+		},
+
+		"single deviceid, multiple queryfields to csv info": {
+			want: datafetcher.CsvInfo{
+				Headers: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+				DeviceIdIndexes: map[datafetcher.DeviceId]datafetcher.Indexes{
+					RegisteredDeviceId: {0, 1},
+				},
+			},
+			input: datafetcher.DeviceDataSlice{
+				{
+					DeviceID:   RegisteredDeviceId,
+					Timestamp:  InsideTimeRange,
+					SensorData: map[string]float64{RegisteredQueryField: 24},
+				},
+				{
+					DeviceID:   RegisteredDeviceId,
+					Timestamp:  AlsoInsideTimeRange,
+					SensorData: map[string]float64{AnotherRegisteredQueryField: 80},
 				},
 			},
 		},
 
 		"multiple deviceids but same queryfields": {
-			want: []string{RegisteredQueryField},
+			want: datafetcher.CsvInfo{
+				Headers: []string{RegisteredQueryField},
+				DeviceIdIndexes: map[datafetcher.DeviceId]datafetcher.Indexes{
+					RegisteredDeviceId:        {0},
+					AnotherRegisteredDeviceId: {1},
+				},
+			},
 			input: datafetcher.DeviceDataSlice{
 				{
 					DeviceID:   RegisteredDeviceId,
@@ -47,7 +80,58 @@ func TestDeviceDataSliceCsvHeaders(t *testing.T) {
 		},
 
 		"multiple deviceids multiple queryfields": {
-			want: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+			want: datafetcher.CsvInfo{
+				Headers: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+				DeviceIdIndexes: map[datafetcher.DeviceId]datafetcher.Indexes{
+					AnotherRegisteredDeviceId: {0},
+					RegisteredDeviceId:        {1},
+				},
+			},
+			input: datafetcher.DeviceDataSlice{
+				{
+					DeviceID:   AnotherRegisteredDeviceId,
+					Timestamp:  AlsoInsideTimeRange,
+					SensorData: map[string]float64{AnotherRegisteredQueryField: 80},
+				},
+				{
+					DeviceID:   RegisteredDeviceId,
+					Timestamp:  InsideTimeRange,
+					SensorData: map[string]float64{RegisteredQueryField: 24},
+				},
+			},
+		},
+	}
+
+	var got []string
+	var err error
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got, err = tc.input.CsvInfo()
+			if tc.wantErr != (err != nil) {
+				t.Fatalf("wantErr: %v, err: %v", tc.wantErr, err)
+			}
+			if !tc.wantErr {
+				if diff := cmp.Diff(tc.want, got); diff != "" {
+					t.Fatalf("headers mismatch: %v\n", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestDeviceDataSliceCsv(t *testing.T) {
+	tests := map[string]struct {
+		wantErr bool
+		input   datafetcher.DeviceDataSlice
+		want    []string
+	}{
+
+		"single deviceid, single queryfield to csv": {
+			want: []string{
+				"", RegisteredQueryField, RegisteredDeviceId,
+				InsideTimeRange.Format(time.DateTime), "24",
+				AlsoInsideTimeRange.Format(time.DateTime), "25",
+			},
 			input: datafetcher.DeviceDataSlice{
 				{
 					DeviceID:   RegisteredDeviceId,
@@ -55,18 +139,51 @@ func TestDeviceDataSliceCsvHeaders(t *testing.T) {
 					SensorData: map[string]float64{RegisteredQueryField: 24},
 				},
 				{
-					DeviceID:   AnotherRegisteredDeviceId,
+					DeviceID:   RegisteredDeviceId,
 					Timestamp:  AlsoInsideTimeRange,
-					SensorData: map[string]float64{AnotherRegisteredQueryField: 80},
+					SensorData: map[string]float64{RegisteredQueryField: 25},
 				},
 			},
 		},
+
+		// "multiple deviceids but same queryfields": {
+		// 	want: []string{RegisteredQueryField},
+		// 	input: datafetcher.DeviceDataSlice{
+		// 		{
+		// 			DeviceID:   RegisteredDeviceId,
+		// 			Timestamp:  InsideTimeRange,
+		// 			SensorData: map[string]float64{RegisteredQueryField: 24},
+		// 		},
+		// 		{
+		// 			DeviceID:   AnotherRegisteredDeviceId,
+		// 			Timestamp:  AlsoInsideTimeRange,
+		// 			SensorData: map[string]float64{RegisteredQueryField: 25},
+		// 		},
+		// 	},
+		// },
+		//
+		// "multiple deviceids multiple queryfields": {
+		// 	want: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+		// 	input: datafetcher.DeviceDataSlice{
+		// 		{
+		// 			DeviceID:   RegisteredDeviceId,
+		// 			Timestamp:  InsideTimeRange,
+		// 			SensorData: map[string]float64{RegisteredQueryField: 24},
+		// 		},
+		// 		{
+		// 			DeviceID:   AnotherRegisteredDeviceId,
+		// 			Timestamp:  AlsoInsideTimeRange,
+		// 			SensorData: map[string]float64{AnotherRegisteredQueryField: 80},
+		// 		},
+		// 	},
+		// },
 	}
+
 	var got []string
 	var err error
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err = tc.input.CsvHeaders()
+			got, err = tc.input.Csv()
 			if tc.wantErr != (err != nil) {
 				t.Fatalf("wantErr: %v, err: %v", tc.wantErr, err)
 			}
