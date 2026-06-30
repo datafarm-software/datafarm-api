@@ -147,37 +147,47 @@ func TestDeviceDataSliceCsv(t *testing.T) {
 			},
 		},
 
-		// "multiple deviceids but same queryfields": {
-		// 	want: []string{RegisteredQueryField},
-		// 	input: datafetcher.DeviceDataSlice{
-		// 		{
-		// 			DeviceID:   RegisteredDeviceId,
-		// 			Timestamp:  InsideTimeRange,
-		// 			SensorData: map[string]float64{RegisteredQueryField: 24},
-		// 		},
-		// 		{
-		// 			DeviceID:   AnotherRegisteredDeviceId,
-		// 			Timestamp:  AlsoInsideTimeRange,
-		// 			SensorData: map[string]float64{RegisteredQueryField: 25},
-		// 		},
-		// 	},
-		// },
-		//
-		// "multiple deviceids multiple queryfields": {
-		// 	want: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-		// 	input: datafetcher.DeviceDataSlice{
-		// 		{
-		// 			DeviceID:   RegisteredDeviceId,
-		// 			Timestamp:  InsideTimeRange,
-		// 			SensorData: map[string]float64{RegisteredQueryField: 24},
-		// 		},
-		// 		{
-		// 			DeviceID:   AnotherRegisteredDeviceId,
-		// 			Timestamp:  AlsoInsideTimeRange,
-		// 			SensorData: map[string]float64{AnotherRegisteredQueryField: 80},
-		// 		},
-		// 	},
-		// },
+		"multiple deviceids but same queryfields": {
+			want: fmt.Sprintf(",%s\n%s,\n%s,%s\n%s,\n%s,%s\n",
+				RegisteredQueryField, RegisteredDeviceId,
+				InsideTimeRange.Format(time.DateTime), "24.000",
+				AnotherRegisteredDeviceId,
+				AlsoInsideTimeRange.Format(time.DateTime), "25.000",
+			),
+			input: datafetcher.DeviceDataSlice{
+				{
+					DeviceID:   RegisteredDeviceId,
+					Timestamp:  InsideTimeRange,
+					SensorData: map[string]float64{RegisteredQueryField: 24},
+				},
+				{
+					DeviceID:   AnotherRegisteredDeviceId,
+					Timestamp:  AlsoInsideTimeRange,
+					SensorData: map[string]float64{RegisteredQueryField: 25},
+				},
+			},
+		},
+
+		"multiple deviceids multiple queryfields": {
+			want: fmt.Sprintf(",%s,%s\n%s,,\n%s,%s,\n%s,,\n%s,,%s\n",
+				RegisteredQueryField, AnotherRegisteredQueryField, RegisteredDeviceId,
+				InsideTimeRange.Format(time.DateTime), "24.000",
+				AnotherRegisteredDeviceId,
+				AlsoInsideTimeRange.Format(time.DateTime), "80.000",
+			),
+			input: datafetcher.DeviceDataSlice{
+				{
+					DeviceID:   RegisteredDeviceId,
+					Timestamp:  InsideTimeRange,
+					SensorData: map[string]float64{RegisteredQueryField: 24},
+				},
+				{
+					DeviceID:   AnotherRegisteredDeviceId,
+					Timestamp:  AlsoInsideTimeRange,
+					SensorData: map[string]float64{AnotherRegisteredQueryField: 80},
+				},
+			},
+		},
 	}
 
 	var got string
