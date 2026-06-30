@@ -1,10 +1,8 @@
 package datafetcher
 
 import (
-	"encoding/csv"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
@@ -42,7 +40,7 @@ type BatchDeviceDataResponse struct {
 }
 
 type DeviceId string
-type Indexes []uint
+type Indexes []int
 
 type CsvInfo struct {
 	Headers         []string
@@ -51,36 +49,39 @@ type CsvInfo struct {
 
 type DeviceDataSlice []DeviceData
 
-func (d DeviceDataSlice) CsvInfo() ([]string, error) {
-	uniqueColumns := make([]string, 0, len(d))
+func (d DeviceDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
+	csvInfo.Headers = make([]string, 0, len(d))
+	csvInfo.DeviceIdIndexes = make(map[DeviceId]Indexes)
 	if len(d) < 1 {
-		return nil, EmptyDeviceData
+		return csvInfo, EmptyDeviceData
 	}
 	queryFieldSeen := make(map[string]bool)
-	for _, dd := range d {
+	for i, dd := range d {
 		for qf, _ := range dd.SensorData {
+			csvInfo.DeviceIdIndexes[DeviceId(dd.DeviceID)] = append(
+				csvInfo.DeviceIdIndexes[DeviceId(dd.DeviceID)], i)
 			if !queryFieldSeen[qf] {
-				uniqueColumns = append(uniqueColumns, qf)
+				csvInfo.Headers = append(csvInfo.Headers, qf)
 				queryFieldSeen[qf] = true
 			}
 		}
 	}
-	return uniqueColumns, nil
+	return csvInfo, nil
 }
 
 func (d DeviceDataSlice) Csv() (csvStr []string, err error) {
-	if len(d) < 1 {
-		return csvStr, EmptyDeviceData
-	}
-	headers, err := d.CsvInfo()
-	if err != nil {
-		return csvStr, fmt.Errorf("csvheaders: %v", err)
-	}
-	var str strings.Builder
-	writer := csv.NewWriter(&str)
-	if err := writer.Write(headers); err != nil {
-		return csvStr, fmt.Errorf("headers: %v", err)
-	}
+	// 	if len(d) < 1 {
+	// 		return csvStr, EmptyDeviceData
+	// 	}
+	// 	headers, err := d.CsvInfo()
+	// 	if err != nil {
+	// 		return csvStr, fmt.Errorf("csvheaders: %v", err)
+	// 	}
+	// 	var str strings.Builder
+	// 	writer := csv.NewWriter(&str)
+	// 	if err := writer.Write(headers); err != nil {
+	// 		return csvStr, fmt.Errorf("headers: %v", err)
+	// 	}
 	// for _, inv := range s.Invites {
 	// 	if err := writer.Write(inv.ToRow()); err != nil {
 	// 		err = fmt.Errorf("writing invite row: %v", err)
@@ -88,7 +89,7 @@ func (d DeviceDataSlice) Csv() (csvStr []string, err error) {
 	// 	}
 	// }
 	// writer.Flush()
-	// return str.Stringe), err
+	// return str.String(), err
 	return csvStr, fmt.Errorf("not implemented")
 }
 

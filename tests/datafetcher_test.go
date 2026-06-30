@@ -81,7 +81,7 @@ func TestCsvInfo(t *testing.T) {
 
 		"multiple deviceids multiple queryfields": {
 			want: datafetcher.CsvInfo{
-				Headers: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+				Headers: []string{AnotherRegisteredQueryField, RegisteredQueryField},
 				DeviceIdIndexes: map[datafetcher.DeviceId]datafetcher.Indexes{
 					AnotherRegisteredDeviceId: {0},
 					RegisteredDeviceId:        {1},
@@ -102,7 +102,7 @@ func TestCsvInfo(t *testing.T) {
 		},
 	}
 
-	var got []string
+	var got datafetcher.CsvInfo
 	var err error
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -112,7 +112,7 @@ func TestCsvInfo(t *testing.T) {
 			}
 			if !tc.wantErr {
 				if diff := cmp.Diff(tc.want, got); diff != "" {
-					t.Fatalf("headers mismatch: %v\n", diff)
+					t.Fatalf("csvinfo mismatch: %v\n", diff)
 				}
 			}
 		})
