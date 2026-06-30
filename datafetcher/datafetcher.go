@@ -45,7 +45,6 @@ func (d DeviceDataSlice) CsvHeaders() ([]string, error) {
 	if len(d) < 1 {
 		return nil, EmptyDeviceData
 	}
-	uniqueColumns = append(uniqueColumns, d[0].DeviceID)
 	queryFieldSeen := make(map[string]bool)
 	for _, dd := range d {
 		for qf, _ := range dd.SensorData {

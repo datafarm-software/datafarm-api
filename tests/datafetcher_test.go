@@ -15,8 +15,7 @@ func TestDeviceDataSliceCsvHeaders(t *testing.T) {
 	}{
 
 		"successfully convert a device data slice queryfields to csv headers": {
-			want: []string{
-				RegisteredDeviceId, RegisteredQueryField, AnotherRegisteredQueryField},
+			want: []string{RegisteredQueryField, AnotherRegisteredQueryField},
 			input: datafetcher.DeviceDataSlice{
 				{
 					DeviceID:   RegisteredDeviceId,
@@ -27,6 +26,38 @@ func TestDeviceDataSliceCsvHeaders(t *testing.T) {
 					DeviceID:   RegisteredDeviceId,
 					Timestamp:  AlsoInsideTimeRange,
 					SensorData: map[string]float64{AnotherRegisteredQueryField: 25},
+				},
+			},
+		},
+
+		"multiple deviceids but same queryfields": {
+			want: []string{RegisteredQueryField},
+			input: datafetcher.DeviceDataSlice{
+				{
+					DeviceID:   RegisteredDeviceId,
+					Timestamp:  InsideTimeRange,
+					SensorData: map[string]float64{RegisteredQueryField: 24},
+				},
+				{
+					DeviceID:   AnotherRegisteredDeviceId,
+					Timestamp:  AlsoInsideTimeRange,
+					SensorData: map[string]float64{RegisteredQueryField: 25},
+				},
+			},
+		},
+
+		"multiple deviceids multiple queryfields": {
+			want: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+			input: datafetcher.DeviceDataSlice{
+				{
+					DeviceID:   RegisteredDeviceId,
+					Timestamp:  InsideTimeRange,
+					SensorData: map[string]float64{RegisteredQueryField: 24},
+				},
+				{
+					DeviceID:   AnotherRegisteredDeviceId,
+					Timestamp:  AlsoInsideTimeRange,
+					SensorData: map[string]float64{AnotherRegisteredQueryField: 80},
 				},
 			},
 		},
