@@ -147,6 +147,26 @@ func TestDeviceDataSliceCsv(t *testing.T) {
 			},
 		},
 
+		"single deviceid, multiple queryfield to csv": {
+			want: fmt.Sprintf(",%s,%s\n%s,,\n%s,%s,\n%s,,%s\n",
+				RegisteredQueryField, AnotherRegisteredQueryField, RegisteredDeviceId,
+				InsideTimeRange.Format(time.DateTime), "24.000",
+				AlsoInsideTimeRange.Format(time.DateTime), "80.000",
+			),
+			input: datafetcher.DeviceDataSlice{
+				{
+					DeviceID:   RegisteredDeviceId,
+					Timestamp:  InsideTimeRange,
+					SensorData: map[string]float64{RegisteredQueryField: 24},
+				},
+				{
+					DeviceID:   RegisteredDeviceId,
+					Timestamp:  AlsoInsideTimeRange,
+					SensorData: map[string]float64{AnotherRegisteredQueryField: 80},
+				},
+			},
+		},
+
 		"multiple deviceids but same queryfields": {
 			want: fmt.Sprintf(",%s\n%s,\n%s,%s\n%s,\n%s,%s\n",
 				RegisteredQueryField, RegisteredDeviceId,
