@@ -122,7 +122,7 @@ func writeDeviceIdRow(deviceId string, columnCount int, writer *csv.Writer) (err
 }
 
 func writeDataRow(queryFieldColumns []string, deviceData DeviceData, writer *csv.Writer) error {
-	row := []string{deviceData.Timestamp.Format(time.DateTime)}
+	row := []string{deviceData.Timestamp.Local().Format(time.DateTime)}
 	var v float64
 	var ok bool
 	for _, qf := range queryFieldColumns {
