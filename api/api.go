@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -94,6 +95,24 @@ func Start(opts ApiOpts) error {
 				Name:         "Authorization",
 				In:           "header",
 				BearerFormat: "Basic",
+			},
+		}
+		config.Formats["text/csv"] = huma.Format{
+			Marshal: func(w io.Writer, v any) error {
+				bytes, ok := v.([]byte)
+				if !ok {
+					return fmt.Errorf("expected []byte for CSV Output, got: %T", v)
+				}
+				_, err := w.Write(bytes)
+				return err
+			},
+			Unmarshal: func(data []byte, v any) error {
+				bytesTarget, ok := v.(*[]byte)
+				if !ok {
+					return fmt.Errorf("expected []byte for CSV Input, got: %T", v)
+				}
+				*bytesTarget = data
+				return nil
 			},
 		}
 		router := mux.NewRouter()

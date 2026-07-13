@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -33,8 +34,8 @@ const UnregisteredPassword = "@Password2"
 const RegisteredCompany = "company"
 const AnotherRegisteredCompany = "company2"
 const OtherCompanyThanDevice = "othercompany"
-const RegisteredNetwork = "Datafarm"
-const AnotherRegisteredNetwork = "Datafarm2"
+const RegisteredNetwork = "RegisteredNetwork"
+const AnotherRegisteredNetwork = "RegisteredNetwork2"
 const RegisteredDeviceId = "device1"
 const AnotherRegisteredDeviceId = "device2"
 const UnregisteredDeviceId = "unregistered1"
@@ -1197,6 +1198,24 @@ func TestGetSensorData(t *testing.T) {
 func setupHuma(t *testing.T) humatest.TestAPI {
 	router := mux.NewRouter()
 	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
+	config.Formats["text/csv"] = huma.Format{
+		Marshal: func(w io.Writer, v any) error {
+			bytes, ok := v.([]byte)
+			if !ok {
+				return fmt.Errorf("expected []byte for CSV Output, got: %T", v)
+			}
+			_, err := w.Write(bytes)
+			return err
+		},
+		Unmarshal: func(data []byte, v any) error {
+			bytesTarget, ok := v.(*[]byte)
+			if !ok {
+				return fmt.Errorf("expected []byte for CSV Input, got: %T", v)
+			}
+			*bytesTarget = data
+			return nil
+		},
+	}
 	humaApiMux := humamux.New(router, config)
 	humaTest := humatest.Wrap(t, humaApiMux)
 	localhuma.RegisterHumaOperations(humaTest,
@@ -3131,10 +3150,10 @@ func TestCsvGetSensorData(t *testing.T) {
 		gsdt GetSensorDataTest
 	}{
 
-		"successfully get deviceid data": {
-			want: fmt.Sprintf("%s,%s\n%s,%d",
-				RegisteredDeviceId, RegisteredQueryField,
-				InsideTimeRange.Format(time.DateTime), 23),
+		"single deviceid, single queryfield": {
+			want: fmt.Sprintf(",%s\n%s,\n%s,%s",
+				RegisteredQueryField, RegisteredDeviceId,
+				InsideTimeRange.Format(time.DateTime), "23.00"),
 			gsdt: GetSensorDataTest{wantErr: false,
 				wantStatus: http.StatusOK,
 				mockAuthStore: authstore.Schema{
@@ -3192,9 +3211,11 @@ func TestCsvGetSensorData(t *testing.T) {
 	defer db.Close()
 	humaTest := setupHuma(t)
 	var qp string
+	var close CloseFunc
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			setupGetSensorDataTest(t, tc.gsdt, db)
+			close = setupGetSensorDataTest(t, tc.gsdt, db)
+			defer close()
 			qp = makeQueryParams(tc.gsdt.deviceRequest)
 			route := "/device/" + tc.gsdt.deviceId + "/sensordata/csv" + qp
 			resp := humaTest.Get(route,

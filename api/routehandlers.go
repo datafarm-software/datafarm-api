@@ -121,12 +121,22 @@ func (a *Api) GetDeviceData(ctx context.Context,
 }
 
 func (a *Api) CsvGetDeviceData(ctx context.Context,
-	in *datafetcher.DeviceDataRequest) (*struct{ Body string }, error) {
-	_, err := a.getDeviceData(ctx, in)
+	in *datafetcher.DeviceDataRequest) (*struct {
+	Body []byte `contentType:"text/csv"`
+}, error) {
+	dd, err := a.getDeviceData(ctx, in)
 	if err != nil {
-		return nil, err
+		return nil, huma.Error500InternalServerError(
+			"Internal error while getting device data.")
 	}
-	return nil, fmt.Errorf("not implemented fully")
+	csvData, err := dd.Csv()
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"Internal error while converting device data to csv.")
+	}
+	return &struct {
+		Body []byte `contentType:"text/csv"`
+	}{[]byte(csvData)}, nil
 }
 
 const MaxDays = 90

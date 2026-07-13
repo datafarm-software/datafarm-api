@@ -25,7 +25,7 @@ func RegisterHumaOperations(api huma.API,
 	verifyToken func(ctx huma.Context, next func(huma.Context)),
 	getSensorData HumaHandler[datafetcher.DeviceDataRequest, datafetcher.DeviceDataResponse],
 	csvGetSensorData HumaHandler[datafetcher.DeviceDataRequest, struct {
-		Body string
+		Body []byte `contentType:"text/csv"`
 	}],
 	batchGetDeviceData HumaHandler[
 		struct {
