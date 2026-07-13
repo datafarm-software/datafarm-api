@@ -3142,6 +3142,7 @@ type GetSensorDataTest struct {
 	token           string
 	deviceId        string
 	deviceRequest   datafetcher.DeviceDataRequest
+	batchRequests   []datafetcher.DeviceDataRequest
 }
 
 func TestCsvGetSensorData(t *testing.T) {
@@ -3405,6 +3406,122 @@ func TestCsvGetSensorData(t *testing.T) {
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.gsdt.token),
 				"Content-Type: text/csv",
+			)
+			if resp.Code != tc.gsdt.wantStatus {
+				t.Fatalf("wantStatus: %d, response status: %d", tc.gsdt.wantStatus, resp.Code)
+			}
+			contentType := resp.Header().Get("Content-Type")
+			if contentType != "text/csv" {
+				t.Fatalf("response content-type not csv: %s", contentType)
+			}
+			defer resp.Result().Body.Close()
+			if !tc.gsdt.wantErr {
+				body := resp.Body.String()
+				if diff := cmp.Diff(tc.want, body); diff != "" {
+					t.Fatalf("response mismatch (-want +got):\n%s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestBatchCsvGetSensorData(t *testing.T) {
+	tests := map[string]struct {
+		want string
+		gsdt GetSensorDataTest
+	}{
+
+		"multiple deviceid, single queryfield": {
+			want: fmt.Sprintf(",%s\n%s,\n%s,%s\n%s,\n%s,%s",
+				RegisteredQueryField, RegisteredDeviceId,
+				InsideTimeRange.Format(time.DateTime), "23.000",
+				AnotherRegisteredDeviceId, InsideTimeRange.Format(time.DateTime),
+				"25.000"),
+			gsdt: GetSensorDataTest{wantErr: false,
+				wantStatus: http.StatusOK,
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.DeviceData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField: 23,
+						},
+					},
+					{
+						DeviceID:  AnotherRegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField: 25,
+						},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+				token: ValidToken,
+				batchRequests: []datafetcher.DeviceDataRequest{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+						Start:       RelativeStart,
+					},
+					{
+						DeviceId:    AnotherRegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+						Start:       RelativeStart,
+					},
+				},
+			},
+		},
+	}
+
+	db, err := miniredis.Run()
+	require.Nil(t, err)
+	defer db.Close()
+	humaTest := setupHuma(t)
+	var close CloseFunc
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			close = setupGetSensorDataTest(t, tc.gsdt, db)
+			defer close()
+			route := "/batch/device/sensordata/csv"
+			resp := humaTest.Post(route,
+				fmt.Sprintf(`Authorization: Bearer %s`, tc.gsdt.token),
+				"Content-Type: text/csv", tc.gsdt.batchRequests,
 			)
 			if resp.Code != tc.gsdt.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.gsdt.wantStatus, resp.Code)
