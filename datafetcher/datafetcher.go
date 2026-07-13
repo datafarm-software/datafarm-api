@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"log"
 	"slices"
 	"strings"
 	"time"
@@ -96,6 +97,7 @@ OuterLoop:
 			err = fmt.Errorf("writing deviceid row: %v", err)
 			break
 		}
+		log.Printf("deviceId: %s, indexes: %v", deviceId, indexes)
 		for _, i := range indexes {
 			if len(d) <= i {
 				err = fmt.Errorf(
@@ -104,6 +106,7 @@ OuterLoop:
 				break OuterLoop
 			}
 			deviceData = d[i]
+			log.Printf("writing data %d: %v", i, deviceData)
 			err = writeDataRow(csvInfo.Headers, deviceData, writer)
 			if err != nil {
 				err = fmt.Errorf("writing row: %v", err)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"slices"
@@ -78,6 +79,7 @@ func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("retrieved data: %v", dd)
 	return dd, nil
 }
 
@@ -295,11 +297,11 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, deviceData 
 	if err != nil {
 		return fmt.Errorf("buckets api: %v", err)
 	}
-	fields := make(map[string]any)
 	var writeApi influxApi.WriteAPI
 	var ok bool
 	var deviceInfo deviceinfo.DeviceInfo
 	for _, dd := range deviceData {
+		fields := make(map[string]any)
 		for key, value := range dd.SensorData {
 			fields[key] = value
 		}
@@ -308,6 +310,7 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, deviceData 
 			err = fmt.Errorf("could not find deviceInfo: %s", dd.DeviceID)
 		}
 		writeApi = t.influx.db.WriteAPI(testingInfluxOpts.Org, deviceInfo.Network)
+		log.Printf("writing: %s, %s, %v", dd.DeviceID, dd.Timestamp, fields)
 		p := influxdb2.NewPoint(
 			deviceInfo.Company,
 			map[string]string{
