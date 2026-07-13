@@ -122,7 +122,8 @@ func (a *Api) GetDeviceData(ctx context.Context,
 
 func (a *Api) CsvGetDeviceData(ctx context.Context,
 	in *datafetcher.DeviceDataRequest) (*struct {
-	Body []byte `contentType:"text/csv"`
+	ContentType string `header:"Content-Type"`
+	Body        []byte
 }, error) {
 	dd, err := a.getDeviceData(ctx, in)
 	if err != nil {
@@ -135,8 +136,9 @@ func (a *Api) CsvGetDeviceData(ctx context.Context,
 			"Internal error while converting device data to csv.")
 	}
 	return &struct {
-		Body []byte `contentType:"text/csv"`
-	}{[]byte(csvData)}, nil
+		ContentType string `header:"Content-Type"`
+		Body        []byte
+	}{"text/csv", []byte(csvData)}, nil
 }
 
 const MaxDays = 90

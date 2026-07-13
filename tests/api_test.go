@@ -3151,9 +3151,9 @@ func TestCsvGetSensorData(t *testing.T) {
 	}{
 
 		"single deviceid, single queryfield": {
-			want: fmt.Sprintf(",%s\n%s,\n%s,%s",
+			want: fmt.Sprintf(",%s\n%s,\n%s,%s\n",
 				RegisteredQueryField, RegisteredDeviceId,
-				InsideTimeRange.Format(time.DateTime), "23.00"),
+				InsideTimeRange.Format(time.DateTime), "23.000"),
 			gsdt: GetSensorDataTest{wantErr: false,
 				wantStatus: http.StatusOK,
 				mockAuthStore: authstore.Schema{
@@ -3224,6 +3224,10 @@ func TestCsvGetSensorData(t *testing.T) {
 			)
 			if resp.Code != tc.gsdt.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.gsdt.wantStatus, resp.Code)
+			}
+			contentType := resp.Header().Get("Content-Type")
+			if contentType != "text/csv" {
+				t.Fatalf("response content-type not csv: %s", contentType)
 			}
 			defer resp.Result().Body.Close()
 			if !tc.gsdt.wantErr {
