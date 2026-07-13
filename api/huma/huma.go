@@ -383,6 +383,14 @@ func RegisterHumaOperations(api huma.API,
 		Description: "Clients can use this route to request CSV formatted data from multiple device ids.",
 		RequestBody: &huma.RequestBody{},
 		Responses: map[string]*huma.Response{
+			"200": {
+				Description: "Format of the CSV file is dependent on each sensor's QueryFields.",
+				Content: map[string]*huma.MediaType{
+					"text/csv": {
+						Schema: &huma.Schema{Type: "string", Format: "binary"},
+					},
+				},
+			},
 			"500": {
 				Description: "Internal Server Error",
 				Content: map[string]*huma.MediaType{

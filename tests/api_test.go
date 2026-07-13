@@ -3432,7 +3432,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 	}{
 
 		"multiple deviceid, single queryfield": {
-			want: fmt.Sprintf(",%s\n%s,\n%s,%s\n%s,\n%s,%s",
+			want: fmt.Sprintf(",%s\n%s,\n%s,%s\n%s,\n%s,%s\n",
 				RegisteredQueryField, RegisteredDeviceId,
 				InsideTimeRange.Format(time.DateTime), "23.000",
 				AnotherRegisteredDeviceId, InsideTimeRange.Format(time.DateTime),
@@ -3521,7 +3521,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 			route := "/batch/device/sensordata/csv"
 			resp := humaTest.Post(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.gsdt.token),
-				"Content-Type: text/csv", tc.gsdt.batchRequests,
+				tc.gsdt.batchRequests,
 			)
 			if resp.Code != tc.gsdt.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.gsdt.wantStatus, resp.Code)
