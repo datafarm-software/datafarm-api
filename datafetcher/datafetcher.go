@@ -26,12 +26,7 @@ type DeviceDataRequest struct {
 	Stop        string   `query:"stop" json:"stop" required:"false" doc:"User specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop can only ever be in RFC3339 Format."`
 }
 
-type BatchDeviceDataRequest struct {
-	DeviceId    string   `json:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-	QueryFields []string `json:"queryFields" required:"true"`
-	Start       string   `query:"start" json:"start" required:"true" doc:"User specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days."`
-	Stop        string   `query:"stop" json:"stop" required:"false" doc:"User specified timestamps are treated as inclusive in returned data. If Start is in Relative Format, Stop field is not required. Stop can only ever be in RFC3339 Format."`
-}
+type BatchDeviceDataRequest []DeviceDataRequest
 
 type DeviceDataError struct {
 	DeviceId string `json:"deviceId"`

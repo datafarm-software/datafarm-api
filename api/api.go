@@ -123,8 +123,8 @@ func Start(opts ApiOpts) error {
 		localhuma.RegisterHumaOperations(humaApi,
 			api.RateLimit, api.VerifyToken,
 			api.GetDeviceData, api.CsvGetDeviceData, api.BatchGetDeviceData,
-			api.Login, api.GetQueryFields, api.BatchGetQueryFields, api.GetDeviceIds,
-			api.GetDeviceDataBoundary,
+			api.BatchCsvGetDeviceData, api.Login, api.GetQueryFields,
+			api.BatchGetQueryFields, api.GetDeviceIds, api.GetDeviceDataBoundary,
 		)
 		server := &http.Server{
 			Addr:    opts.Port,

@@ -28,12 +28,20 @@ func RegisterHumaOperations(api huma.API,
 		ContentType string `header:"Content-Type"`
 		Body        []byte
 	}],
-	batchGetDeviceData HumaHandler[
+	batchGetSensorData HumaHandler[
 		struct {
-			Body []datafetcher.BatchDeviceDataRequest
+			Body datafetcher.BatchDeviceDataRequest
 		},
 		struct {
 			Body datafetcher.BatchDeviceDataResponse
+		}],
+	batchCsvGetSensorData HumaHandler[
+		struct {
+			Body datafetcher.BatchDeviceDataRequest
+		},
+		struct {
+			ContentType string `header:"Content-Type"`
+			Body        []byte
 		}],
 	login HumaHandler[tokenprovider.LoginRequest, tokenprovider.LoginResponse],
 	getQueryFields HumaHandler[deviceinfo.QueryFieldsRequest, deviceinfo.QueryFieldsResponse],
@@ -365,6 +373,48 @@ func RegisterHumaOperations(api huma.API,
 
 	operation = huma.Operation{
 		Method:      "POST",
+		Path:        "/batch/device/sensordata/csv",
+		Middlewares: huma.Middlewares{rateLimit, verifyToken},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+		Tags:        []string{"POST"},
+		Summary:     "Batch Get CSV Sensor Data",
+		Description: "Clients can use this route to request CSV formatted data from multiple device ids.",
+		RequestBody: &huma.RequestBody{},
+		Responses: map[string]*huma.Response{
+			"500": {
+				Description: "Internal Server Error",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Internal Server Error",
+							Status: 500,
+							Detail: "Internal error while getting data for the device.",
+						},
+					}}},
+			"401": {
+				Description: "Unauthorized",
+				Content: map[string]*huma.MediaType{
+					"application/json": {
+						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
+						Example: HumaError{
+							Schema: "http://localhost:3030/schemas/ErrorModel.json",
+							Title:  "Unauthorized",
+							Status: http.StatusUnauthorized,
+							Detail: "Unknown user.",
+						},
+					},
+				},
+			},
+		},
+	}
+	huma.Register(api, operation, batchCsvGetSensorData)
+
+	operation = huma.Operation{
+		Method:      "POST",
 		Path:        "/batch/device/sensordata",
 		Middlewares: huma.Middlewares{rateLimit, verifyToken},
 		Security: []map[string][]string{
@@ -387,20 +437,6 @@ func RegisterHumaOperations(api huma.API,
 							Detail: "Internal error while getting data for the device.",
 						},
 					}}},
-			"400": {
-				Description: "Bad Request",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Bad Request",
-							Status: 400,
-							Detail: "Invalid start time.",
-						},
-					},
-				},
-			},
 			"401": {
 				Description: "Unauthorized",
 				Content: map[string]*huma.MediaType{
@@ -417,7 +453,7 @@ func RegisterHumaOperations(api huma.API,
 			},
 		},
 	}
-	huma.Register(api, operation, batchGetDeviceData)
+	huma.Register(api, operation, batchGetSensorData)
 
 	operation = huma.Operation{
 		Method:      "POST",

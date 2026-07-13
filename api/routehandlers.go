@@ -141,6 +141,29 @@ func (a *Api) CsvGetDeviceData(ctx context.Context,
 	}{"text/csv", []byte(csvData)}, nil
 }
 
+func (a *Api) BatchCsvGetDeviceData(ctx context.Context,
+	in *struct {
+		Body datafetcher.BatchDeviceDataRequest
+	}) (*struct {
+	ContentType string `header:"Content-Type"`
+	Body        []byte
+}, error) {
+	result, err := a.BatchGetDeviceData(ctx, in)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"Internal error while getting device data.")
+	}
+	csvData, err := result.Body.Results.Csv()
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"Internal error while converting device data to csv.")
+	}
+	return &struct {
+		ContentType string `header:"Content-Type"`
+		Body        []byte
+	}{"text/csv", []byte(csvData)}, nil
+}
+
 const MaxDays = 90
 const MaxMinutes = 129600
 const MaxSeconds = 7776000
@@ -369,7 +392,7 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 
 func (a *Api) BatchGetDeviceData(ctx context.Context,
 	in *struct {
-		Body []datafetcher.BatchDeviceDataRequest
+		Body datafetcher.BatchDeviceDataRequest
 	}) (*struct {
 	Body datafetcher.BatchDeviceDataResponse
 }, error) {
