@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -59,15 +60,16 @@ func (d DeviceDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
 	}
 	queryFieldSeen := make(map[string]bool)
 	for i, dd := range d {
+		csvInfo.DeviceIdIndexes[DeviceId(dd.DeviceID)] = append(
+			csvInfo.DeviceIdIndexes[DeviceId(dd.DeviceID)], i)
 		for qf, _ := range dd.SensorData {
-			csvInfo.DeviceIdIndexes[DeviceId(dd.DeviceID)] = append(
-				csvInfo.DeviceIdIndexes[DeviceId(dd.DeviceID)], i)
 			if !queryFieldSeen[qf] {
 				csvInfo.Headers = append(csvInfo.Headers, qf)
 				queryFieldSeen[qf] = true
 			}
 		}
 	}
+	slices.Sort(csvInfo.Headers)
 	return csvInfo, nil
 }
 
