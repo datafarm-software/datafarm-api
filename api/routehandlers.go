@@ -120,50 +120,6 @@ func (a *Api) GetDeviceData(ctx context.Context,
 	}, nil
 }
 
-func (a *Api) CsvGetDeviceData(ctx context.Context,
-	in *datafetcher.DeviceDataRequest) (*struct {
-	ContentType string `header:"Content-Type"`
-	Body        []byte
-}, error) {
-	dd, err := a.getDeviceData(ctx, in)
-	if err != nil {
-		return nil, huma.Error500InternalServerError(
-			"Internal error while getting device data.")
-	}
-	csvData, err := dd.Csv()
-	if err != nil {
-		return nil, huma.Error500InternalServerError(
-			"Internal error while converting device data to csv.")
-	}
-	return &struct {
-		ContentType string `header:"Content-Type"`
-		Body        []byte
-	}{"text/csv", []byte(csvData)}, nil
-}
-
-func (a *Api) BatchCsvGetDeviceData(ctx context.Context,
-	in *struct {
-		Body datafetcher.BatchDeviceDataRequest
-	}) (*struct {
-	ContentType string `header:"Content-Type"`
-	Body        []byte
-}, error) {
-	result, err := a.BatchGetDeviceData(ctx, in)
-	if err != nil {
-		return nil, huma.Error500InternalServerError(
-			"Internal error while getting device data.")
-	}
-	csvData, err := result.Body.Results.Csv()
-	if err != nil {
-		return nil, huma.Error500InternalServerError(
-			"Internal error while converting device data to csv.")
-	}
-	return &struct {
-		ContentType string `header:"Content-Type"`
-		Body        []byte
-	}{"text/csv", []byte(csvData)}, nil
-}
-
 const MaxDays = 90
 const MaxMinutes = 129600
 const MaxSeconds = 7776000
@@ -394,7 +350,7 @@ func (a *Api) BatchGetDeviceData(ctx context.Context,
 	in *struct {
 		Body datafetcher.BatchDeviceDataRequest
 	}) (*struct {
-	Body datafetcher.BatchDeviceDataResponse
+	Body *datafetcher.BatchDeviceDataResponse
 }, error) {
 	var dr datafetcher.DeviceDataRequest
 	var dataResp *datafetcher.DeviceDataResponse
@@ -419,9 +375,9 @@ func (a *Api) BatchGetDeviceData(ctx context.Context,
 		}
 	}
 	return &struct {
-		Body datafetcher.BatchDeviceDataResponse
+		Body *datafetcher.BatchDeviceDataResponse
 	}{
-		Body: datafetcher.BatchDeviceDataResponse{
+		Body: &datafetcher.BatchDeviceDataResponse{
 			Results: resultSlice,
 			Errors:  errSlice,
 		},

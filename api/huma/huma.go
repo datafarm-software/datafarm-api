@@ -29,7 +29,7 @@ func RegisterHumaOperations(api huma.API,
 			Body datafetcher.BatchDeviceDataRequest
 		},
 		struct {
-			Body datafetcher.BatchDeviceDataResponse
+			Body *datafetcher.BatchDeviceDataResponse
 		}],
 	login HumaHandler[tokenprovider.LoginRequest, tokenprovider.LoginResponse],
 	getQueryFields HumaHandler[deviceinfo.QueryFieldsRequest, deviceinfo.QueryFieldsResponse],
