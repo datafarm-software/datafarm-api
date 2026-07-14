@@ -126,6 +126,14 @@ func Start(opts ApiOpts) error {
 			api.BatchCsvGetDeviceData, api.Login, api.GetQueryFields,
 			api.BatchGetQueryFields, api.GetDeviceIds, api.GetDeviceDataBoundary,
 		)
+		spec := humaApi.OpenAPI()
+		op := spec.Paths["/batch/device/sensordata"].Post
+		resp := op.Responses["200"]
+		resp.Content["text/csv"] = &huma.MediaType{
+			Schema: &huma.Schema{
+				Type: "string",
+			},
+		}
 		server := &http.Server{
 			Addr:    opts.Port,
 			Handler: router,
