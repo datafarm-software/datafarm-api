@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -12,11 +11,10 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/datafarm-software/datafarm-api/api"
-	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
+	"github.com/datafarm-software/datafarm-api/api/huma"
 	"github.com/datafarm-software/datafarm-api/authstore"
 	"github.com/datafarm-software/datafarm-api/datafetcher"
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
@@ -1196,33 +1194,16 @@ func TestGetSensorData(t *testing.T) {
 }
 
 func setupHuma(t *testing.T) humatest.TestAPI {
+	_, config := api.SetupHumaRouter()
 	router := mux.NewRouter()
-	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.0")
-	config.Formats["text/csv"] = huma.Format{
-		Marshal: func(w io.Writer, v any) error {
-			bytes, ok := v.([]byte)
-			if !ok {
-				return fmt.Errorf("expected []byte for CSV Output, got: %T", v)
-			}
-			_, err := w.Write(bytes)
-			return err
-		},
-		Unmarshal: func(data []byte, v any) error {
-			bytesTarget, ok := v.(*[]byte)
-			if !ok {
-				return fmt.Errorf("expected []byte for CSV Input, got: %T", v)
-			}
-			*bytesTarget = data
-			return nil
-		},
-	}
-	humaApiMux := humamux.New(router, config)
-	humaTest := humatest.Wrap(t, humaApiMux)
-	localhuma.RegisterHumaOperations(humaTest,
-		a.RateLimit, a.VerifyToken, a.GetDeviceData, a.CsvGetDeviceData,
-		a.BatchGetDeviceData, a.BatchCsvGetDeviceData, a.Login, a.GetQueryFields,
-		a.BatchGetQueryFields, a.GetDeviceIds, a.GetDeviceDataBoundary)
-	return humaTest
+	humaApiMux := humamux.New(router, *config)
+	huma.RegisterHumaOperations(humaApiMux,
+		a.RateLimit, a.VerifyToken,
+		a.GetDeviceData, a.CsvGetDeviceData, a.BatchGetDeviceData,
+		a.BatchCsvGetDeviceData, a.Login, a.GetQueryFields,
+		a.BatchGetQueryFields, a.GetDeviceIds, a.GetDeviceDataBoundary,
+	)
+	return humatest.Wrap(t, humaApiMux)
 }
 
 func makeQueryParams(dr datafetcher.DeviceDataRequest) string {
@@ -3674,9 +3655,10 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			close = setupGetSensorDataTest(t, tc.gsdt, db)
 			defer close()
-			route := "/batch/device/sensordata/csv"
+			route := "/batch/device/sensordata"
 			resp := humaTest.Post(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.gsdt.token),
+				`Accept: text/csv`,
 				tc.gsdt.batchRequests,
 			)
 			if resp.Code != tc.gsdt.wantStatus {

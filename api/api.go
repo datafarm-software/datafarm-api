@@ -79,61 +79,7 @@ func Start(opts ApiOpts) error {
 	}
 	authstore.InitRoles()
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
-		config := huma.DefaultConfig("DataFarm SensorData API", "1.0.5")
-		config.DocsPath = "/api/v1/docs"
-		config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
-			"bearer": {
-				Type:         "http",
-				Scheme:       "bearer",
-				Name:         "Authorization",
-				In:           "header",
-				BearerFormat: "JWT",
-			},
-			"basic": {
-				Type:         "http",
-				Scheme:       "basic",
-				Name:         "Authorization",
-				In:           "header",
-				BearerFormat: "Basic",
-			},
-		}
-		config.Formats["text/csv"] = huma.Format{
-			Marshal: func(w io.Writer, v any) error {
-				bytes, ok := v.([]byte)
-				if !ok {
-					return fmt.Errorf("expected []byte for CSV Output, got: %T", v)
-				}
-				_, err := w.Write(bytes)
-				return err
-			},
-			Unmarshal: func(data []byte, v any) error {
-				bytesTarget, ok := v.(*[]byte)
-				if !ok {
-					return fmt.Errorf("expected []byte for CSV Input, got: %T", v)
-				}
-				*bytesTarget = data
-				return nil
-			},
-		}
-		router := mux.NewRouter()
-		humaApi := humamux.New(router, config)
-		humaApi.OpenAPI().Servers = append(humaApi.OpenAPI().Servers, &huma.Server{
-			URL: "/api/v1",
-		})
-		localhuma.RegisterHumaOperations(humaApi,
-			api.RateLimit, api.VerifyToken,
-			api.GetDeviceData, api.CsvGetDeviceData, api.BatchGetDeviceData,
-			api.BatchCsvGetDeviceData, api.Login, api.GetQueryFields,
-			api.BatchGetQueryFields, api.GetDeviceIds, api.GetDeviceDataBoundary,
-		)
-		spec := humaApi.OpenAPI()
-		op := spec.Paths["/batch/device/sensordata"].Post
-		resp := op.Responses["200"]
-		resp.Content["text/csv"] = &huma.MediaType{
-			Schema: &huma.Schema{
-				Type: "string",
-			},
-		}
+		router, _ := SetupHumaRouter()
 		server := &http.Server{
 			Addr:    opts.Port,
 			Handler: router,
@@ -153,6 +99,66 @@ func Start(opts ApiOpts) error {
 	})
 	cli.Run()
 	return nil
+}
+
+func SetupHumaRouter() (http.Handler, *huma.Config) {
+	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.5")
+	config.DocsPath = "/api/v1/docs"
+	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
+		"bearer": {
+			Type:         "http",
+			Scheme:       "bearer",
+			Name:         "Authorization",
+			In:           "header",
+			BearerFormat: "JWT",
+		},
+		"basic": {
+			Type:         "http",
+			Scheme:       "basic",
+			Name:         "Authorization",
+			In:           "header",
+			BearerFormat: "Basic",
+		},
+	}
+	config.Formats["text/csv"] = huma.Format{
+		Marshal: func(w io.Writer, v any) error {
+			bytes, ok := v.([]byte)
+			if !ok {
+				return fmt.Errorf("expected []byte for CSV Output, got: %T", v)
+			}
+			_, err := w.Write(bytes)
+			return err
+		},
+		Unmarshal: func(data []byte, v any) error {
+			bytesTarget, ok := v.(*[]byte)
+			if !ok {
+				return fmt.Errorf("expected []byte for CSV Input, got: %T", v)
+			}
+			*bytesTarget = data
+			return nil
+		},
+	}
+	router := mux.NewRouter()
+	humaApi := humamux.New(router, config)
+	humaApi.OpenAPI().Servers = append(humaApi.OpenAPI().Servers, &huma.Server{
+		URL: "/api/v1",
+	})
+	var a Api
+	localhuma.RegisterHumaOperations(humaApi,
+		a.RateLimit, a.VerifyToken,
+		a.GetDeviceData, a.CsvGetDeviceData, a.BatchGetDeviceData,
+		a.BatchCsvGetDeviceData, a.Login, a.GetQueryFields,
+		a.BatchGetQueryFields, a.GetDeviceIds, a.GetDeviceDataBoundary,
+	)
+	spec := humaApi.OpenAPI()
+	op := spec.Paths["/batch/device/sensordata"].Post
+	resp := op.Responses["200"]
+	resp.Content["text/csv"] = &huma.MediaType{
+		Schema: &huma.Schema{
+			Type: "string",
+		},
+	}
+	return router, &config
 }
 
 func (a *Api) Close() {
