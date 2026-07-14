@@ -37,6 +37,10 @@ type BatchDeviceDataResponse struct {
 	Errors  []DeviceDataError `json:"errors"`
 }
 
+func (b BatchDeviceDataResponse) Csv() (string, error) {
+	return "", fmt.Errorf("not implemented")
+}
+
 type DeviceId string
 type Indexes []int
 

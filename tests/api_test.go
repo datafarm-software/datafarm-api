@@ -1194,13 +1194,12 @@ func TestGetSensorData(t *testing.T) {
 }
 
 func setupHuma(t *testing.T) humatest.TestAPI {
-	_, config := api.SetupHumaRouter()
+	_, config := a.SetupHumaRouter()
 	router := mux.NewRouter()
 	humaApiMux := humamux.New(router, *config)
 	huma.RegisterHumaOperations(humaApiMux,
 		a.RateLimit, a.VerifyToken,
-		a.GetDeviceData, a.CsvGetDeviceData, a.BatchGetDeviceData,
-		a.BatchCsvGetDeviceData, a.Login, a.GetQueryFields,
+		a.GetDeviceData, a.BatchGetDeviceData, a.Login, a.GetQueryFields,
 		a.BatchGetQueryFields, a.GetDeviceIds, a.GetDeviceDataBoundary,
 	)
 	return humatest.Wrap(t, humaApiMux)
@@ -3639,6 +3638,44 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 					{
 						DeviceId:    AnotherRegisteredDeviceId,
 						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+						Start:       RelativeStart,
+					},
+				},
+			},
+		},
+
+		"multiple deviceid, all errors": {
+			want: fmt.Sprintf(",,\n,%s,%s\n,%s,%s\n", RegisteredDeviceId,
+				"some error", AnotherRegisteredDeviceId, "some error"),
+			gsdt: GetSensorDataTest{wantErr: false,
+				wantStatus: http.StatusOK,
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+				token: ValidToken,
+				batchRequests: []datafetcher.DeviceDataRequest{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+						Start:       RelativeStart,
+					},
+					{
+						DeviceId:    AnotherRegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
 						Start:       RelativeStart,
 					},
 				},

@@ -24,24 +24,12 @@ func RegisterHumaOperations(api huma.API,
 	rateLimit func(ctx huma.Context, next func(huma.Context)),
 	verifyToken func(ctx huma.Context, next func(huma.Context)),
 	getSensorData HumaHandler[datafetcher.DeviceDataRequest, datafetcher.DeviceDataResponse],
-	csvGetSensorData HumaHandler[datafetcher.DeviceDataRequest, struct {
-		ContentType string `header:"Content-Type"`
-		Body        []byte
-	}],
 	batchGetSensorData HumaHandler[
 		struct {
 			Body datafetcher.BatchDeviceDataRequest
 		},
 		struct {
 			Body datafetcher.BatchDeviceDataResponse
-		}],
-	batchCsvGetSensorData HumaHandler[
-		struct {
-			Body datafetcher.BatchDeviceDataRequest
-		},
-		struct {
-			ContentType string `header:"Content-Type"`
-			Body        []byte
 		}],
 	login HumaHandler[tokenprovider.LoginRequest, tokenprovider.LoginResponse],
 	getQueryFields HumaHandler[deviceinfo.QueryFieldsRequest, deviceinfo.QueryFieldsResponse],
@@ -140,98 +128,6 @@ func RegisterHumaOperations(api huma.API,
 		},
 	}
 	huma.Register(api, operation, getSensorData)
-
-	operation = huma.Operation{
-		Method:      "GET",
-		Path:        "/device/{deviceId}/sensordata/csv",
-		Middlewares: huma.Middlewares{rateLimit, verifyToken},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-		Parameters: []*huma.Param{
-			{
-				Name:        "deviceId",
-				In:          "path",
-				Description: "Device Id to request data from.",
-				Required:    true,
-				Schema: &huma.Schema{
-					Type:    "string",
-					Pattern: `^\w{1,30}$`,
-				},
-			},
-		},
-		Tags:        []string{"GET"},
-		Summary:     "Get CSV Sensor Data",
-		RequestBody: &huma.RequestBody{},
-		Responses: map[string]*huma.Response{
-			"200": {
-				Description: "Format of the CSV file is dependent on the sensor's QueryFields.",
-				Content: map[string]*huma.MediaType{
-					"text/csv": {
-						Schema: &huma.Schema{Type: "string", Format: "binary"},
-					},
-				},
-			},
-			"204": {
-				Description: "No SensorData for the requested time period.",
-			},
-			"500": {
-				Description: "Internal Server Error",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Internal Server Error",
-							Status: 500,
-							Detail: "Internal error while getting data for the device.",
-						},
-					}}},
-			"400": {
-				Description: "Bad Request",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Bad Request",
-							Status: 400,
-							Detail: "Invalid start time.",
-						},
-					},
-				},
-			},
-			"401": {
-				Description: "Unauthorized",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Unauthorized",
-							Status: http.StatusUnauthorized,
-							Detail: "Unknown user.",
-						},
-					},
-				},
-			},
-			"404": {
-				Description: "Not Found",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Not Found",
-							Status: http.StatusUnauthorized,
-							Detail: "Device Not Found.",
-						},
-					},
-				},
-			},
-		},
-	}
-	huma.Register(api, operation, csvGetSensorData)
 
 	operation = huma.Operation{
 		Method:      "POST",
@@ -369,56 +265,6 @@ func RegisterHumaOperations(api huma.API,
 		},
 	}
 	huma.Register(api, operation, getQueryFields)
-
-	operation = huma.Operation{
-		Method:      "POST",
-		Path:        "/batch/device/sensordata/csv",
-		Middlewares: huma.Middlewares{rateLimit, verifyToken},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-		Tags:        []string{"POST"},
-		Summary:     "Batch Get CSV Sensor Data",
-		Description: "Clients can use this route to request CSV formatted data from multiple device ids.",
-		RequestBody: &huma.RequestBody{},
-		Responses: map[string]*huma.Response{
-			"200": {
-				Description: "Format of the CSV file is dependent on each sensor's QueryFields.",
-				Content: map[string]*huma.MediaType{
-					"text/csv": {
-						Schema: &huma.Schema{Type: "string", Format: "binary"},
-					},
-				},
-			},
-			"500": {
-				Description: "Internal Server Error",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Internal Server Error",
-							Status: 500,
-							Detail: "Internal error while getting data for the device.",
-						},
-					}}},
-			"401": {
-				Description: "Unauthorized",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Unauthorized",
-							Status: http.StatusUnauthorized,
-							Detail: "Unknown user.",
-						},
-					},
-				},
-			},
-		},
-	}
-	huma.Register(api, operation, batchCsvGetSensorData)
 
 	operation = huma.Operation{
 		Method:      "POST",

@@ -79,7 +79,7 @@ func Start(opts ApiOpts) error {
 	}
 	authstore.InitRoles()
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
-		router, _ := SetupHumaRouter()
+		router, _ := api.SetupHumaRouter()
 		server := &http.Server{
 			Addr:    opts.Port,
 			Handler: router,
@@ -101,7 +101,7 @@ func Start(opts ApiOpts) error {
 	return nil
 }
 
-func SetupHumaRouter() (http.Handler, *huma.Config) {
+func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
 	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.5")
 	config.DocsPath = "/api/v1/docs"
 	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
@@ -140,11 +140,9 @@ func SetupHumaRouter() (http.Handler, *huma.Config) {
 	humaApi.OpenAPI().Servers = append(humaApi.OpenAPI().Servers, &huma.Server{
 		URL: "/api/v1",
 	})
-	var a Api
 	localhuma.RegisterHumaOperations(humaApi,
 		a.RateLimit, a.VerifyToken,
-		a.GetDeviceData, a.CsvGetDeviceData, a.BatchGetDeviceData,
-		a.BatchCsvGetDeviceData, a.Login, a.GetQueryFields,
+		a.GetDeviceData, a.BatchGetDeviceData, a.Login, a.GetQueryFields,
 		a.BatchGetQueryFields, a.GetDeviceIds, a.GetDeviceDataBoundary,
 	)
 	spec := humaApi.OpenAPI()
