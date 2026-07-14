@@ -162,7 +162,6 @@ func RegisterHumaOperations(api huma.API,
 		},
 		Tags:        []string{"GET"},
 		Summary:     "Get CSV Sensor Data",
-		Description: "Clients can use this route to request CSV formatted data from a sensor using its device id.",
 		RequestBody: &huma.RequestBody{},
 		Responses: map[string]*huma.Response{
 			"200": {

@@ -3383,10 +3383,10 @@ func TestCsvGetSensorData(t *testing.T) {
 			close = setupGetSensorDataTest(t, tc.gsdt, db)
 			defer close()
 			qp = makeQueryParams(tc.gsdt.deviceRequest)
-			route := "/device/" + tc.gsdt.deviceId + "/sensordata/csv" + qp
+			route := "/device/" + tc.gsdt.deviceId + "/sensordata" + qp
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.gsdt.token),
-				"Content-Type: text/csv",
+				"Accept: text/csv",
 			)
 			if resp.Code != tc.gsdt.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.gsdt.wantStatus, resp.Code)

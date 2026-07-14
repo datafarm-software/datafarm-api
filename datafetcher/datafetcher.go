@@ -40,6 +40,10 @@ type BatchDeviceDataResponse struct {
 type DeviceId string
 type Indexes []int
 
+type CsvMarshaller interface {
+	Csv() (string, error)
+}
+
 type CsvInfo struct {
 	Headers         []string
 	DeviceIdIndexes map[DeviceId]Indexes

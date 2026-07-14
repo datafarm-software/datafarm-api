@@ -120,22 +120,19 @@ func SetupHumaRouter() (http.Handler, *huma.Config) {
 			BearerFormat: "Basic",
 		},
 	}
+	config.DefaultFormat = "application/json"
 	config.Formats["text/csv"] = huma.Format{
 		Marshal: func(w io.Writer, v any) error {
-			bytes, ok := v.([]byte)
+			cm, ok := v.(datafetcher.CsvMarshaller)
 			if !ok {
-				return fmt.Errorf("expected []byte for CSV Output, got: %T", v)
+				return fmt.Errorf("csv marshal did not receive marshaller, got: %T", v)
 			}
-			_, err := w.Write(bytes)
+			csv, _ := cm.Csv()
+			_, err := w.Write([]byte(csv))
 			return err
 		},
 		Unmarshal: func(data []byte, v any) error {
-			bytesTarget, ok := v.(*[]byte)
-			if !ok {
-				return fmt.Errorf("expected []byte for CSV Input, got: %T", v)
-			}
-			*bytesTarget = data
-			return nil
+			return fmt.Errorf("text/csv request bodies are not supported")
 		},
 	}
 	router := mux.NewRouter()
@@ -155,7 +152,16 @@ func SetupHumaRouter() (http.Handler, *huma.Config) {
 	resp := op.Responses["200"]
 	resp.Content["text/csv"] = &huma.MediaType{
 		Schema: &huma.Schema{
-			Type: "string",
+			Description: "Clients are able to negotiate CSV formatted sensor data using the Accept header.",
+			Type:        "string",
+		},
+	}
+	op = spec.Paths["/device/{deviceId}/sensordata"].Get
+	resp = op.Responses["200"]
+	resp.Content["text/csv"] = &huma.MediaType{
+		Schema: &huma.Schema{
+			Description: "Clients are able to negotiate CSV formatted sensor data using the Accept header.",
+			Type:        "string",
 		},
 	}
 	return router, &config
