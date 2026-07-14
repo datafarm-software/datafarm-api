@@ -150,7 +150,7 @@ func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
 	resp := op.Responses["200"]
 	resp.Content["text/csv"] = &huma.MediaType{
 		Schema: &huma.Schema{
-			Description: "Clients are able to negotiate CSV formatted sensor data using the Accept header.",
+			Description: "Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect these to be included in the CSV file.",
 			Type:        "string",
 		},
 	}
@@ -158,7 +158,7 @@ func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
 	resp = op.Responses["200"]
 	resp.Content["text/csv"] = &huma.MediaType{
 		Schema: &huma.Schema{
-			Description: "Clients are able to negotiate CSV formatted sensor data using the Accept header.",
+			Description: "Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV file is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect the CSV data to be aborted and those errors to be returned as plain http response.",
 			Type:        "string",
 		},
 	}
