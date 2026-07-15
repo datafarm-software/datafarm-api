@@ -2,6 +2,7 @@ package huma
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"reflect"
 
@@ -16,6 +17,11 @@ type HumaError struct {
 	Title  string `json:"title" doc:"Name associated with error code."`
 	Status int    `json:"status" doc:"Http Status Code."`
 	Detail string `json:"detail" doc:"Human Readable explanation of what went wrong."`
+}
+
+func (h HumaError) Csv() (csvStr string, err error) {
+	return fmt.Sprintf("Title, Status, Detail\n%s,%d,%s\n",
+		h.Title, h.Status, h.Detail), nil
 }
 
 type HumaHandler[I, O any] func(context.Context, *I) (*O, error)

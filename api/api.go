@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
@@ -145,10 +146,17 @@ func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
 	config.Transformers = []huma.Transformer{
 		func(ctx huma.Context, status string, v any) (any, error) {
 			negotiatedContentType := ctx.Header("Accept")
-			if negotiatedContentType == "text/csv" {
-				return v, nil
+			if !strings.Contains(negotiatedContentType, "text/csv") {
+				return defaultTransformer.Transform(ctx, status, v)
 			}
-			return defaultTransformer.Transform(ctx, status, v)
+			if errM, ok := v.(*huma.ErrorModel); ok {
+				return localhuma.HumaError{
+					Title:  errM.Title,
+					Status: errM.Status,
+					Detail: errM.Detail,
+				}, nil
+			}
+			return v, nil
 		},
 	}
 	router := mux.NewRouter()
@@ -166,7 +174,7 @@ func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
 	resp := op.Responses["200"]
 	resp.Content["text/csv"] = &huma.MediaType{
 		Schema: &huma.Schema{
-			Description: "Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect these to be included in the CSV file.",
+			Description: "Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect these to be included in the CSV.",
 			Type:        "string",
 		},
 	}
@@ -174,7 +182,7 @@ func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
 	resp = op.Responses["200"]
 	resp.Content["text/csv"] = &huma.MediaType{
 		Schema: &huma.Schema{
-			Description: "Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV file is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect the CSV data to be aborted and those errors to be returned as plain http response.",
+			Description: "Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV file is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect these to be included in the CSV.",
 			Type:        "string",
 		},
 	}
