@@ -10,6 +10,9 @@
 *.json
 *.txt
 *.pem
+*.csv
+*#
+*~
 
 # Test binary, built with `go test -c`
 *.test

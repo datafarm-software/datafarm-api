@@ -135,6 +135,22 @@ func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
 			return fmt.Errorf("text/csv request bodies are not supported")
 		},
 	}
+	defaultTransformer := huma.NewSchemaLinkTransformer("#/components/schemas/", "/schemas")
+	config.CreateHooks = []func(huma.Config) huma.Config{
+		func(c huma.Config) huma.Config {
+			c.OnAddOperation = append(c.OnAddOperation, defaultTransformer.OnAddOperation)
+			return c
+		},
+	}
+	config.Transformers = []huma.Transformer{
+		func(ctx huma.Context, status string, v any) (any, error) {
+			negotiatedContentType := ctx.Header("Accept")
+			if negotiatedContentType == "text/csv" {
+				return v, nil
+			}
+			return defaultTransformer.Transform(ctx, status, v)
+		},
+	}
 	router := mux.NewRouter()
 	humaApi := humamux.New(router, config)
 	humaApi.OpenAPI().Servers = append(humaApi.OpenAPI().Servers, &huma.Server{
