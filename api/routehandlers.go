@@ -474,7 +474,6 @@ func (a *Api) GetDeviceDataBoundary(ctx context.Context, in *datafetcher.DataBou
 		authstore.GetDataBoundary) {
 		return nil, huma.Error500InternalServerError("Access denied to DataBoundary.")
 	}
-	log.Printf("deviceInfo: %v", di)
 	dataBoundary, err := a.DataFetcher.GetDataBoundary(di)
 	if err != nil {
 		log.Printf("%s getting data boundary: %v", user.Username, err)

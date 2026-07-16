@@ -84,8 +84,8 @@ func TestDeviceDataSliceCsvInfo(t *testing.T) {
 			want: datafetcher.CsvInfo{
 				Headers: []string{AnotherRegisteredQueryField, RegisteredQueryField},
 				DeviceIdIndexes: map[datafetcher.DeviceId]datafetcher.Indexes{
-					AnotherRegisteredDeviceId: {0},
-					RegisteredDeviceId:        {1},
+					RegisteredDeviceId:        {0},
+					AnotherRegisteredDeviceId: {1},
 				},
 			},
 			input: datafetcher.DeviceDataSlice{
@@ -189,11 +189,11 @@ func TestDeviceDataSliceCsv(t *testing.T) {
 		},
 
 		"multiple deviceids multiple queryfields": {
-			want: fmt.Sprintf(",%s,%s\n%s,,\n%s,%s,\n%s,,\n%s,,%s\n",
-				AnotherRegisteredQueryField, RegisteredQueryField, AnotherRegisteredDeviceId,
-				AlsoInsideTimeRange.Format(time.DateTime), "80.000",
-				RegisteredDeviceId,
+			want: fmt.Sprintf(",%s,%s\n%s,,\n%s,,%s\n%s,,\n%s,%s,\n",
+				AnotherRegisteredQueryField, RegisteredQueryField, RegisteredDeviceId,
 				InsideTimeRange.Format(time.DateTime), "24.000",
+				AnotherRegisteredDeviceId,
+				AlsoInsideTimeRange.Format(time.DateTime), "80.000",
 			),
 			input: datafetcher.DeviceDataSlice{
 				{

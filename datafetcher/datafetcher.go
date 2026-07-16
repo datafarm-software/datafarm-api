@@ -68,6 +68,9 @@ func (d DeviceDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
 		return csvInfo, EmptyDeviceData
 	}
 	queryFieldSeen := make(map[string]bool)
+	slices.SortFunc(d, func(a, b DeviceData) int {
+		return a.Timestamp.Compare(b.Timestamp)
+	})
 	for i, dd := range d {
 		csvInfo.DeviceIdIndexes[DeviceId(dd.DeviceID)] = append(
 			csvInfo.DeviceIdIndexes[DeviceId(dd.DeviceID)], i)
