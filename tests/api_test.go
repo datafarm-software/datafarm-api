@@ -14,7 +14,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/datafarm-software/datafarm-api/api"
-	"github.com/datafarm-software/datafarm-api/api/huma"
+	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
 	"github.com/datafarm-software/datafarm-api/authstore"
 	"github.com/datafarm-software/datafarm-api/datafetcher"
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
@@ -1194,15 +1194,11 @@ func TestGetSensorData(t *testing.T) {
 }
 
 func setupHuma(t *testing.T) humatest.TestAPI {
-	_, config := a.SetupHumaRouter()
+	config := localhuma.Config()
 	router := mux.NewRouter()
-	humaApiMux := humamux.New(router, *config)
-	huma.RegisterHumaOperations(humaApiMux,
-		a.RateLimit, a.VerifyToken,
-		a.GetDeviceData, a.BatchGetDeviceData, a.Login, a.GetQueryFields,
-		a.BatchGetQueryFields, a.GetDeviceIds, a.GetDeviceDataBoundary,
-	)
-	return humatest.Wrap(t, humaApiMux)
+	humaApi := humamux.New(router, config)
+	localhuma.SetupApi(humaApi, a)
+	return humatest.Wrap(t, humaApi)
 }
 
 func makeQueryParams(dr datafetcher.DeviceDataRequest) string {

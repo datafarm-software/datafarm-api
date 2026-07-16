@@ -3,14 +3,39 @@ package huma
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/datafarm-software/datafarm-api/datafetcher"
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
 	"github.com/datafarm-software/datafarm-api/tokenprovider"
 )
+
+type HumaOperator interface {
+	RateLimit(ctx huma.Context, next func(huma.Context))
+	VerifyToken(ctx huma.Context, next func(huma.Context))
+	GetSensorData(context.Context,
+		*datafetcher.DeviceDataRequest) (*datafetcher.DeviceDataResponse, error)
+	BatchGetSensorData(context.Context, *struct {
+		Body datafetcher.BatchDeviceDataRequest
+	}) (*struct {
+		Body *datafetcher.BatchDeviceDataResponse
+	}, error)
+	Login(context.Context, *tokenprovider.LoginRequest) (
+		*tokenprovider.LoginResponse, error)
+	GetQueryFields(context.Context, *deviceinfo.QueryFieldsRequest) (
+		*deviceinfo.QueryFieldsResponse, error)
+	BatchGetQueryFields(context.Context, *deviceinfo.BatchQueryFieldsRequest) (
+		*struct {
+			Body deviceinfo.BatchQueryFieldsResponse
+		}, error)
+	GetDeviceIds(context.Context, *struct{}) (*deviceinfo.DeviceIdsResponse, error)
+	GetDeviceDataBoundary(context.Context, *datafetcher.DataBoundaryRequest) (
+		*datafetcher.DataBoundaryResponse, error)
+}
 
 type HumaError struct {
 	Schema string `json:"$schema" doc:"Link to Object Model."`
@@ -24,36 +49,12 @@ func (h HumaError) Csv() (csvStr string, err error) {
 		h.Title, h.Status, h.Detail), nil
 }
 
-type HumaHandler[I, O any] func(context.Context, *I) (*O, error)
-
-func RegisterHumaOperations(api huma.API,
-	rateLimit func(ctx huma.Context, next func(huma.Context)),
-	verifyToken func(ctx huma.Context, next func(huma.Context)),
-	getSensorData HumaHandler[datafetcher.DeviceDataRequest, datafetcher.DeviceDataResponse],
-	batchGetSensorData HumaHandler[
-		struct {
-			Body datafetcher.BatchDeviceDataRequest
-		},
-		struct {
-			Body *datafetcher.BatchDeviceDataResponse
-		}],
-	login HumaHandler[tokenprovider.LoginRequest, tokenprovider.LoginResponse],
-	getQueryFields HumaHandler[deviceinfo.QueryFieldsRequest, deviceinfo.QueryFieldsResponse],
-	batchGetQueryFields HumaHandler[
-		deviceinfo.BatchQueryFieldsRequest,
-		struct {
-			Body deviceinfo.BatchQueryFieldsResponse
-		},
-	],
-	getDeviceIds HumaHandler[struct{}, deviceinfo.DeviceIdsResponse],
-	getDeviceDataBoundary HumaHandler[datafetcher.DataBoundaryRequest, datafetcher.DataBoundaryResponse],
-) {
+func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	registry := huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
-
 	operation := huma.Operation{
 		Method:      "GET",
 		Path:        "/device/{deviceId}/sensordata",
-		Middlewares: huma.Middlewares{rateLimit, verifyToken},
+		Middlewares: huma.Middlewares{ho.RateLimit, ho.VerifyToken},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -133,7 +134,7 @@ func RegisterHumaOperations(api huma.API,
 			},
 		},
 	}
-	huma.Register(api, operation, getSensorData)
+	huma.Register(api, operation, ho.GetSensorData)
 
 	operation = huma.Operation{
 		Method:      "POST",
@@ -188,13 +189,13 @@ func RegisterHumaOperations(api huma.API,
 			},
 		},
 	}
-	huma.Register(api, operation, login)
+	huma.Register(api, operation, ho.Login)
 
 	operation = huma.Operation{
 		Method:      "GET",
 		Path:        "/device/{deviceId}/queryfields",
 		Tags:        []string{"GET"},
-		Middlewares: huma.Middlewares{rateLimit, verifyToken},
+		Middlewares: huma.Middlewares{ho.RateLimit, ho.VerifyToken},
 		Summary:     "Get DeviceId QueryFields",
 		Description: "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor might have a 'temperature' QueryField.",
 		RequestBody: &huma.RequestBody{},
@@ -270,12 +271,12 @@ func RegisterHumaOperations(api huma.API,
 			},
 		},
 	}
-	huma.Register(api, operation, getQueryFields)
+	huma.Register(api, operation, ho.GetQueryFields)
 
 	operation = huma.Operation{
 		Method:      "POST",
 		Path:        "/batch/device/sensordata",
-		Middlewares: huma.Middlewares{rateLimit, verifyToken},
+		Middlewares: huma.Middlewares{ho.RateLimit, ho.VerifyToken},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -312,12 +313,12 @@ func RegisterHumaOperations(api huma.API,
 			},
 		},
 	}
-	huma.Register(api, operation, batchGetSensorData)
+	huma.Register(api, operation, ho.BatchGetSensorData)
 
 	operation = huma.Operation{
 		Method:      "POST",
 		Path:        "/batch/device/queryfields",
-		Middlewares: huma.Middlewares{rateLimit, verifyToken},
+		Middlewares: huma.Middlewares{ho.RateLimit, ho.VerifyToken},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -382,12 +383,12 @@ func RegisterHumaOperations(api huma.API,
 			},
 		},
 	}
-	huma.Register(api, operation, batchGetQueryFields)
+	huma.Register(api, operation, ho.BatchGetQueryFields)
 
 	operation = huma.Operation{
 		Method:      "GET",
 		Path:        "/device/ids",
-		Middlewares: huma.Middlewares{rateLimit, verifyToken},
+		Middlewares: huma.Middlewares{ho.RateLimit, ho.VerifyToken},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -424,13 +425,13 @@ func RegisterHumaOperations(api huma.API,
 			},
 		},
 	}
-	huma.Register(api, operation, getDeviceIds)
+	huma.Register(api, operation, ho.GetDeviceIds)
 
 	operation = huma.Operation{
 		Method:      "GET",
 		Path:        "/device/{deviceId}/databoundary",
 		Tags:        []string{"GET"},
-		Middlewares: huma.Middlewares{rateLimit, verifyToken},
+		Middlewares: huma.Middlewares{ho.RateLimit, ho.VerifyToken},
 		Summary:     "Get DeviceId DataBoundary",
 		Description: "Clients can use this route to get the device's DataBoundary. A DataBoundary contains the oldest and most recent sensordata timestamps for the device.",
 		RequestBody: &huma.RequestBody{},
@@ -506,5 +507,85 @@ func RegisterHumaOperations(api huma.API,
 			},
 		},
 	}
-	huma.Register(api, operation, getDeviceDataBoundary)
+	huma.Register(api, operation, ho.GetDeviceDataBoundary)
+}
+
+func Config() (config huma.Config) {
+	config = huma.DefaultConfig("DataFarm SensorData API", "1.0.5")
+	config.DocsPath = "/api/v1/docs"
+	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
+		"bearer": {
+			Type:         "http",
+			Scheme:       "bearer",
+			Name:         "Authorization",
+			In:           "header",
+			BearerFormat: "JWT",
+		},
+		"basic": {
+			Type:         "http",
+			Scheme:       "basic",
+			Name:         "Authorization",
+			In:           "header",
+			BearerFormat: "Basic",
+		},
+	}
+	config.DefaultFormat = "application/json"
+	config.Formats["text/csv"] = huma.Format{
+		Marshal: func(w io.Writer, v any) error {
+			cm, ok := v.(datafetcher.CsvMarshaller)
+			if !ok {
+				return fmt.Errorf("csv marshal did not receive marshaller, got: %T", v)
+			}
+			csv, _ := cm.Csv()
+			_, err := w.Write([]byte(csv))
+			return err
+		},
+		Unmarshal: func(data []byte, v any) error {
+			return fmt.Errorf("text/csv request bodies are not supported")
+		},
+	}
+	defaultTransformer := huma.NewSchemaLinkTransformer("#/components/schemas/", "/schemas")
+	config.CreateHooks = []func(huma.Config) huma.Config{
+		func(c huma.Config) huma.Config {
+			c.OnAddOperation = append(c.OnAddOperation, defaultTransformer.OnAddOperation)
+			return c
+		},
+	}
+	config.Transformers = []huma.Transformer{
+		func(ctx huma.Context, status string, v any) (any, error) {
+			negotiatedContentType := ctx.Header("Accept")
+			if !strings.Contains(negotiatedContentType, "text/csv") {
+				return defaultTransformer.Transform(ctx, status, v)
+			}
+			if errM, ok := v.(*huma.ErrorModel); ok {
+				return HumaError{
+					Title:  errM.Title,
+					Status: errM.Status,
+					Detail: errM.Detail,
+				}, nil
+			}
+			return v, nil
+		},
+	}
+	return
+}
+
+func SetupApi(humaApi huma.API, a HumaOperator) {
+	humaApi.OpenAPI().Servers = append(humaApi.OpenAPI().Servers, &huma.Server{
+		URL: "/api/v1",
+	})
+	csvMediaType := &huma.MediaType{
+		Schema: &huma.Schema{
+			Description: "Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect these to be included in the CSV.",
+			Type:        "string",
+		},
+	}
+	RegisterHumaOperations(humaApi, a)
+	spec := humaApi.OpenAPI()
+	op := spec.Paths["/batch/device/sensordata"].Post
+	resp := op.Responses["200"]
+	resp.Content["text/csv"] = csvMediaType
+	op = spec.Paths["/device/{deviceId}/sensordata"].Get
+	resp = op.Responses["200"]
+	resp.Content["text/csv"] = csvMediaType
 }

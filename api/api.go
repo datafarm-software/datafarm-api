@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
 	"regexp"
-	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
@@ -103,89 +101,10 @@ func Start(opts ApiOpts) error {
 }
 
 func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
-	config := huma.DefaultConfig("DataFarm SensorData API", "1.0.5")
-	config.DocsPath = "/api/v1/docs"
-	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
-		"bearer": {
-			Type:         "http",
-			Scheme:       "bearer",
-			Name:         "Authorization",
-			In:           "header",
-			BearerFormat: "JWT",
-		},
-		"basic": {
-			Type:         "http",
-			Scheme:       "basic",
-			Name:         "Authorization",
-			In:           "header",
-			BearerFormat: "Basic",
-		},
-	}
-	config.DefaultFormat = "application/json"
-	config.Formats["text/csv"] = huma.Format{
-		Marshal: func(w io.Writer, v any) error {
-			cm, ok := v.(datafetcher.CsvMarshaller)
-			if !ok {
-				return fmt.Errorf("csv marshal did not receive marshaller, got: %T", v)
-			}
-			csv, _ := cm.Csv()
-			_, err := w.Write([]byte(csv))
-			return err
-		},
-		Unmarshal: func(data []byte, v any) error {
-			return fmt.Errorf("text/csv request bodies are not supported")
-		},
-	}
-	defaultTransformer := huma.NewSchemaLinkTransformer("#/components/schemas/", "/schemas")
-	config.CreateHooks = []func(huma.Config) huma.Config{
-		func(c huma.Config) huma.Config {
-			c.OnAddOperation = append(c.OnAddOperation, defaultTransformer.OnAddOperation)
-			return c
-		},
-	}
-	config.Transformers = []huma.Transformer{
-		func(ctx huma.Context, status string, v any) (any, error) {
-			negotiatedContentType := ctx.Header("Accept")
-			if !strings.Contains(negotiatedContentType, "text/csv") {
-				return defaultTransformer.Transform(ctx, status, v)
-			}
-			if errM, ok := v.(*huma.ErrorModel); ok {
-				return localhuma.HumaError{
-					Title:  errM.Title,
-					Status: errM.Status,
-					Detail: errM.Detail,
-				}, nil
-			}
-			return v, nil
-		},
-	}
+	config := localhuma.Config()
 	router := mux.NewRouter()
 	humaApi := humamux.New(router, config)
-	humaApi.OpenAPI().Servers = append(humaApi.OpenAPI().Servers, &huma.Server{
-		URL: "/api/v1",
-	})
-	localhuma.RegisterHumaOperations(humaApi,
-		a.RateLimit, a.VerifyToken,
-		a.GetDeviceData, a.BatchGetDeviceData, a.Login, a.GetQueryFields,
-		a.BatchGetQueryFields, a.GetDeviceIds, a.GetDeviceDataBoundary,
-	)
-	spec := humaApi.OpenAPI()
-	op := spec.Paths["/batch/device/sensordata"].Post
-	resp := op.Responses["200"]
-	resp.Content["text/csv"] = &huma.MediaType{
-		Schema: &huma.Schema{
-			Description: "Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect these to be included in the CSV.",
-			Type:        "string",
-		},
-	}
-	op = spec.Paths["/device/{deviceId}/sensordata"].Get
-	resp = op.Responses["200"]
-	resp.Content["text/csv"] = &huma.MediaType{
-		Schema: &huma.Schema{
-			Description: "Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV file is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect these to be included in the CSV.",
-			Type:        "string",
-		},
-	}
+	localhuma.SetupApi(humaApi, a)
 	return router, &config
 }
 

@@ -105,7 +105,7 @@ func (a *Api) getDeviceData(
 	return deviceData, nil
 }
 
-func (a *Api) GetDeviceData(ctx context.Context,
+func (a *Api) GetSensorData(ctx context.Context,
 	in *datafetcher.DeviceDataRequest) (out *datafetcher.DeviceDataResponse, err error) {
 	deviceData, err := a.getDeviceData(ctx, in)
 	if err != nil {
@@ -346,7 +346,7 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 	return &deviceinfo.QueryFieldsResponse{Body: queryFields}, nil
 }
 
-func (a *Api) BatchGetDeviceData(ctx context.Context,
+func (a *Api) BatchGetSensorData(ctx context.Context,
 	in *struct {
 		Body datafetcher.BatchDeviceDataRequest
 	}) (*struct {
@@ -365,7 +365,7 @@ func (a *Api) BatchGetDeviceData(ctx context.Context,
 			Start:       bdr.Start,
 			Stop:        bdr.Stop,
 		}
-		dataResp, err = a.GetDeviceData(ctx, &dr)
+		dataResp, err = a.GetSensorData(ctx, &dr)
 		if err == nil {
 			resultSlice = append(resultSlice, dataResp.Body...)
 		} else {
