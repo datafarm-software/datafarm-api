@@ -17,9 +17,9 @@ import (
 type HumaOperator interface {
 	RateLimit(ctx huma.Context, next func(huma.Context))
 	VerifyToken(ctx huma.Context, next func(huma.Context))
-	GetSensorData(context.Context,
+	GetDeviceData(context.Context,
 		*datafetcher.DeviceDataRequest) (*datafetcher.DeviceDataResponse, error)
-	BatchGetSensorData(context.Context, *struct {
+	BatchGetDeviceData(context.Context, *struct {
 		Body datafetcher.BatchDeviceDataRequest
 	}) (*struct {
 		Body *datafetcher.BatchDeviceDataResponse
@@ -134,7 +134,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 			},
 		},
 	}
-	huma.Register(api, operation, ho.GetSensorData)
+	huma.Register(api, operation, ho.GetDeviceData)
 
 	operation = huma.Operation{
 		Method:      "POST",
@@ -313,7 +313,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 			},
 		},
 	}
-	huma.Register(api, operation, ho.BatchGetSensorData)
+	huma.Register(api, operation, ho.BatchGetDeviceData)
 
 	operation = huma.Operation{
 		Method:      "POST",
