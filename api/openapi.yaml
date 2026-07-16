@@ -1019,7 +1019,7 @@ components:
             type: object
             additionalProperties: false
             properties:
-                DeviceId:
+                deviceId:
                     type: string
                     pattern: ^[a-zA-Z0-9]{1,30}$
                 queryFields:
@@ -1034,7 +1034,7 @@ components:
                     type: string
                     description: User specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop can only ever be in RFC3339 Format.
             required:
-                - DeviceId
+                - deviceId
                 - queryFields
                 - start
         ErrorDetail:
