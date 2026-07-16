@@ -2906,6 +2906,7 @@ func TestGetDataBoundary(t *testing.T) {
 					Timestamp: InsideTimeRange,
 					SensorData: map[string]float64{
 						RegisteredQueryField: 23,
+						"batv":               3.4,
 					},
 				},
 				{
@@ -2913,6 +2914,7 @@ func TestGetDataBoundary(t *testing.T) {
 					Timestamp: AlsoInsideTimeRange,
 					SensorData: map[string]float64{
 						RegisteredQueryField: 23,
+						"batv":               3.4,
 					},
 				},
 			},
@@ -2965,6 +2967,7 @@ func TestGetDataBoundary(t *testing.T) {
 					Timestamp: InsideTimeRange,
 					SensorData: map[string]float64{
 						RegisteredQueryField: 23,
+						"batv":               3.4,
 					},
 				},
 				{
@@ -2972,6 +2975,7 @@ func TestGetDataBoundary(t *testing.T) {
 					Timestamp: AlsoInsideTimeRange,
 					SensorData: map[string]float64{
 						RegisteredQueryField: 23,
+						"batv":               3.4,
 					},
 				},
 			},
@@ -3024,6 +3028,7 @@ func TestGetDataBoundary(t *testing.T) {
 					Timestamp: InsideTimeRange,
 					SensorData: map[string]float64{
 						RegisteredQueryField: 23,
+						"batv":               3.4,
 					},
 				},
 				{
@@ -3031,6 +3036,7 @@ func TestGetDataBoundary(t *testing.T) {
 					Timestamp: AlsoInsideTimeRange,
 					SensorData: map[string]float64{
 						RegisteredQueryField: 23,
+						"batv":               3.4,
 					},
 				},
 			},
