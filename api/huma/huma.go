@@ -511,7 +511,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 }
 
 func Config() (config huma.Config) {
-	config = huma.DefaultConfig("DataFarm SensorData API", "1.1.0")
+	config = huma.DefaultConfig("DataFarm SensorData API", "1.1.1")
 	config.Info.Description = `
 ⚠️ **Warning**
 You are visiting the legacy home of our API. The API is scheduled to move exclusively to www.api.datafarm.co.za/v1/docs on Monday 27 July 2026. Please contact us should you have any concerns around migrating.
@@ -534,7 +534,7 @@ Accept: text/csv
 
 ### Contributing
 
-DataFarm welcomes external contribution by Open Sourcing our API under the GPL-3.0 License. If you would like to contribute please visit the project's Github page to get started: www.github.com/datafarm-software/datafarm-api.
+DataFarm welcomes external contribution through Open Source under the GPL-3.0 License. If you would like to contribute please visit the project's Github page to get started: www.github.com/datafarm-software/datafarm-api.
 `
 	config.DocsPath = "/api/v1/docs"
 	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
