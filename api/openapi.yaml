@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
-    title: SensorData API
-    version: 1.0.0
+    title: DataFarm SensorData API
+    version: 1.1.0
 servers:
     - url: /api/v1
 paths:
@@ -166,7 +166,7 @@ paths:
                         schema:
                             type: array
                             items:
-                                $ref: '#/components/schemas/BatchDeviceDataRequest'
+                                $ref: '#/components/schemas/DeviceDataRequest'
                 required: true
             responses:
                 "200":
@@ -175,37 +175,10 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/BatchDeviceDataResponse'
-                "400":
-                    description: Bad Request
-                    content:
-                        application/json:
+                        text/csv:
                             schema:
-                                type: object
-                                additionalProperties: false
-                                properties:
-                                    $schema:
-                                        type: string
-                                        description: Link to Object Model.
-                                    detail:
-                                        type: string
-                                        description: Human Readable explanation of what went wrong.
-                                    status:
-                                        type: integer
-                                        description: Http Status Code.
-                                        format: int64
-                                    title:
-                                        type: string
-                                        description: Name associated with error code.
-                                required:
-                                    - $schema
-                                    - title
-                                    - status
-                                    - detail
-                            example:
-                                schema: http://localhost:3030/schemas/ErrorModel.json
-                                title: Bad Request
-                                status: 400
-                                detail: Invalid start time.
+                                type: string
+                                description: Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect these to be included in the CSV.
                 "401":
                     description: Unauthorized
                     content:
@@ -618,8 +591,12 @@ paths:
                                 type: array
                                 items:
                                     $ref: '#/components/schemas/DeviceData'
+                        text/csv:
+                            schema:
+                                type: string
+                                description: Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect these to be included in the CSV.
                 "204":
-                    description: No Content
+                    description: No SensorData for the requested time period.
                 "400":
                     description: Bad Request
                     content:
@@ -942,27 +919,6 @@ paths:
                 - basic: []
 components:
     schemas:
-        BatchDeviceDataRequest:
-            type: object
-            additionalProperties: false
-            properties:
-                deviceId:
-                    type: string
-                    pattern: ^[a-zA-Z0-9]{1,30}$
-                queryFields:
-                    type: array
-                    items:
-                        type: string
-                start:
-                    type: string
-                    description: User specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days.
-                stop:
-                    type: string
-                    description: User specified timestamps are treated as inclusive in returned data. If Start is in Relative Format, Stop field is not required. Stop can only ever be in RFC3339 Format.
-            required:
-                - deviceId
-                - queryFields
-                - start
         BatchDeviceDataResponse:
             type: object
             additionalProperties: false
@@ -1059,6 +1015,28 @@ components:
             required:
                 - deviceId
                 - error
+        DeviceDataRequest:
+            type: object
+            additionalProperties: false
+            properties:
+                deviceId:
+                    type: string
+                    pattern: ^[a-zA-Z0-9]{1,30}$
+                queryFields:
+                    type: array
+                    description: 'If all QueryFields desired, set ?queryField=all. Multiple QueryFields supported using format: ?queryField=temperature&queryField=humidity.'
+                    items:
+                        type: string
+                start:
+                    type: string
+                    description: User specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days.
+                stop:
+                    type: string
+                    description: User specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop can only ever be in RFC3339 Format.
+            required:
+                - deviceId
+                - queryFields
+                - start
         ErrorDetail:
             type: object
             additionalProperties: false
@@ -1140,3 +1118,16 @@ components:
             required:
                 - deviceId
                 - error
+    securitySchemes:
+        basic:
+            type: http
+            name: Authorization
+            in: header
+            scheme: basic
+            bearerFormat: Basic
+        bearer:
+            type: http
+            name: Authorization
+            in: header
+            scheme: bearer
+            bearerFormat: JWT

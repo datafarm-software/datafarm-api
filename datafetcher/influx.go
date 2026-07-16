@@ -60,7 +60,7 @@ func (i *InfluxDatafetcher) Close() error {
 }
 
 func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
-	[]DeviceData, error) {
+	DeviceDataSlice, error) {
 	formattedQueryRange, err := i.formatQueryRange(metadata.Start, metadata.Stop)
 	if err != nil {
 		return nil, err
@@ -207,7 +207,7 @@ func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
 	return dataBoundary, nil
 }
 
-func (i *InfluxDatafetcher) PrepareDb(*deviceinfo.Schema, []DeviceData) error {
+func (i *InfluxDatafetcher) PrepareDb(*deviceinfo.Schema, DeviceDataSlice) error {
 	return nil
 }
 
@@ -255,13 +255,16 @@ func (t *TestingInflux) Close() error {
 	if err != nil {
 		return fmt.Errorf("finding org: %v", err)
 	}
+	if org == nil {
+		return fmt.Errorf("returned org is nil")
+	}
 	if err = orgApi.DeleteOrganization(ctx, org); err != nil {
 		return fmt.Errorf("deleting org: %v", err)
 	}
 	return t.influx.Close()
 }
 
-func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, deviceData []DeviceData) error {
+func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, deviceData DeviceDataSlice) error {
 	if allDevicesInfo == nil {
 		return nil
 	}
@@ -282,17 +285,21 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, deviceData 
 		}
 		uniqueNetworks = append(uniqueNetworks, dd.Network)
 		if _, err = bucketsApi.CreateBucketWithName(ctx, org, dd.Network); err != nil {
-			break
+			if strings.Contains(err.Error(), "exists") {
+				err = nil
+			} else {
+				break
+			}
 		}
 	}
 	if err != nil {
 		return fmt.Errorf("buckets api: %v", err)
 	}
-	fields := make(map[string]any)
 	var writeApi influxApi.WriteAPI
 	var ok bool
 	var deviceInfo deviceinfo.DeviceInfo
 	for _, dd := range deviceData {
+		fields := make(map[string]any)
 		for key, value := range dd.SensorData {
 			fields[key] = value
 		}
@@ -335,7 +342,7 @@ func deviceInfoMap(allDevicesInfo *deviceinfo.Schema) map[string]deviceinfo.Devi
 }
 
 func (t *TestingInflux) GetData(metadata deviceinfo.DeviceInfo) (
-	[]DeviceData, error) {
+	DeviceDataSlice, error) {
 	return t.influx.GetData(metadata)
 }
 
