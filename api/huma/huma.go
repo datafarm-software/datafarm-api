@@ -511,7 +511,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 }
 
 func Config() (config huma.Config) {
-	config = huma.DefaultConfig("DataFarm SensorData API", "1.0.5")
+	config = huma.DefaultConfig("DataFarm SensorData API", "1.1.0")
 	config.DocsPath = "/api/v1/docs"
 	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 		"bearer": {
