@@ -511,7 +511,31 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 }
 
 func Config() (config huma.Config) {
-	config = huma.DefaultConfig("DataFarm SensorData API", "1.1.0")
+	config = huma.DefaultConfig("DataFarm SensorData API", "1.1.1")
+	config.Info.Description = `
+⚠️ **Warning**
+You are visiting the legacy home of our API. The API is scheduled to move exclusively to www.api.datafarm.co.za/v1/docs on Monday 27 July 2026. Please contact us should you have any concerns around migrating.
+	
+## Welcome
+
+The DataFarm SensorData API provides our clients access to Sensor Data,
+Device Metadata, and export functionality.
+
+### Authentication
+
+A Bearer token should first be obtained from the Login endpoint. All subsequent endpoints will require this for authentication.
+
+### Content Types
+
+All endpoints support JSON by default. Selected endpoints also support CSV by
+setting request header:
+
+Accept: text/csv
+
+### Contributing
+
+DataFarm welcomes external contribution through Open Source under the GPL-3.0 License. If you would like to contribute please visit the project's Github page to get started: www.github.com/datafarm-software/datafarm-api.
+`
 	config.DocsPath = "/api/v1/docs"
 	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 		"bearer": {
