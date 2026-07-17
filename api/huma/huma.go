@@ -511,15 +511,12 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 }
 
 func Config() (config huma.Config) {
-	config = huma.DefaultConfig("DataFarm SensorData API", "1.1.1")
+	config = huma.DefaultConfig("DataFarm SensorData API", "1.1.2")
 	config.Info.Description = `
-⚠️ **Warning**
-You are visiting the legacy home of our API. The API is scheduled to move exclusively to www.api.datafarm.co.za/v1/docs on Monday 27 July 2026. Please contact us should you have any concerns around migrating.
-	
 ## Welcome
 
-The DataFarm SensorData API provides our clients access to Sensor Data,
-Device Metadata, and export functionality.
+The DataFarm SensorData API provides our clients with access to their Sensor Data,
+Device Metadata, and Export Functionality.
 
 ### Authentication
 
@@ -534,9 +531,9 @@ Accept: text/csv
 
 ### Contributing
 
-DataFarm welcomes external contribution through Open Source under the GPL-3.0 License. If you would like to contribute please visit the project's Github page to get started: www.github.com/datafarm-software/datafarm-api.
+DataFarm welcomes external contribution to the API, through Open Source under the GPL-3.0 License. If you would like to contribute please visit the project's Github page to get started: www.github.com/datafarm-software/datafarm-api.
 `
-	config.DocsPath = "/api/v1/docs"
+	config.DocsPath = "/v1/docs"
 	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 		"bearer": {
 			Type:         "http",
@@ -596,7 +593,7 @@ DataFarm welcomes external contribution through Open Source under the GPL-3.0 Li
 
 func SetupApi(humaApi huma.API, a HumaOperator) {
 	humaApi.OpenAPI().Servers = append(humaApi.OpenAPI().Servers, &huma.Server{
-		URL: "/api/v1",
+		URL: "/v1",
 	})
 	csvMediaType := &huma.MediaType{
 		Schema: &huma.Schema{

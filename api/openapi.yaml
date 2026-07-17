@@ -2,13 +2,10 @@ openapi: 3.1.0
 info:
     title: DataFarm SensorData API
     description: |4
-        ⚠️ **Warning**
-        You are visiting the legacy home of our API. The API is scheduled to move exclusively to www.api.datafarm.co.za/v1/docs on Monday 27 July 2026. Please contact us should you have any concerns around migrating.
-        	
         ## Welcome
 
-        The DataFarm SensorData API provides our clients access to Sensor Data,
-        Device Metadata, and export functionality.
+        The DataFarm SensorData API provides our clients with access to their Sensor Data,
+        Device Metadata, and Export Functionality.
 
         ### Authentication
 
@@ -23,10 +20,10 @@ info:
 
         ### Contributing
 
-        DataFarm welcomes external contribution through Open Source under the GPL-3.0 License. If you would like to contribute please visit the project's Github page to get started: www.github.com/datafarm-software/datafarm-api.
-    version: 1.1.1
+        DataFarm welcomes external contribution to the API, through Open Source under the GPL-3.0 License. If you would like to contribute please visit the project's Github page to get started: www.github.com/datafarm-software/datafarm-api.
+    version: 1.1.2
 servers:
-    - url: /api/v1
+    - url: /v1
 paths:
     /batch/device/queryfields:
         post:
