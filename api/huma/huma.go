@@ -14,8 +14,17 @@ import (
 	"github.com/datafarm-software/datafarm-api/tokenprovider"
 )
 
+type Mode int
+
+const (
+	Production Mode = iota
+	Development
+)
+
+const MajorApiVersionRoutePrefix = "/v1"
+
 type HumaOperator interface {
-	Mode() string
+	Mode() Mode
 	RateLimit(ctx huma.Context, next func(huma.Context))
 	VerifyToken(ctx huma.Context, next func(huma.Context))
 	GetDeviceData(context.Context,
@@ -511,7 +520,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	huma.Register(api, operation, ho.GetDeviceDataBoundary)
 }
 
-func Config() (config huma.Config) {
+func Config(mode Mode) (config huma.Config) {
 	config = huma.DefaultConfig("DataFarm SensorData API", "1.1.2")
 	config.Info.Description = `
 ## Welcome
@@ -534,7 +543,11 @@ Accept: text/csv
 
 DataFarm welcomes external contribution to the API, through Open Source under the GPL-3.0 License. If you would like to contribute please visit the project's Github page to get started: www.github.com/datafarm-software/datafarm-api.
 `
-	config.DocsPath = "/v1/docs"
+	var docsPath string
+	if mode == Production {
+		docsPath = MajorApiVersionRoutePrefix
+	}
+	config.DocsPath = docsPath + "/docs"
 	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 		"bearer": {
 			Type:         "http",
@@ -593,9 +606,9 @@ DataFarm welcomes external contribution to the API, through Open Source under th
 }
 
 func SetupApi(humaApi huma.API, a HumaOperator) {
-	if a.Mode() != "Development" {
+	if a.Mode() == Production {
 		humaApi.OpenAPI().Servers = append(humaApi.OpenAPI().Servers, &huma.Server{
-			URL: "/v1",
+			URL: MajorApiVersionRoutePrefix,
 		})
 	}
 	csvMediaType := &huma.MediaType{

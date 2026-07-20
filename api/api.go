@@ -43,7 +43,7 @@ type ApiOpts struct {
 	Port           string                 `mapstructure:"port" validate:"required"`
 	PrivateKeyFile string                 `mapstructure:"privatekeyfile" validate:"required"`
 	PublicKeyFile  string                 `mapstructure:"publickeyfile" validate:"required"`
-	Mode           string                 `mapstructure:"mode"`
+	Mode           localhuma.Mode         `mapstructure:"mode"`
 }
 
 type Api struct {
@@ -52,7 +52,7 @@ type Api struct {
 	TokenProvider tokenprovider.TokenProvider
 	AuthStore     authstore.AuthStore
 	Port          string
-	mode          string
+	mode          localhuma.Mode
 }
 
 func Start(opts ApiOpts) error {
@@ -104,7 +104,7 @@ func Start(opts ApiOpts) error {
 }
 
 func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
-	config := localhuma.Config()
+	config := localhuma.Config(a.mode)
 	router := mux.NewRouter()
 	humaApi := humamux.New(router, config)
 	localhuma.SetupApi(humaApi, a)
@@ -127,6 +127,6 @@ func (a *Api) Close() {
 	log.Println("Api shutdown.")
 }
 
-func (a *Api) Mode() string {
+func (a *Api) Mode() localhuma.Mode {
 	return a.mode
 }
