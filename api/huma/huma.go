@@ -54,470 +54,157 @@ type HumaError struct {
 	Detail string `json:"detail" doc:"Human Readable explanation of what went wrong."`
 }
 
-func (h HumaError) Csv() (csvStr string, err error) {
+var HumaErrorRegistry huma.Registry = huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
+
+func (h *HumaError) MediaType() *huma.MediaType {
+	return &huma.MediaType{
+		Schema:  huma.SchemaFromType(HumaErrorRegistry, reflect.TypeFor[HumaError]()),
+		Example: h,
+	}
+}
+
+func (h *HumaError) Csv() (csvStr string, err error) {
 	return fmt.Sprintf("Title, Status, Detail\n%s,%d,%s\n",
 		h.Title, h.Status, h.Detail), nil
 }
 
 func RegisterHumaOperations(api huma.API, ho HumaOperator) {
-	registry := huma.NewMapRegistry("#/errors", huma.DefaultSchemaNamer)
-	operation := huma.Operation{
-		Method:      "GET",
-		Path:        "/device/{deviceId}/sensordata",
-		Middlewares: huma.Middlewares{ho.RateLimit, ho.VerifyToken},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-		Parameters: []*huma.Param{
-			{
-				Name:        "deviceId",
-				In:          "path",
-				Description: "Device Id to request data from.",
-				Required:    true,
-				Schema: &huma.Schema{
-					Type:    "string",
-					Pattern: `^\w{1,30}$`,
-				},
-			},
-		},
-		Tags:        []string{"GET"},
-		Summary:     "Get Sensor Data",
-		Description: "Clients can use this route to request data from a sensor using its device id.",
-		RequestBody: &huma.RequestBody{},
-		Responses: map[string]*huma.Response{
-			"204": {
-				Description: "No SensorData for the requested time period.",
-			},
-			"500": {
-				Description: "Internal Server Error",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Internal Server Error",
-							Status: 500,
-							Detail: "Internal error while getting data for the device.",
-						},
-					}}},
-			"400": {
-				Description: "Bad Request",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Bad Request",
-							Status: 400,
-							Detail: "Invalid start time.",
-						},
-					},
-				},
-			},
-			"401": {
-				Description: "Unauthorized",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Unauthorized",
-							Status: http.StatusUnauthorized,
-							Detail: "Unknown user.",
-						},
-					},
-				},
-			},
-			"404": {
-				Description: "Not Found",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Not Found",
-							Status: http.StatusUnauthorized,
-							Detail: "Device Not Found.",
-						},
-					},
-				},
-			},
-		},
+	operation := huma.Operation{RequestBody: &huma.RequestBody{}}
+	Basic := []map[string][]string{{"basic": {}}}
+	Bearer := []map[string][]string{{"bearer": {}}}
+	FiveHundredExample := HumaError{
+		Schema: "http://localhost:3030/schemas/ErrorModel.json",
+		Title:  "Internal Server Error",
+		Status: http.StatusInternalServerError,
 	}
-	huma.Register(api, operation, ho.GetDeviceData)
+	FiveHundredResponse := &huma.Response{
+		Description: "Internal Server Error",
+		Content: map[string]*huma.MediaType{
+			"application/json": FiveHundredExample.MediaType()}}
+	FourHundredExample := HumaError{
+		Schema: "http://localhost:3030/schemas/ErrorModel.json",
+		Title:  "Bad Request",
+		Status: http.StatusBadRequest,
+		Detail: "No auth header provided.",
+	}
+	FourHundredResponse := &huma.Response{
+		Description: "Bad Request",
+		Content: map[string]*huma.MediaType{
+			"application/json": FourHundredExample.MediaType()}}
+	FourOhOneExample := HumaError{
+		Schema: "http://localhost:3030/schemas/ErrorModel.json",
+		Title:  "Unauthorized",
+		Status: http.StatusUnauthorized,
+		Detail: "Unknown user.",
+	}
+	FourOhOneResponse := &huma.Response{
+		Description: "Unauthorized",
+		Content: map[string]*huma.MediaType{
+			"application/json": FourOhOneExample.MediaType()}}
+	FourOhFourExample := HumaError{
+		Schema: "http://localhost:3030/schemas/ErrorModel.json",
+		Title:  "Not Found",
+		Status: http.StatusUnauthorized,
+		Detail: "Device Not Found.",
+	}
+	FourOhFourResponse := &huma.Response{
+		Description: "Not Found",
+		Content: map[string]*huma.MediaType{
+			"application/json": FourOhFourExample.MediaType()}}
+	operation.Responses = map[string]*huma.Response{
+		"500": FiveHundredResponse,
+		"400": FourHundredResponse,
+		"401": FourOhOneResponse,
+	}
 
-	operation = huma.Operation{
-		Method:      "POST",
-		Path:        "/login",
-		Tags:        []string{"POST"},
-		Summary:     "Login",
-		Description: "Clients can use this route to login and receive an active session token.",
-		Security: []map[string][]string{
-			{"basic": {}},
-		},
-		RequestBody: &huma.RequestBody{},
-		Responses: map[string]*huma.Response{
-			"500": {
-				Description: "Internal Server Error",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Internal Server Error",
-							Status: http.StatusInternalServerError,
-							Detail: "Internal error logging in.",
-						},
-					}}},
-			"400": {
-				Description: "Bad Request",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Bad Request",
-							Status: http.StatusBadRequest,
-							Detail: "No auth header provided.",
-						},
-					},
-				},
-			},
-			"401": {
-				Description: "Unauthorized",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Unauthorized",
-							Status: http.StatusUnauthorized,
-							Detail: "Unknown user.",
-						},
-					},
-				},
-			},
-		},
-	}
+	operation.Method = "POST"
+	operation.Tags = []string{"POST"}
+
+	operation.Path = "/login"
+	operation.Summary = "Login"
+	operation.Security = Basic
+	operation.Description =
+		"Clients can use this route to login and receive an active session token."
+	FiveHundredExample.Detail = "Internal error logging in."
+	operation.Responses["500"].Content["application/json"] = FiveHundredExample.MediaType()
 	huma.Register(api, operation, ho.Login)
 
-	operation = huma.Operation{
-		Method:      "GET",
-		Path:        "/device/{deviceId}/queryfields",
-		Tags:        []string{"GET"},
-		Middlewares: huma.Middlewares{ho.RateLimit, ho.VerifyToken},
-		Summary:     "Get DeviceId QueryFields",
-		Description: "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor might have a 'temperature' QueryField.",
-		RequestBody: &huma.RequestBody{},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-		Parameters: []*huma.Param{
-			{
-				Name:        "deviceId",
-				In:          "path",
-				Description: "Device Id to get QueryField information from.",
-				Required:    true,
-				Schema: &huma.Schema{
-					Type:    "string",
-					Pattern: `^\w{1,30}$`,
-				},
-			},
-		},
-		Responses: map[string]*huma.Response{
-			"500": {
-				Description: "Internal Server Error",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Internal Server Error",
-							Status: http.StatusInternalServerError,
-							Detail: "Internal error getting queryFields.",
-						},
-					}}},
-			"400": {
-				Description: "Bad Request",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Bad Request",
-							Status: http.StatusBadRequest,
-							Detail: "No auth header provided.",
-						},
-					},
-				},
-			},
-			"401": {
-				Description: "Unauthorized",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Unauthorized",
-							Status: http.StatusUnauthorized,
-							Detail: "Unknown user.",
-						},
-					},
-				},
-			},
-			"404": {
-				Description: "Not Found",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Not Found",
-							Status: http.StatusUnauthorized,
-							Detail: "Device Not Found.",
-						},
-					},
-				},
-			},
-		},
-	}
-	huma.Register(api, operation, ho.GetQueryFields)
+	operation.Security = Bearer
+	operation.Middlewares = huma.Middlewares{ho.RateLimit, ho.VerifyToken}
+	operation.Responses["404"] = FourOhFourResponse
 
-	operation = huma.Operation{
-		Method:      "POST",
-		Path:        "/batch/device/sensordata",
-		Middlewares: huma.Middlewares{ho.RateLimit, ho.VerifyToken},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-		Tags:        []string{"POST"},
-		Summary:     "Batch Get Sensor Data",
-		Description: "Clients can use this route to request data from multiple device ids.",
-		RequestBody: &huma.RequestBody{},
-		Responses: map[string]*huma.Response{
-			"500": {
-				Description: "Internal Server Error",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Internal Server Error",
-							Status: 500,
-							Detail: "Internal error while getting data for the device.",
-						},
-					}}},
-			"401": {
-				Description: "Unauthorized",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Unauthorized",
-							Status: http.StatusUnauthorized,
-							Detail: "Unknown user.",
-						},
-					},
-				},
-			},
-		},
-	}
+	operation.Path = "/batch/device/sensordata"
+	operation.Summary = "Batch Get Sensor Data"
+	operation.Description = "Clients can use this route to request data from multiple device ids."
+	FiveHundredExample.Detail = "Internal error while getting data for the device."
+	operation.Responses["500"].Content["application/json"] = FiveHundredExample.MediaType()
 	huma.Register(api, operation, ho.BatchGetDeviceData)
 
-	operation = huma.Operation{
-		Method:      "POST",
-		Path:        "/batch/device/queryfields",
-		Middlewares: huma.Middlewares{ho.RateLimit, ho.VerifyToken},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-		Tags:        []string{"POST"},
-		Summary:     "Batch Get DeviceId QueryFields",
-		Description: "Clients can use this route to request QueryFields from multiple device ids.",
-		RequestBody: &huma.RequestBody{},
-		Responses: map[string]*huma.Response{
-			"500": {
-				Description: "Internal Server Error",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Internal Server Error",
-							Status: 500,
-							Detail: "Internal error while getting queryfields for the device.",
-						},
-					}}},
-			"400": {
-				Description: "Bad Request",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Bad Request",
-							Status: 400,
-							Detail: "Invalid DeviceId.",
-						},
-					},
-				},
-			},
-			"401": {
-				Description: "Unauthorized",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Unauthorized",
-							Status: http.StatusUnauthorized,
-							Detail: "Unknown user.",
-						},
-					},
-				},
-			},
-			"404": {
-				Description: "Not Found",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Not Found",
-							Status: http.StatusUnauthorized,
-							Detail: "Device Not Found.",
-						},
-					},
-				},
-			},
-		},
-	}
+	operation.Path = "/batch/device/queryfields"
+	operation.Summary = "Batch Get DeviceId QueryFields"
+	operation.Description =
+		"Clients can use this route to request QueryFields from multiple device ids."
+	FiveHundredExample.Detail =
+		"Internal error while getting queryfields for the device."
+	operation.Responses["500"].Content["application/json"] = FiveHundredExample.MediaType()
+	FourOhFourExample.Detail = "Device Not Found."
+	operation.Responses["404"].Content["application/json"] = FourOhFourExample.MediaType()
 	huma.Register(api, operation, ho.BatchGetQueryFields)
 
-	operation = huma.Operation{
-		Method:      "GET",
-		Path:        "/device/ids",
-		Middlewares: huma.Middlewares{ho.RateLimit, ho.VerifyToken},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-		Tags:        []string{"GET"},
-		Summary:     "Get Client DeviceIds",
-		Description: "Clients can use this route to get the DeviceIds they have access to.",
-		RequestBody: &huma.RequestBody{},
-		Responses: map[string]*huma.Response{
-			"500": {
-				Description: "Internal Server Error",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Internal Server Error",
-							Status: 500,
-							Detail: "Internal error while getting deviceids.",
-						},
-					}}},
-			"401": {
-				Description: "Unauthorized",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Unauthorized",
-							Status: http.StatusUnauthorized,
-							Detail: "Unknown user.",
-						},
-					},
-				},
-			},
+	deviceIdParam := &huma.Param{
+		Name:     "deviceId",
+		In:       "path",
+		Required: true,
+		Schema: &huma.Schema{
+			Type:    "string",
+			Pattern: `^\w{1,30}$`,
 		},
 	}
+
+	operation.Method = "GET"
+	operation.Tags = []string{"GET"}
+
+	operation.Path = "/device/{deviceId}/sensordata"
+	deviceIdParam.Description = "Device Id to request data from."
+	operation.Parameters = []*huma.Param{deviceIdParam}
+	operation.Summary = "Get Sensor Data"
+	operation.Description =
+		"Clients can use this route to request data from a sensor using its device id."
+	operation.Responses["204"] = &huma.Response{
+		Description: "No SensorData for the requested time period.",
+	}
+	FiveHundredExample.Detail = "Internal error while getting data for the device."
+	operation.Responses["500"].Content["application/json"] = FiveHundredExample.MediaType()
+	huma.Register(api, operation, ho.GetDeviceData)
+	operation.Responses["204"] = nil
+	operation.Parameters = []*huma.Param{}
+
+	operation.Path = "/device/{deviceId}/queryfields"
+	operation.Summary = "Get DeviceId QueryFields"
+	operation.Description = "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor might have a 'temperature' QueryField."
+	deviceIdParam.Description = "Device Id to get QueryField information from."
+	operation.Parameters = []*huma.Param{deviceIdParam}
+	FiveHundredExample.Detail = "Internal error getting queryFields."
+	operation.Responses["500"].Content["application/json"] = FiveHundredExample.MediaType()
+	huma.Register(api, operation, ho.GetQueryFields)
+	operation.Parameters = []*huma.Param{}
+
+	operation.Path = "/device/ids"
+	operation.Summary = "Get Client DeviceIds"
+	operation.Description = "Clients can use this route to get the DeviceIds they have access to."
+	FiveHundredExample.Detail = "Internal error while getting deviceids."
+	operation.Responses["500"].Content["application/json"] = FiveHundredExample.MediaType()
 	huma.Register(api, operation, ho.GetDeviceIds)
 
-	operation = huma.Operation{
-		Method:      "GET",
-		Path:        "/device/{deviceId}/databoundary",
-		Tags:        []string{"GET"},
-		Middlewares: huma.Middlewares{ho.RateLimit, ho.VerifyToken},
-		Summary:     "Get DeviceId DataBoundary",
-		Description: "Clients can use this route to get the device's DataBoundary. A DataBoundary contains the oldest and most recent sensordata timestamps for the device.",
-		RequestBody: &huma.RequestBody{},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-		Parameters: []*huma.Param{
-			{
-				Name:        "deviceId",
-				In:          "path",
-				Description: "Device Id to get DataBoundary information from.",
-				Required:    true,
-				Schema: &huma.Schema{
-					Type:    "string",
-					Pattern: `^\w{1,30}$`,
-				},
-			},
-		},
-		Responses: map[string]*huma.Response{
-			"500": {
-				Description: "Internal Server Error",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Internal Server Error",
-							Status: http.StatusInternalServerError,
-							Detail: "Internal error getting DataBoundary.",
-						},
-					}}},
-			"400": {
-				Description: "Bad Request",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Bad Request",
-							Status: http.StatusBadRequest,
-							Detail: "No auth header provided.",
-						},
-					},
-				},
-			},
-			"401": {
-				Description: "Unauthorized",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Unauthorized",
-							Status: http.StatusUnauthorized,
-							Detail: "Unknown user.",
-						},
-					},
-				},
-			},
-			"404": {
-				Description: "Not Found",
-				Content: map[string]*huma.MediaType{
-					"application/json": {
-						Schema: huma.SchemaFromType(registry, reflect.TypeFor[HumaError]()),
-						Example: HumaError{
-							Schema: "http://localhost:3030/schemas/ErrorModel.json",
-							Title:  "Not Found",
-							Status: http.StatusUnauthorized,
-							Detail: "Device Not Found.",
-						},
-					},
-				},
-			},
-		},
-	}
+	operation.Path = "/device/{deviceId}/databoundary"
+	operation.Summary = "Get DeviceId DataBoundary"
+	operation.Description = "Clients can use this route to get the device's DataBoundary. A DataBoundary contains the oldest and most recent sensordata timestamps for the device."
+	deviceIdParam.Description = "Device Id to get DataBoundary information from."
+	operation.Parameters = []*huma.Param{deviceIdParam}
+	FiveHundredExample.Detail = "Internal error getting DataBoundary."
+	operation.Responses["500"].Content["application/json"] = FiveHundredExample.MediaType()
 	huma.Register(api, operation, ho.GetDeviceDataBoundary)
+	operation.Parameters = []*huma.Param{}
 }
 
 func Config(mode Mode) (config huma.Config) {
