@@ -15,6 +15,7 @@ import (
 )
 
 type HumaOperator interface {
+	Mode() string
 	RateLimit(ctx huma.Context, next func(huma.Context))
 	VerifyToken(ctx huma.Context, next func(huma.Context))
 	GetDeviceData(context.Context,
@@ -592,9 +593,11 @@ DataFarm welcomes external contribution to the API, through Open Source under th
 }
 
 func SetupApi(humaApi huma.API, a HumaOperator) {
-	humaApi.OpenAPI().Servers = append(humaApi.OpenAPI().Servers, &huma.Server{
-		URL: "/v1",
-	})
+	if a.Mode() != "Development" {
+		humaApi.OpenAPI().Servers = append(humaApi.OpenAPI().Servers, &huma.Server{
+			URL: "/v1",
+		})
+	}
 	csvMediaType := &huma.MediaType{
 		Schema: &huma.Schema{
 			Description: "Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect these to be included in the CSV.",
