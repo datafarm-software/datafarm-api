@@ -176,7 +176,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	FiveHundredExample.Detail = "Internal error while getting data for the device."
 	operation.Responses["500"].Content["application/json"] = FiveHundredExample.MediaType()
 	huma.Register(api, operation, ho.GetDeviceData)
-	operation.Responses["204"] = nil
+	operation.Responses["204"] = &huma.Response{}
 	operation.Parameters = []*huma.Param{}
 
 	operation.Path = "/device/{deviceId}/queryfields"

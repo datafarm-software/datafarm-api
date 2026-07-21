@@ -103,7 +103,7 @@ func (i *InfluxDatafetcher) extractValue(result *influxApi.QueryTableResult) ([]
 	var records []DataRow
 	for result.Next() {
 		dataRow := DataRow{
-			Time:     result.Record().Time(),
+			Time:     result.Record().Time().Local(),
 			Value:    result.Record().Value(),
 			DeviceID: result.Record().ValueByKey("deviceID").(string),
 			Field:    result.Record().Field(),
@@ -133,6 +133,7 @@ func (i *InfluxDatafetcher) dataRows2DeviceData(data []DataRow) ([]DeviceData, e
 		default:
 			value = float64(0)
 		}
+		//TODO: 10 seconds seems too long, check this
 		for i, deviceData := range deviceDataSlice {
 			timestampWithin10Seconds = math.Abs(float64(
 				deviceData.Timestamp.Sub(row.Time).Seconds())) <= 10
