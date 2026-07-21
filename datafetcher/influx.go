@@ -37,6 +37,7 @@ type InfluxOpts struct {
 type InfluxDatafetcher struct {
 	db       influxdb2.Client
 	queryApi influxApi.QueryAPI
+	loc      *time.Location
 }
 
 func NewInfluxDatafetcher(opts InfluxOpts) (*InfluxDatafetcher, error) {
@@ -48,9 +49,14 @@ func NewInfluxDatafetcher(opts InfluxOpts) (*InfluxDatafetcher, error) {
 	if !ok {
 		return nil, fmt.Errorf("influx server not running")
 	}
+	loc, err := time.LoadLocation("Africa/Johannesburg")
+	if err != nil {
+		return nil, fmt.Errorf("setting timestamp locale: %v", err)
+	}
 	return &InfluxDatafetcher{
 		db:       db,
 		queryApi: db.QueryAPI(opts.Org),
+		loc:      loc,
 	}, nil
 }
 
@@ -103,7 +109,7 @@ func (i *InfluxDatafetcher) extractValue(result *influxApi.QueryTableResult) ([]
 	var records []DataRow
 	for result.Next() {
 		dataRow := DataRow{
-			Time:     result.Record().Time().Local(),
+			Time:     result.Record().Time().In(i.loc),
 			Value:    result.Record().Value(),
 			DeviceID: result.Record().ValueByKey("deviceID").(string),
 			Field:    result.Record().Field(),
