@@ -68,88 +68,121 @@ func (h *HumaError) Csv() (csvStr string, err error) {
 		h.Title, h.Status, h.Detail), nil
 }
 
-func RegisterHumaOperations(api huma.API, ho HumaOperator) {
-	operation := huma.Operation{RequestBody: &huma.RequestBody{}}
-	Basic := []map[string][]string{{"basic": {}}}
-	Bearer := []map[string][]string{{"bearer": {}}}
-	FiveHundredExample := HumaError{
+func FiveHundredExample() *HumaError {
+	return &HumaError{
 		Schema: "http://localhost:3030/schemas/ErrorModel.json",
 		Title:  "Internal Server Error",
 		Status: http.StatusInternalServerError,
 	}
-	FiveHundredResponse := &huma.Response{
+}
+
+func FiveHundredResponse() *huma.Response {
+	return &huma.Response{
 		Description: "Internal Server Error",
 		Content: map[string]*huma.MediaType{
-			"application/json": FiveHundredExample.MediaType()}}
-	FourHundredExample := HumaError{
+			"application/json": FiveHundredExample().MediaType()}}
+}
+
+func FourHundredExample() *HumaError {
+	return &HumaError{
 		Schema: "http://localhost:3030/schemas/ErrorModel.json",
 		Title:  "Bad Request",
 		Status: http.StatusBadRequest,
-		Detail: "No auth header provided.",
+		Detail: "No Authorization Header Provided.",
 	}
-	FourHundredResponse := &huma.Response{
+}
+
+func FourHundredResponse() *huma.Response {
+	return &huma.Response{
 		Description: "Bad Request",
 		Content: map[string]*huma.MediaType{
-			"application/json": FourHundredExample.MediaType()}}
-	FourOhOneExample := HumaError{
+			"application/json": FourHundredExample().MediaType()}}
+}
+
+func FourOhOneExample() *HumaError {
+	return &HumaError{
 		Schema: "http://localhost:3030/schemas/ErrorModel.json",
 		Title:  "Unauthorized",
 		Status: http.StatusUnauthorized,
 		Detail: "Unknown user.",
 	}
-	FourOhOneResponse := &huma.Response{
+}
+
+func FourOhOneResponse() *huma.Response {
+	return &huma.Response{
 		Description: "Unauthorized",
 		Content: map[string]*huma.MediaType{
-			"application/json": FourOhOneExample.MediaType()}}
-	FourOhFourExample := HumaError{
+			"application/json": FourOhOneExample().MediaType()}}
+}
+
+func FourOhFourExample() *HumaError {
+	return &HumaError{
 		Schema: "http://localhost:3030/schemas/ErrorModel.json",
 		Title:  "Not Found",
 		Status: http.StatusUnauthorized,
 		Detail: "Device Not Found.",
 	}
-	FourOhFourResponse := &huma.Response{
+}
+
+func FourOhFourResponse() *huma.Response {
+	return &huma.Response{
 		Description: "Not Found",
 		Content: map[string]*huma.MediaType{
-			"application/json": FourOhFourExample.MediaType()}}
-	operation.Responses = map[string]*huma.Response{
-		"500": FiveHundredResponse,
-		"400": FourHundredResponse,
-		"401": FourOhOneResponse,
+			"application/json": FourOhFourExample().MediaType()}}
+}
+
+var Basic = []map[string][]string{{"basic": {}}}
+var Bearer = []map[string][]string{{"bearer": {}}}
+
+func baseOperation(method string) huma.Operation {
+	return huma.Operation{
+		RequestBody: &huma.RequestBody{},
+		Responses: map[string]*huma.Response{
+			"500": FiveHundredResponse(),
+			"400": FourHundredResponse(),
+			"401": FourOhOneResponse(),
+			"404": FourOhFourResponse(),
+		},
+		Method: method,
+		Tags:   []string{method},
 	}
+}
 
-	operation.Method = "POST"
-	operation.Tags = []string{"POST"}
-
-	operation.Path = "/login"
-	operation.Summary = "Login"
-	operation.Security = Basic
-	operation.Description =
+func RegisterHumaOperations(api huma.API, ho HumaOperator) {
+	op := baseOperation("POST")
+	op.Path = "/login"
+	op.Summary = "Login"
+	op.Security = Basic
+	op.Description =
 		"Clients can use this route to login and receive an active session token."
-	FiveHundredExample.Detail = "Internal error logging in."
-	operation.Responses["500"].Content["application/json"] = FiveHundredExample.MediaType()
-	huma.Register(api, operation, ho.Login)
+	fh := FiveHundredExample()
+	fh.Detail = "Internal error logging in."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	op.Responses["404"] = &huma.Response{}
+	huma.Register(api, op, ho.Login)
 
-	operation.Security = Bearer
-	operation.Middlewares = huma.Middlewares{ho.RateLimit, ho.VerifyToken}
-	operation.Responses["404"] = FourOhFourResponse
+	op = baseOperation("POST")
+	op.Security = Bearer
+	op.Middlewares = huma.Middlewares{ho.RateLimit, ho.VerifyToken}
 
-	operation.Path = "/batch/device/sensordata"
-	operation.Summary = "Batch Get Sensor Data"
-	operation.Description = "Clients can use this route to request data from multiple device ids."
-	FiveHundredExample.Detail = "Internal error while getting data for the device."
-	operation.Responses["500"].Content["application/json"] = FiveHundredExample.MediaType()
-	huma.Register(api, operation, ho.BatchGetDeviceData)
+	op.Path = "/batch/device/sensordata"
+	op.Summary = "Batch Get Sensor Data"
+	op.Description = "Clients can use this route to request data from multiple device ids."
+	fh = FiveHundredExample()
+	fh.Detail = "Internal error while getting data for the device."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	huma.Register(api, op, ho.BatchGetDeviceData)
 
-	operation.Path = "/batch/device/queryfields"
-	operation.Summary = "Batch Get DeviceId QueryFields"
-	operation.Description =
+	op = baseOperation("POST")
+	op.Path = "/batch/device/queryfields"
+	op.Summary = "Batch Get DeviceId QueryFields"
+	op.Description =
 		"Clients can use this route to request QueryFields from multiple device ids."
-	FiveHundredExample.Detail =
+	fh = FiveHundredExample()
+	fh.Detail =
 		"Internal error while getting queryfields for the device."
-	operation.Responses["500"].Content["application/json"] = FiveHundredExample.MediaType()
-	FourOhFourExample.Detail = "Device Not Found."
-	operation.Responses["404"].Content["application/json"] = FourOhFourExample.MediaType()
-	huma.Register(api, operation, ho.BatchGetQueryFields)
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	huma.Register(api, op, ho.BatchGetQueryFields)
 
 	deviceIdParam := &huma.Param{
 		Name:     "deviceId",
@@ -161,50 +194,55 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 		},
 	}
 
-	operation.Method = "GET"
-	operation.Tags = []string{"GET"}
-
-	operation.Path = "/device/{deviceId}/sensordata"
+	op = baseOperation("GET")
+	op.Path = "/device/{deviceId}/sensordata"
 	deviceIdParam.Description = "Device Id to request data from."
-	operation.Parameters = []*huma.Param{deviceIdParam}
-	operation.Summary = "Get Sensor Data"
-	operation.Description =
+	op.Parameters = []*huma.Param{deviceIdParam}
+	op.Summary = "Get Sensor Data"
+	op.Description =
 		"Clients can use this route to request data from a sensor using its device id."
-	operation.Responses["204"] = &huma.Response{
+	op.Responses["204"] = &huma.Response{
 		Description: "No SensorData for the requested time period.",
 	}
-	FiveHundredExample.Detail = "Internal error while getting data for the device."
-	operation.Responses["500"].Content["application/json"] = FiveHundredExample.MediaType()
-	huma.Register(api, operation, ho.GetDeviceData)
-	operation.Responses["204"] = &huma.Response{}
-	operation.Parameters = []*huma.Param{}
+	fh = FiveHundredExample()
+	fh.Detail = "Internal error while getting data for the device."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	huma.Register(api, op, ho.GetDeviceData)
+	op.Responses["204"] = &huma.Response{}
+	op.Parameters = []*huma.Param{}
 
-	operation.Path = "/device/{deviceId}/queryfields"
-	operation.Summary = "Get DeviceId QueryFields"
-	operation.Description = "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor might have a 'temperature' QueryField."
+	op = baseOperation("GET")
+	op.Path = "/device/{deviceId}/queryfields"
+	op.Summary = "Get DeviceId QueryFields"
+	op.Description = "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor might have a 'temperature' QueryField."
 	deviceIdParam.Description = "Device Id to get QueryField information from."
-	operation.Parameters = []*huma.Param{deviceIdParam}
-	FiveHundredExample.Detail = "Internal error getting queryFields."
-	operation.Responses["500"].Content["application/json"] = FiveHundredExample.MediaType()
-	huma.Register(api, operation, ho.GetQueryFields)
-	operation.Parameters = []*huma.Param{}
+	op.Parameters = []*huma.Param{deviceIdParam}
+	fh = FiveHundredExample()
+	fh.Detail = "Internal error getting queryFields."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	huma.Register(api, op, ho.GetQueryFields)
+	op.Parameters = []*huma.Param{}
 
-	operation.Path = "/device/ids"
-	operation.Summary = "Get Client DeviceIds"
-	operation.Description = "Clients can use this route to get the DeviceIds they have access to."
-	FiveHundredExample.Detail = "Internal error while getting deviceids."
-	operation.Responses["500"].Content["application/json"] = FiveHundredExample.MediaType()
-	huma.Register(api, operation, ho.GetDeviceIds)
+	op = baseOperation("GET")
+	op.Path = "/device/ids"
+	op.Summary = "Get Client DeviceIds"
+	op.Description = "Clients can use this route to get the DeviceIds they have access to."
+	fh = FiveHundredExample()
+	fh.Detail = "Internal error while getting deviceids."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	huma.Register(api, op, ho.GetDeviceIds)
 
-	operation.Path = "/device/{deviceId}/databoundary"
-	operation.Summary = "Get DeviceId DataBoundary"
-	operation.Description = "Clients can use this route to get the device's DataBoundary. A DataBoundary contains the oldest and most recent sensordata timestamps for the device."
+	op = baseOperation("GET")
+	op.Path = "/device/{deviceId}/databoundary"
+	op.Summary = "Get DeviceId DataBoundary"
+	op.Description = "Clients can use this route to get the device's DataBoundary. A DataBoundary contains the oldest and most recent sensordata timestamps for the device."
 	deviceIdParam.Description = "Device Id to get DataBoundary information from."
-	operation.Parameters = []*huma.Param{deviceIdParam}
-	FiveHundredExample.Detail = "Internal error getting DataBoundary."
-	operation.Responses["500"].Content["application/json"] = FiveHundredExample.MediaType()
-	huma.Register(api, operation, ho.GetDeviceDataBoundary)
-	operation.Parameters = []*huma.Param{}
+	op.Parameters = []*huma.Param{deviceIdParam}
+	fh = FiveHundredExample()
+	fh.Detail = "Internal error getting DataBoundary."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	huma.Register(api, op, ho.GetDeviceDataBoundary)
+	op.Parameters = []*huma.Param{}
 }
 
 func Config(mode Mode) (config huma.Config) {
