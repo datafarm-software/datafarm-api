@@ -134,8 +134,8 @@ func FourOhFourResponse() *huma.Response {
 var Basic = []map[string][]string{{"basic": {}}}
 var Bearer = []map[string][]string{{"bearer": {}}}
 
-func baseOperation(method string) huma.Operation {
-	return huma.Operation{
+func baseOperation(method string, middlewares *huma.Middlewares) huma.Operation {
+	op := huma.Operation{
 		RequestBody: &huma.RequestBody{},
 		Responses: map[string]*huma.Response{
 			"500": FiveHundredResponse(),
@@ -143,13 +143,19 @@ func baseOperation(method string) huma.Operation {
 			"401": FourOhOneResponse(),
 			"404": FourOhFourResponse(),
 		},
-		Method: method,
-		Tags:   []string{method},
+		Method:   method,
+		Tags:     []string{method},
+		Security: Bearer,
 	}
+	if middlewares != nil {
+		op.Middlewares = *middlewares
+	}
+	return op
 }
 
 func RegisterHumaOperations(api huma.API, ho HumaOperator) {
-	op := baseOperation("POST")
+	mw := &huma.Middlewares{ho.RateLimit, ho.VerifyToken}
+	op := baseOperation("POST", nil)
 	op.Path = "/login"
 	op.Summary = "Login"
 	op.Security = Basic
@@ -161,27 +167,21 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.Login)
 
-	op = baseOperation("POST")
-	op.Security = Bearer
-	op.Middlewares = huma.Middlewares{ho.RateLimit, ho.VerifyToken}
-
+	op = baseOperation("POST", mw)
 	op.Path = "/batch/device/sensordata"
 	op.Summary = "Batch Get Sensor Data"
 	op.Description = "Clients can use this route to request data from multiple device ids."
-	fh = FiveHundredExample()
-	fh.Detail = "Internal error while getting data for the device."
-	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	op.Responses["500"] = &huma.Response{}
+	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.BatchGetDeviceData)
 
-	op = baseOperation("POST")
+	op = baseOperation("POST", mw)
 	op.Path = "/batch/device/queryfields"
 	op.Summary = "Batch Get DeviceId QueryFields"
 	op.Description =
 		"Clients can use this route to request QueryFields from multiple device ids."
-	fh = FiveHundredExample()
-	fh.Detail =
-		"Internal error while getting queryfields for the device."
-	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	op.Responses["500"] = &huma.Response{}
+	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.BatchGetQueryFields)
 
 	deviceIdParam := &huma.Param{
@@ -194,7 +194,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 		},
 	}
 
-	op = baseOperation("GET")
+	op = baseOperation("GET", mw)
 	op.Path = "/device/{deviceId}/sensordata"
 	deviceIdParam.Description = "Device Id to request data from."
 	op.Parameters = []*huma.Param{deviceIdParam}
@@ -211,7 +211,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["204"] = &huma.Response{}
 	op.Parameters = []*huma.Param{}
 
-	op = baseOperation("GET")
+	op = baseOperation("GET", mw)
 	op.Path = "/device/{deviceId}/queryfields"
 	op.Summary = "Get DeviceId QueryFields"
 	op.Description = "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor might have a 'temperature' QueryField."
@@ -223,16 +223,17 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	huma.Register(api, op, ho.GetQueryFields)
 	op.Parameters = []*huma.Param{}
 
-	op = baseOperation("GET")
+	op = baseOperation("GET", mw)
 	op.Path = "/device/ids"
 	op.Summary = "Get Client DeviceIds"
 	op.Description = "Clients can use this route to get the DeviceIds they have access to."
 	fh = FiveHundredExample()
 	fh.Detail = "Internal error while getting deviceids."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.GetDeviceIds)
 
-	op = baseOperation("GET")
+	op = baseOperation("GET", mw)
 	op.Path = "/device/{deviceId}/databoundary"
 	op.Summary = "Get DeviceId DataBoundary"
 	op.Description = "Clients can use this route to get the device's DataBoundary. A DataBoundary contains the oldest and most recent sensordata timestamps for the device."
