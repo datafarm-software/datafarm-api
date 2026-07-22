@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -58,6 +57,12 @@ var InsideTimeRange = time.Now().UTC().Add(-2 * time.Hour)
 var AlsoInsideTimeRange = time.Now().UTC().Add(-1 * time.Hour)
 var RegisteredCompanyDevices = []string{RegisteredDeviceId}
 var a = &api.Api{}
+
+var considerTimeZone = cmp.Comparer(func(x, y time.Time) bool {
+	return x.Equal(y) &&
+		x.Location().String() == y.Location().String()
+})
+var cmpOpts = []cmp.Option{considerTimeZone}
 
 func TestLogin(t *testing.T) {
 	tests := map[string]struct {
@@ -1303,8 +1308,7 @@ func TestGetSensorData(t *testing.T) {
 				body := resp.Body.Bytes()
 				err = json.Unmarshal(body, &dd)
 				require.Nil(t, err)
-				log.Printf("dd: %+v", dd)
-				if diff := cmp.Diff(tc.want, dd); diff != "" {
+				if diff := cmp.Diff(tc.want, dd, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
 			}
@@ -1511,7 +1515,7 @@ func TestGetQueryFields(t *testing.T) {
 				body := resp.Body.Bytes()
 				err = json.Unmarshal(body, &qf)
 				require.Nil(t, err)
-				if diff := cmp.Diff(tc.want, qf); diff != "" {
+				if diff := cmp.Diff(tc.want, qf, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
 			}
@@ -2223,7 +2227,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 				body := resp.Body.Bytes()
 				err = json.Unmarshal(body, &dd)
 				require.Nil(t, err)
-				if diff := cmp.Diff(tc.want, dd); diff != "" {
+				if diff := cmp.Diff(tc.want, dd, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
 			}
@@ -2764,7 +2768,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 				body := resp.Body.Bytes()
 				err = json.Unmarshal(body, &dd)
 				require.Nil(t, err)
-				if diff := cmp.Diff(tc.want, dd); diff != "" {
+				if diff := cmp.Diff(tc.want, dd, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
 			}
@@ -2947,7 +2951,7 @@ func TestGetDeviceIds(t *testing.T) {
 				body := resp.Body.Bytes()
 				err = json.Unmarshal(body, &dr)
 				require.Nil(t, err)
-				if diff := cmp.Diff(tc.want, dr); diff != "" {
+				if diff := cmp.Diff(tc.want, dr, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
 			}
@@ -3226,7 +3230,7 @@ func TestGetDataBoundary(t *testing.T) {
 				body := resp.Body.Bytes()
 				err = json.Unmarshal(body, &got)
 				require.Nil(t, err)
-				if diff := cmp.Diff(tc.want, got); diff != "" {
+				if diff := cmp.Diff(tc.want, got, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
 			}
@@ -3519,7 +3523,7 @@ func TestCsvGetSensorData(t *testing.T) {
 			defer resp.Result().Body.Close()
 			if !tc.gsdt.wantErr {
 				body := resp.Body.String()
-				if diff := cmp.Diff(tc.want, body); diff != "" {
+				if diff := cmp.Diff(tc.want, body, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
 			}
@@ -4096,7 +4100,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 			defer resp.Result().Body.Close()
 			if !tc.gsdt.wantErr {
 				body := resp.Body.String()
-				if diff := cmp.Diff(tc.want, body); diff != "" {
+				if diff := cmp.Diff(tc.want, body, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
 			}
