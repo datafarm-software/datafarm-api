@@ -31,18 +31,20 @@ func (a *Api) RateLimit(ctx huma.Context, next func(huma.Context)) {
 		http.Error(w, "No Authorization Header Provided.", http.StatusBadRequest)
 		return
 	}
-	parts := strings.Split(authHeader, "Bearer")
-	if len(parts) != 2 {
-		parts = strings.Split(authHeader, "Basic")
-		if len(parts) != 2 {
-			http.Error(w, "Invalid Authorization Header Format.", http.StatusBadRequest)
-			return
-		}
-	}
 	var lr tokenprovider.LoginResponse
-	lr.Body = strings.TrimSpace(parts[1])
-	lr.Body = strings.Trim(lr.Body, `"`)
-	key := "token:" + lr.Body
+	var key string
+	parts := strings.Split(authHeader, "Bearer")
+	if len(parts) == 2 {
+		lr.Body = strings.TrimSpace(parts[1])
+		lr.Body = strings.Trim(lr.Body, `"`)
+		key = "token:" + lr.Body
+	} else {
+		ip := r.Header.Get("X-Forwarded-For")
+		if ip == "" {
+			ip = r.RemoteAddr
+		}
+		key = "anon:" + ip
+	}
 	limiter := a.getLimiter(key)
 	if !limiter.Allow() {
 		http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
