@@ -212,8 +212,12 @@ func TestGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{
+						QueryFields: []string{RegisteredQueryField},
+					},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -274,9 +278,11 @@ func TestGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       RelativeStart,
-					Timezone:    "Africa/Johannesburg",
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start:    RelativeStart,
+						Timezone: "Africa/Johannesburg",
+					},
 				},
 			},
 		},
@@ -328,9 +334,11 @@ func TestGetSensorData(t *testing.T) {
 				},
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       RelativeStart,
-					Timezone:    "$ome/Wr0ng/Timezone",
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start:    RelativeStart,
+						Timezone: "$ome/Wr0ng/Timezone",
+					},
 				},
 			},
 		},
@@ -396,8 +404,10 @@ func TestGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{"all"},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{QueryFields: []string{"all"}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -462,8 +472,10 @@ func TestGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{"all"},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{QueryFields: []string{"all"}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -528,8 +540,10 @@ func TestGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{"all"},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{QueryFields: []string{"all"}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -541,8 +555,10 @@ func TestGetSensorData(t *testing.T) {
 				token:      InvalidToken,
 				deviceId:   RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -554,9 +570,11 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       FutureStart,
-					Stop:        Stop,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: FutureStart,
+						Stop:  Stop,
+					},
 				},
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -585,9 +603,11 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       StartGreaterThanStop,
-					Stop:        Stop,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: StartGreaterThanStop,
+						Stop:  Stop,
+					},
 				},
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -678,9 +698,11 @@ func TestGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       Start,
-					Stop:        StopInFuture,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: Start,
+						Stop:  StopInFuture,
+					},
 				},
 			},
 		},
@@ -709,8 +731,10 @@ func TestGetSensorData(t *testing.T) {
 				},
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       RelativeMoreThanNinetyDays,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeMoreThanNinetyDays,
+					},
 				},
 			},
 		},
@@ -739,9 +763,11 @@ func TestGetSensorData(t *testing.T) {
 				},
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       MoreThanNinetyDays,
-					Stop:        Stop,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: MoreThanNinetyDays,
+						Stop:  Stop,
+					},
 				},
 			},
 		},
@@ -815,8 +841,10 @@ func TestGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -894,8 +922,10 @@ func TestGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -976,8 +1006,10 @@ func TestGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -1058,8 +1090,10 @@ func TestGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -1111,8 +1145,10 @@ func TestGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       "-1h",
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: "-1h",
+					},
 				},
 			},
 		},
@@ -1164,8 +1200,10 @@ func TestGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: UnregisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       "-1h",
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: "-1h",
+					},
 				},
 			},
 		},
@@ -1217,8 +1255,10 @@ func TestGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -1278,8 +1318,10 @@ func TestGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -1335,7 +1377,7 @@ func makeQueryParams(dr datafetcher.DeviceDataRequest) string {
 	for _, q := range dr.QueryFields {
 		fmt.Fprintf(&b, "&queryField=%s", q)
 	}
-	fmt.Fprintf(&b, "&timezone=%s", dr.Timezone)
+	fmt.Fprintf(&b, "&timezone-return=%s", dr.Timezone)
 	return b.String()
 }
 
@@ -1618,14 +1660,18 @@ func TestBatchGetDeviceData(t *testing.T) {
 			token: ValidToken,
 			deviceRequests: []datafetcher.DeviceDataRequest{
 				{
-					DeviceId:    RegisteredDeviceId,
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 				{
-					DeviceId:    AnotherRegisteredDeviceId,
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -1712,14 +1758,18 @@ func TestBatchGetDeviceData(t *testing.T) {
 			token: ValidToken,
 			deviceRequests: []datafetcher.DeviceDataRequest{
 				{
-					DeviceId:    RegisteredDeviceId,
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 				{
-					DeviceId:    AnotherRegisteredDeviceId,
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -1806,14 +1856,18 @@ func TestBatchGetDeviceData(t *testing.T) {
 			token: ValidToken,
 			deviceRequests: []datafetcher.DeviceDataRequest{
 				{
-					DeviceId:    RegisteredDeviceId,
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 				{
-					DeviceId:    AnotherRegisteredDeviceId,
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -1900,14 +1954,18 @@ func TestBatchGetDeviceData(t *testing.T) {
 			token: ValidToken,
 			deviceRequests: []datafetcher.DeviceDataRequest{
 				{
-					DeviceId:    RegisteredDeviceId,
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 				{
-					DeviceId:    AnotherRegisteredDeviceId,
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -1986,14 +2044,18 @@ func TestBatchGetDeviceData(t *testing.T) {
 			token: ValidToken,
 			deviceRequests: []datafetcher.DeviceDataRequest{
 				{
-					DeviceId:    RegisteredDeviceId,
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 				{
-					DeviceId:    AnotherRegisteredDeviceId,
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -2072,14 +2134,18 @@ func TestBatchGetDeviceData(t *testing.T) {
 			token: ValidToken,
 			deviceRequests: []datafetcher.DeviceDataRequest{
 				{
-					DeviceId:    RegisteredDeviceId,
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 				{
-					DeviceId:    AnotherRegisteredDeviceId,
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -2163,14 +2229,18 @@ func TestBatchGetDeviceData(t *testing.T) {
 			token: ValidToken,
 			deviceRequests: []datafetcher.DeviceDataRequest{
 				{
-					DeviceId:    RegisteredDeviceId,
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 				{
-					DeviceId:    AnotherRegisteredDeviceId,
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -2182,9 +2252,11 @@ func TestBatchGetDeviceData(t *testing.T) {
 			want:       datafetcher.BatchDeviceDataResponse{},
 			deviceRequests: []datafetcher.DeviceDataRequest{
 				{
-					DeviceId:    RegisteredDeviceId,
-					QueryFields: []string{RegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -3306,8 +3378,10 @@ func TestCsvGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -3362,8 +3436,10 @@ func TestCsvGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -3427,8 +3503,10 @@ func TestCsvGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -3490,8 +3568,10 @@ func TestCsvGetSensorData(t *testing.T) {
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
 				deviceRequest: datafetcher.DeviceDataRequest{
-					QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-					Start:       RelativeStart,
+					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
+					},
 				},
 			},
 		},
@@ -3601,14 +3681,18 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				token: ValidToken,
 				batchRequests: []datafetcher.DeviceDataRequest{
 					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
-						Start:       RelativeStart,
+						Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField}},
+						TimeFrame: datafetcher.TimeFrame{
+							Start: RelativeStart,
+						},
 					},
 					{
-						DeviceId:    AnotherRegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
-						Start:       RelativeStart,
+						Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField}},
+						TimeFrame: datafetcher.TimeFrame{
+							Start: RelativeStart,
+						},
 					},
 				},
 			},
@@ -3680,14 +3764,18 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				token: ValidToken,
 				batchRequests: []datafetcher.DeviceDataRequest{
 					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-						Start:       RelativeStart,
+						Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+						TimeFrame: datafetcher.TimeFrame{
+							Start: RelativeStart,
+						},
 					},
 					{
-						DeviceId:    AnotherRegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-						Start:       RelativeStart,
+						Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+						TimeFrame: datafetcher.TimeFrame{
+							Start: RelativeStart,
+						},
 					},
 				},
 			},
@@ -3757,14 +3845,18 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				token: ValidToken,
 				batchRequests: []datafetcher.DeviceDataRequest{
 					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-						Start:       RelativeStart,
+						Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+						TimeFrame: datafetcher.TimeFrame{
+							Start: RelativeStart,
+						},
 					},
 					{
-						DeviceId:    AnotherRegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-						Start:       RelativeStart,
+						Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+						TimeFrame: datafetcher.TimeFrame{
+							Start: RelativeStart,
+						},
 					},
 				},
 			},
@@ -3831,14 +3923,18 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				token: ValidToken,
 				batchRequests: []datafetcher.DeviceDataRequest{
 					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
-						Start:       RelativeStart,
+						Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField}},
+						TimeFrame: datafetcher.TimeFrame{
+							Start: RelativeStart,
+						},
 					},
 					{
-						DeviceId:    AnotherRegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
-						Start:       RelativeStart,
+						Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField}},
+						TimeFrame: datafetcher.TimeFrame{
+							Start: RelativeStart,
+						},
 					},
 				},
 			},
@@ -3907,14 +4003,18 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				token: ValidToken,
 				batchRequests: []datafetcher.DeviceDataRequest{
 					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
-						Start:       RelativeStart,
+						Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField}},
+						TimeFrame: datafetcher.TimeFrame{
+							Start: RelativeStart,
+						},
 					},
 					{
-						DeviceId:    AnotherRegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
-						Start:       RelativeStart,
+						Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField}},
+						TimeFrame: datafetcher.TimeFrame{
+							Start: RelativeStart,
+						},
 					},
 				},
 			},
@@ -3984,14 +4084,18 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				token: ValidToken,
 				batchRequests: []datafetcher.DeviceDataRequest{
 					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-						Start:       RelativeStart,
+						Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+						TimeFrame: datafetcher.TimeFrame{
+							Start: RelativeStart,
+						},
 					},
 					{
-						DeviceId:    AnotherRegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
-						Start:       RelativeStart,
+						Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField}},
+						TimeFrame: datafetcher.TimeFrame{
+							Start: RelativeStart,
+						},
 					},
 				},
 			},
@@ -4061,14 +4165,18 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				token: ValidToken,
 				batchRequests: []datafetcher.DeviceDataRequest{
 					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
-						Start:       RelativeStart,
+						Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+						TimeFrame: datafetcher.TimeFrame{
+							Start: RelativeStart,
+						},
 					},
 					{
-						DeviceId:    AnotherRegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
-						Start:       RelativeStart,
+						Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField}},
+						TimeFrame: datafetcher.TimeFrame{
+							Start: RelativeStart,
+						},
 					},
 				},
 			},
