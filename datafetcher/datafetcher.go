@@ -161,7 +161,7 @@ func writeDataRow(queryFieldColumns []string, deviceData DeviceData, writer *csv
 
 type DeviceData struct {
 	DeviceID   string             `json:"deviceId"`
-	Timestamp  time.Time          `json:"timestamp"`
+	Timestamp  time.Time          `json:"timestamp" doc:"Timestamp will be in UTC timezone and RFC3339 Format."`
 	SensorData map[string]float64 `json:"sensorData"`
 }
 
