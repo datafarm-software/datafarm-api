@@ -78,7 +78,7 @@ paths:
                                 schema: http://localhost:3030/schemas/ErrorModel.json
                                 title: Bad Request
                                 status: 400
-                                detail: Invalid DeviceId.
+                                detail: No Authorization Header Provided.
                 "401":
                     description: Unauthorized
                     content:
@@ -110,68 +110,8 @@ paths:
                                 title: Unauthorized
                                 status: 401
                                 detail: Unknown user.
-                "404":
-                    description: Not Found
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                additionalProperties: false
-                                properties:
-                                    $schema:
-                                        type: string
-                                        description: Link to Object Model.
-                                    detail:
-                                        type: string
-                                        description: Human Readable explanation of what went wrong.
-                                    status:
-                                        type: integer
-                                        description: Http Status Code.
-                                        format: int64
-                                    title:
-                                        type: string
-                                        description: Name associated with error code.
-                                required:
-                                    - $schema
-                                    - title
-                                    - status
-                                    - detail
-                            example:
-                                schema: http://localhost:3030/schemas/ErrorModel.json
-                                title: Not Found
-                                status: 401
-                                detail: Device Not Found.
-                "500":
-                    description: Internal Server Error
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                additionalProperties: false
-                                properties:
-                                    $schema:
-                                        type: string
-                                        description: Link to Object Model.
-                                    detail:
-                                        type: string
-                                        description: Human Readable explanation of what went wrong.
-                                    status:
-                                        type: integer
-                                        description: Http Status Code.
-                                        format: int64
-                                    title:
-                                        type: string
-                                        description: Name associated with error code.
-                                required:
-                                    - $schema
-                                    - title
-                                    - status
-                                    - detail
-                            example:
-                                schema: http://localhost:3030/schemas/ErrorModel.json
-                                title: Internal Server Error
-                                status: 500
-                                detail: Internal error while getting queryfields for the device.
+                "404": {}
+                "500": {}
             security:
                 - bearer: []
     /batch/device/sensordata:
@@ -199,6 +139,37 @@ paths:
                             schema:
                                 type: string
                                 description: Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect these to be included in the CSV.
+                "400":
+                    description: Bad Request
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Bad Request
+                                status: 400
+                                detail: No Authorization Header Provided.
                 "401":
                     description: Unauthorized
                     content:
@@ -230,37 +201,8 @@ paths:
                                 title: Unauthorized
                                 status: 401
                                 detail: Unknown user.
-                "500":
-                    description: Internal Server Error
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                additionalProperties: false
-                                properties:
-                                    $schema:
-                                        type: string
-                                        description: Link to Object Model.
-                                    detail:
-                                        type: string
-                                        description: Human Readable explanation of what went wrong.
-                                    status:
-                                        type: integer
-                                        description: Http Status Code.
-                                        format: int64
-                                    title:
-                                        type: string
-                                        description: Name associated with error code.
-                                required:
-                                    - $schema
-                                    - title
-                                    - status
-                                    - detail
-                            example:
-                                schema: http://localhost:3030/schemas/ErrorModel.json
-                                title: Internal Server Error
-                                status: 500
-                                detail: Internal error while getting data for the device.
+                "404": {}
+                "500": {}
             security:
                 - bearer: []
     /device/{deviceId}/databoundary:
@@ -316,7 +258,7 @@ paths:
                                 schema: http://localhost:3030/schemas/ErrorModel.json
                                 title: Bad Request
                                 status: 400
-                                detail: No auth header provided.
+                                detail: No Authorization Header Provided.
                 "401":
                     description: Unauthorized
                     content:
@@ -421,7 +363,7 @@ paths:
             parameters:
                 - name: deviceId
                   in: path
-                  description: Device Id to get QueryField information from.
+                  description: Device Id to get DataBoundary information from.
                   required: true
                   schema:
                     type: string
@@ -465,7 +407,7 @@ paths:
                                 schema: http://localhost:3030/schemas/ErrorModel.json
                                 title: Bad Request
                                 status: 400
-                                detail: No auth header provided.
+                                detail: No Authorization Header Provided.
                 "401":
                     description: Unauthorized
                     content:
@@ -570,7 +512,7 @@ paths:
             parameters:
                 - name: deviceId
                   in: path
-                  description: Device Id to request data from.
+                  description: Device Id to get DataBoundary information from.
                   required: true
                   schema:
                     type: string
@@ -615,8 +557,7 @@ paths:
                             schema:
                                 type: string
                                 description: Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect these to be included in the CSV.
-                "204":
-                    description: No SensorData for the requested time period.
+                "204": {}
                 "400":
                     description: Bad Request
                     content:
@@ -647,7 +588,7 @@ paths:
                                 schema: http://localhost:3030/schemas/ErrorModel.json
                                 title: Bad Request
                                 status: 400
-                                detail: Invalid start time.
+                                detail: No Authorization Header Provided.
                 "401":
                     description: Unauthorized
                     content:
@@ -762,6 +703,37 @@ paths:
                                 items:
                                     type: string
                                     pattern: ^[a-zA-Z0-9]{1,30}$
+                "400":
+                    description: Bad Request
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Bad Request
+                                status: 400
+                                detail: No Authorization Header Provided.
                 "401":
                     description: Unauthorized
                     content:
@@ -793,6 +765,7 @@ paths:
                                 title: Unauthorized
                                 status: 401
                                 detail: Unknown user.
+                "404": {}
                 "500":
                     description: Internal Server Error
                     content:
@@ -872,7 +845,7 @@ paths:
                                 schema: http://localhost:3030/schemas/ErrorModel.json
                                 title: Bad Request
                                 status: 400
-                                detail: No auth header provided.
+                                detail: No Authorization Header Provided.
                 "401":
                     description: Unauthorized
                     content:
@@ -904,6 +877,7 @@ paths:
                                 title: Unauthorized
                                 status: 401
                                 detail: Unknown user.
+                "404": {}
                 "500":
                     description: Internal Server Error
                     content:
