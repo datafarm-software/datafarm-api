@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -208,6 +209,123 @@ func TestGetSensorData(t *testing.T) {
 				deviceRequest: datafetcher.DeviceDataRequest{
 					QueryFields: []string{RegisteredQueryField},
 					Start:       RelativeStart,
+				},
+			},
+		},
+
+		"successfully get deviceid data in Africa/Johannesburg timezone": {
+			want: []datafetcher.DeviceData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange.Local(),
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+					},
+				},
+			},
+			gsdt: GetSensorDataTest{
+				wantErr:    false,
+				wantStatus: http.StatusOK,
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.DeviceData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField: 23,
+						},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+				token:    ValidToken,
+				deviceId: RegisteredDeviceId,
+				deviceRequest: datafetcher.DeviceDataRequest{
+					QueryFields: []string{RegisteredQueryField},
+					Start:       RelativeStart,
+					Timezone:    "Africa/Johannesburg",
+				},
+			},
+		},
+
+		"invalid timezone requested so unprocessable": {
+			want: nil,
+			gsdt: GetSensorDataTest{wantErr: true,
+				wantStatus: http.StatusUnprocessableEntity,
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.DeviceData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField: 23,
+						},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				token: ValidToken,
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+				deviceId: RegisteredDeviceId,
+				deviceRequest: datafetcher.DeviceDataRequest{
+					QueryFields: []string{RegisteredQueryField},
+					Start:       RelativeStart,
+					Timezone:    "$ome/Wr0ng/Timezone",
 				},
 			},
 		},
@@ -1185,6 +1303,7 @@ func TestGetSensorData(t *testing.T) {
 				body := resp.Body.Bytes()
 				err = json.Unmarshal(body, &dd)
 				require.Nil(t, err)
+				log.Printf("dd: %+v", dd)
 				if diff := cmp.Diff(tc.want, dd); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
@@ -1212,6 +1331,7 @@ func makeQueryParams(dr datafetcher.DeviceDataRequest) string {
 	for _, q := range dr.QueryFields {
 		fmt.Fprintf(&b, "&queryField=%s", q)
 	}
+	fmt.Fprintf(&b, "&timezone=%s", dr.Timezone)
 	return b.String()
 }
 
