@@ -20,15 +20,15 @@ import (
 )
 
 func formatTimestamp(in *datafetcher.DeviceDataRequest) (err error) {
-	in.Start = strings.TrimSpace(in.Start)
-	if RELATIVETIME_REGEX.MatchString(in.Start) {
-		older := CheckOlderThanNinetyDays(in.Start)
+	in.TimeFrame.Start = strings.TrimSpace(in.TimeFrame.Start)
+	if RELATIVETIME_REGEX.MatchString(in.TimeFrame.Start) {
+		older := CheckOlderThanNinetyDays(in.TimeFrame.Start)
 		if older {
 			return huma.Error400BadRequest("Relative start time older than 90 days.")
 		}
-		in.Stop = ""
+		in.TimeFrame.Stop = ""
 	} else {
-		rfcStart, err := time.Parse(time.RFC3339Nano, in.Start)
+		rfcStart, err := time.Parse(time.RFC3339Nano, in.TimeFrame.Start)
 		if err != nil {
 			return huma.Error400BadRequest("Start time is invalid rfc.")
 		}
@@ -38,11 +38,11 @@ func formatTimestamp(in *datafetcher.DeviceDataRequest) (err error) {
 		if rfcStart.UnixMilli() >= time.Now().UnixMilli() {
 			return huma.Error400BadRequest("Start time is in the future.")
 		}
-		if in.Stop == "" {
+		if in.TimeFrame.Stop == "" {
 			return huma.Error400BadRequest("No stop time provided.")
 		}
-		in.Stop = strings.TrimSpace(in.Stop)
-		rfcStop, err := time.Parse(time.RFC3339Nano, in.Stop)
+		in.TimeFrame.Stop = strings.TrimSpace(in.TimeFrame.Stop)
+		rfcStop, err := time.Parse(time.RFC3339Nano, in.TimeFrame.Stop)
 		if err != nil {
 			return huma.Error400BadRequest("Stop time is invalid rfc.")
 		}
@@ -78,8 +78,8 @@ func (a *Api) getDeviceData(
 				"Internal error checking acess to DeviceId.")
 		}
 	}
-	di.Start = in.Start
-	di.Stop = in.Stop
+	di.Start = in.TimeFrame.Start
+	di.Stop = in.TimeFrame.Stop
 	di.QueryFields = in.Hardware.QueryFields
 	if in.Hardware.QueryFields[0] == "all" {
 		if !authstore.HasPermission(authstore.Role(user.Role),
@@ -95,8 +95,8 @@ func (a *Api) getDeviceData(
 		}
 		di.QueryFields = qf.QueryFields
 	}
-	if in.Timezone != "" {
-		di.Timezone, err = time.LoadLocation(in.Timezone)
+	if in.TimeFrame.Timezone != "" {
+		di.Timezone, err = time.LoadLocation(in.TimeFrame.Timezone)
 		if err != nil {
 			return nil, huma.Error400BadRequest(
 				"Invalid location. Please try a different IANA Timezone.")
@@ -358,17 +358,22 @@ func (a *Api) BatchGetDeviceData(ctx context.Context,
 	}) (*struct {
 	Body *datafetcher.BatchDeviceDataResponse
 }, error) {
+	var dataReq *datafetcher.DeviceDataRequest
 	var dataResp *datafetcher.DeviceDataResponse
 	var deviceErr datafetcher.DeviceDataError
 	var err error
-	errSlice := make([]datafetcher.DeviceDataError, 0, len(in.Body))
-	resultSlice := make(datafetcher.DeviceDataSlice, 0, len(in.Body))
-	for _, bdr := range in.Body {
-		dataResp, err = a.GetDeviceData(ctx, &bdr)
+	errSlice := make([]datafetcher.DeviceDataError, 0, len(in.Body.Hardware))
+	resultSlice := make(datafetcher.DeviceDataSlice, 0, len(in.Body.Hardware))
+	for _, hw := range in.Body.Hardware {
+		dataReq = &datafetcher.DeviceDataRequest{
+			Hardware:  hw,
+			TimeFrame: in.Body.TimeFrame,
+		}
+		dataResp, err = a.GetDeviceData(ctx, dataReq)
 		if err == nil {
 			resultSlice = append(resultSlice, dataResp.Body...)
 		} else {
-			deviceErr.DeviceId = bdr.Hardware.DeviceId
+			deviceErr.DeviceId = hw.DeviceId
 			deviceErr.Error = err.Error()
 			errSlice = append(errSlice, deviceErr)
 		}
