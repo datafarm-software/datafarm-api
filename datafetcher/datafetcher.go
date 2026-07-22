@@ -57,6 +57,7 @@ type CsvMarshaller interface {
 type CsvInfo struct {
 	Headers         []string
 	DeviceIdIndexes map[DeviceId]Indexes
+	DeviceIds       []DeviceId
 }
 
 type DeviceDataSlice []DeviceData
@@ -71,10 +72,17 @@ func (d DeviceDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
 	slices.SortFunc(d, func(a, b DeviceData) int {
 		return a.Timestamp.Compare(b.Timestamp)
 	})
+	var id DeviceId
+	idSeen := make(map[DeviceId]bool)
 	for i, dd := range d {
-		csvInfo.DeviceIdIndexes[DeviceId(dd.DeviceID)] = append(
+		id = DeviceId(dd.DeviceID)
+		csvInfo.DeviceIdIndexes[id] = append(
 			csvInfo.DeviceIdIndexes[DeviceId(dd.DeviceID)], i)
-		for qf, _ := range dd.SensorData {
+		if !idSeen[id] {
+			csvInfo.DeviceIds = append(csvInfo.DeviceIds, id)
+			idSeen[id] = true
+		}
+		for qf := range dd.SensorData {
 			if !queryFieldSeen[qf] {
 				csvInfo.Headers = append(csvInfo.Headers, qf)
 				queryFieldSeen[qf] = true
@@ -82,6 +90,7 @@ func (d DeviceDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
 		}
 	}
 	slices.Sort(csvInfo.Headers)
+	slices.Sort(csvInfo.DeviceIds)
 	return csvInfo, nil
 }
 
@@ -101,17 +110,19 @@ func (d DeviceDataSlice) Csv() (csvStr string, err error) {
 		return csvStr, fmt.Errorf("writing headers: %v", err)
 	}
 	var deviceData DeviceData
+	var indexes Indexes
 OuterLoop:
-	for deviceId, indexes := range csvInfo.DeviceIdIndexes {
-		err = writeDeviceIdRow(string(deviceId), len(csvInfo.Headers), writer)
+	for _, deviceId := range csvInfo.DeviceIds {
+		err = writeDeviceIdRow(string(deviceId), writer)
 		if err != nil {
 			err = fmt.Errorf("writing deviceid row: %v", err)
 			break
 		}
+		indexes = csvInfo.DeviceIdIndexes[deviceId]
 		for _, i := range indexes {
 			if len(d) <= i {
 				err = fmt.Errorf(
-					"deviceid: %s, gave index out of range: len(%d) <= %i",
+					"deviceid: %s, gave index out of range: len(%d) <= %d",
 					deviceId, len(d), i)
 				break OuterLoop
 			}
@@ -127,24 +138,21 @@ OuterLoop:
 	return str.String(), err
 }
 
-func writeDeviceIdRow(deviceId string, columnCount int, writer *csv.Writer) (err error) {
+func writeDeviceIdRow(deviceId string, writer *csv.Writer) (err error) {
 	deviceIdRow := []string{string(deviceId)}
-	for range columnCount {
-		deviceIdRow = append(deviceIdRow, "")
-	}
 	return writer.Write(deviceIdRow)
 }
 
 func writeDataRow(queryFieldColumns []string, deviceData DeviceData, writer *csv.Writer) error {
-	row := []string{deviceData.Timestamp.Local().Format(time.DateTime)}
+	row := []string{deviceData.Timestamp.Format(time.RFC3339)}
 	var v float64
 	var ok bool
 	for _, qf := range queryFieldColumns {
 		v, ok = deviceData.SensorData[qf]
-		if !ok {
-			row = append(row, "")
-		} else {
+		if ok {
 			row = append(row, fmt.Sprintf("%.3f", v))
+		} else {
+			row = append(row, "")
 		}
 	}
 	return writer.Write(row)

@@ -46,15 +46,15 @@ const InvalidToken = "invalidToken0"
 const RelativeStart = "-6h"
 const RelativeMoreThanNinetyDays = "-91d"
 
-var MoreThanNinetyDays = time.Now().Add(-91 * 24 * time.Hour).Format(time.RFC3339)
-var Start = time.Now().Add(-24 * time.Hour).Format(time.RFC3339)
-var StartGreaterThanStop = time.Now().Add(1 * time.Hour).Format(time.RFC3339)
-var FutureStart = time.Now().Add(1 * time.Hour).Format(time.RFC3339)
-var Stop = time.Now().Format(time.RFC3339)
-var StopInFuture = time.Now().Add(24 * time.Hour).Format(time.RFC3339)
-var OutsideTimeRange = time.Now().Add(-25 * time.Hour)
-var InsideTimeRange = time.Now().Add(-2 * time.Hour)
-var AlsoInsideTimeRange = time.Now().Add(-1 * time.Hour)
+var MoreThanNinetyDays = time.Now().UTC().Add(-91 * 24 * time.Hour).Format(time.RFC3339)
+var Start = time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
+var StartGreaterThanStop = time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339)
+var FutureStart = time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339)
+var Stop = time.Now().UTC().Format(time.RFC3339)
+var StopInFuture = time.Now().UTC().Add(24 * time.Hour).Format(time.RFC3339)
+var OutsideTimeRange = time.Now().UTC().Add(-25 * time.Hour)
+var InsideTimeRange = time.Now().UTC().Add(-2 * time.Hour)
+var AlsoInsideTimeRange = time.Now().UTC().Add(-1 * time.Hour)
 var RegisteredCompanyDevices = []string{RegisteredDeviceId}
 var a = &api.Api{}
 
@@ -1194,7 +1194,7 @@ func TestGetSensorData(t *testing.T) {
 }
 
 func setupHuma(t *testing.T) humatest.TestAPI {
-	config := localhuma.Config()
+	config := localhuma.Config(localhuma.Production)
 	router := mux.NewRouter()
 	humaApi := humamux.New(router, config)
 	localhuma.SetupApi(humaApi, a)
@@ -3134,9 +3134,9 @@ func TestCsvGetSensorData(t *testing.T) {
 	}{
 
 		"single deviceid, single queryfield": {
-			want: fmt.Sprintf(",%s\n%s,\n%s,%s\n",
+			want: fmt.Sprintf(",%s\n%s\n%s,%s\n",
 				RegisteredQueryField, RegisteredDeviceId,
-				InsideTimeRange.Format(time.DateTime), "23.000"),
+				InsideTimeRange.Format(time.RFC3339), "23.000"),
 			gsdt: GetSensorDataTest{wantErr: false,
 				wantStatus: http.StatusOK,
 				mockAuthStore: authstore.Schema{
@@ -3189,9 +3189,9 @@ func TestCsvGetSensorData(t *testing.T) {
 		},
 
 		"single deviceid, multiple queryfield": {
-			want: fmt.Sprintf(",%s,%s\n%s,,\n%s,%s,%s\n",
+			want: fmt.Sprintf(",%s,%s\n%s\n%s,%s,%s\n",
 				AnotherRegisteredQueryField, RegisteredQueryField, RegisteredDeviceId,
-				InsideTimeRange.Format(time.DateTime), "80.000", "23.000"),
+				InsideTimeRange.Format(time.RFC3339), "80.000", "23.000"),
 			gsdt: GetSensorDataTest{wantErr: false,
 				wantStatus: http.StatusOK,
 				mockAuthStore: authstore.Schema{
@@ -3245,10 +3245,10 @@ func TestCsvGetSensorData(t *testing.T) {
 		},
 
 		"single deviceid, multiple queryfield and timestamp": {
-			want: fmt.Sprintf(",%s,%s\n%s,,\n%s,%s,%s\n%s,%s,%s\n",
+			want: fmt.Sprintf(",%s,%s\n%s\n%s,%s,%s\n%s,%s,%s\n",
 				AnotherRegisteredQueryField, RegisteredQueryField, RegisteredDeviceId,
-				InsideTimeRange.Format(time.DateTime), "80.000", "23.000",
-				AlsoInsideTimeRange.Format(time.DateTime), "81.000", "25.000"),
+				InsideTimeRange.Format(time.RFC3339), "80.000", "23.000",
+				AlsoInsideTimeRange.Format(time.RFC3339), "81.000", "25.000"),
 			gsdt: GetSensorDataTest{wantErr: false,
 				wantStatus: http.StatusOK,
 				mockAuthStore: authstore.Schema{
@@ -3310,10 +3310,10 @@ func TestCsvGetSensorData(t *testing.T) {
 		},
 
 		"single deviceid, multiple queryfield and seperate timestamp": {
-			want: fmt.Sprintf(",%s,%s\n%s,,\n%s,%s,\n%s,,%s\n",
+			want: fmt.Sprintf(",%s,%s\n%s\n%s,%s,\n%s,,%s\n",
 				AnotherRegisteredQueryField, RegisteredQueryField, RegisteredDeviceId,
-				InsideTimeRange.Format(time.DateTime), "80.000",
-				AlsoInsideTimeRange.Format(time.DateTime), "25.000"),
+				InsideTimeRange.Format(time.RFC3339), "80.000",
+				AlsoInsideTimeRange.Format(time.RFC3339), "25.000"),
 			gsdt: GetSensorDataTest{wantErr: false,
 				wantStatus: http.StatusOK,
 				mockAuthStore: authstore.Schema{
@@ -3414,10 +3414,10 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 	}{
 
 		"multiple deviceid, single queryfield": {
-			want: fmt.Sprintf(",%s\n%s,\n%s,%s\n%s,\n%s,%s\n",
+			want: fmt.Sprintf(",%s\n%s\n%s,%s\n%s\n%s,%s\n",
 				RegisteredQueryField, RegisteredDeviceId,
-				InsideTimeRange.Format(time.DateTime), "23.000",
-				AnotherRegisteredDeviceId, InsideTimeRange.Format(time.DateTime),
+				InsideTimeRange.Format(time.RFC3339), "23.000",
+				AnotherRegisteredDeviceId, InsideTimeRange.Format(time.RFC3339),
 				"25.000"),
 			gsdt: GetSensorDataTest{wantErr: false,
 				wantStatus: http.StatusOK,
@@ -3491,10 +3491,10 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 		},
 
 		"multiple deviceid, multiple queryfield": {
-			want: fmt.Sprintf(",%s,%s\n%s,,\n%s,%s,%s\n%s,,\n%s,%s,%s\n",
+			want: fmt.Sprintf(",%s,%s\n%s\n%s,%s,%s\n%s\n%s,%s,%s\n",
 				AnotherRegisteredQueryField, RegisteredQueryField, RegisteredDeviceId,
-				InsideTimeRange.Format(time.DateTime), "80.000", "23.000",
-				AnotherRegisteredDeviceId, InsideTimeRange.Format(time.DateTime),
+				InsideTimeRange.Format(time.RFC3339), "80.000", "23.000",
+				AnotherRegisteredDeviceId, InsideTimeRange.Format(time.RFC3339),
 				"81.000", "25.000"),
 			gsdt: GetSensorDataTest{wantErr: false,
 				wantStatus: http.StatusOK,
@@ -3570,10 +3570,10 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 		},
 
 		"multiple deviceid, multiple queryfield seperate timestamp": {
-			want: fmt.Sprintf(",%s,%s\n%s,,\n%s,,%s\n%s,,\n%s,%s,\n",
+			want: fmt.Sprintf(",%s,%s\n%s\n%s,,%s\n%s\n%s,%s,\n",
 				AnotherRegisteredQueryField, RegisteredQueryField, RegisteredDeviceId,
-				InsideTimeRange.Format(time.DateTime), "23.000",
-				AnotherRegisteredDeviceId, AlsoInsideTimeRange.Format(time.DateTime),
+				InsideTimeRange.Format(time.RFC3339), "23.000",
+				AnotherRegisteredDeviceId, AlsoInsideTimeRange.Format(time.RFC3339),
 				"81.000"),
 			gsdt: GetSensorDataTest{wantErr: false,
 				wantStatus: http.StatusOK,
@@ -3721,9 +3721,9 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 		},
 
 		"multiple deviceid, single queryfield, result and errors mixed together": {
-			want: fmt.Sprintf(",%s\n%s,\n%s,%s\n%s,%s\n",
+			want: fmt.Sprintf(",%s\n%s\n%s,%s\n%s,%s\n",
 				RegisteredQueryField, RegisteredDeviceId,
-				InsideTimeRange.Format(time.DateTime), "23.000",
+				InsideTimeRange.Format(time.RFC3339), "23.000",
 				AnotherRegisteredDeviceId, "Unauthorized access to this device."),
 			gsdt: GetSensorDataTest{wantErr: false,
 				wantStatus: http.StatusOK,
@@ -3797,9 +3797,9 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 		},
 
 		"multiple deviceid, multiple queryfield, result and errors mixed together": {
-			want: fmt.Sprintf(",%s,%s\n%s,,\n%s,%s,%s\n%s,%s\n",
+			want: fmt.Sprintf(",%s,%s\n%s\n%s,%s,%s\n%s,%s\n",
 				AnotherRegisteredQueryField, RegisteredQueryField, RegisteredDeviceId,
-				InsideTimeRange.Format(time.DateTime), "80.000", "23.000",
+				InsideTimeRange.Format(time.RFC3339), "80.000", "23.000",
 				AnotherRegisteredDeviceId, "Unauthorized access to this device."),
 			gsdt: GetSensorDataTest{wantErr: false,
 				wantStatus: http.StatusOK,
@@ -3874,9 +3874,10 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 		},
 
 		"multiple deviceid, multiple queryfield, seperate timestamp, result and errors mixed together": {
-			want: fmt.Sprintf(",%s,%s\n%s,,\n%s,%s,\n%s,,%s\n%s,%s\n",
+			want: fmt.Sprintf(",%s,%s\n%s\n%s,%s,\n%s,,%s\n%s,%s\n",
 				AnotherRegisteredQueryField, RegisteredQueryField, RegisteredDeviceId,
-				InsideTimeRange.Format(time.DateTime), "80.000", AlsoInsideTimeRange.Format(time.DateTime), "23.000",
+				InsideTimeRange.Format(time.RFC3339), "80.000",
+				AlsoInsideTimeRange.Format(time.RFC3339), "23.000",
 				AnotherRegisteredDeviceId, "Unauthorized access to this device."),
 			gsdt: GetSensorDataTest{wantErr: false,
 				wantStatus: http.StatusOK,
