@@ -19,7 +19,7 @@ import (
 	"github.com/datafarm-software/datafarm-api/tokenprovider"
 )
 
-func formatTimestamp(in *datafetcher.DeviceDataRequest) error {
+func formatTimestamp(in *datafetcher.DeviceDataRequest) (err error) {
 	in.Start = strings.TrimSpace(in.Start)
 	if RELATIVETIME_REGEX.MatchString(in.Start) {
 		older := CheckOlderThanNinetyDays(in.Start)
@@ -30,7 +30,6 @@ func formatTimestamp(in *datafetcher.DeviceDataRequest) error {
 	} else {
 		rfcStart, err := time.Parse(time.RFC3339Nano, in.Start)
 		if err != nil {
-			log.Printf("parsing start: %v", err)
 			return huma.Error400BadRequest("Start time is invalid rfc.")
 		}
 		if rfcStart.UnixMilli() <= time.Now().Add(-90*24*time.Hour).UnixMilli() {
@@ -95,6 +94,13 @@ func (a *Api) getDeviceData(
 				"Internal error getting query fields for deviceId.")
 		}
 		di.QueryFields = qf.QueryFields
+	}
+	if in.Timezone != "" {
+		di.Timezone, err = time.LoadLocation(in.Timezone)
+		if err != nil {
+			return nil, huma.Error400BadRequest(
+				"Invalid location. Please try a different IANA Timezone.")
+		}
 	}
 	deviceData, err = a.DataFetcher.GetData(di)
 	if err != nil {

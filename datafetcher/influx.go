@@ -25,7 +25,7 @@ type DataRow struct {
 	DeviceID string
 	Field    string
 	Time     time.Time
-	Value    interface{}
+	Value    any
 }
 
 type InfluxOpts struct {
@@ -74,7 +74,7 @@ func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
 	if err != nil {
 		return nil, fmt.Errorf("error processing query result: %v", err)
 	}
-	dd, err := i.dataRows2DeviceData(dataRows)
+	dd, err := i.dataRows2DeviceData(dataRows, metadata.Timezone)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (i *InfluxDatafetcher) extractValue(result *influxApi.QueryTableResult) ([]
 	return records, nil
 }
 
-func (i *InfluxDatafetcher) dataRows2DeviceData(data []DataRow) ([]DeviceData, error) {
+func (i *InfluxDatafetcher) dataRows2DeviceData(data []DataRow, loc *time.Location) ([]DeviceData, error) {
 	var deviceDataSlice []DeviceData
 	var found bool
 	var value float64
@@ -147,8 +147,12 @@ func (i *InfluxDatafetcher) dataRows2DeviceData(data []DataRow) ([]DeviceData, e
 		if !found {
 			newDeviceData := DeviceData{
 				DeviceID:   row.DeviceID,
-				Timestamp:  row.Time,
 				SensorData: map[string]float64{row.Field: value},
+			}
+			if loc == nil {
+				newDeviceData.Timestamp = row.Time
+			} else {
+				newDeviceData.Timestamp = row.Time.In(loc)
 			}
 			deviceDataSlice = append(deviceDataSlice, newDeviceData)
 		}

@@ -1,6 +1,9 @@
 package deviceinfo
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
 
 var GeneralQueryFields = []string{
 	"latitude", "longitude", "signal_strength", "rssi", "snr", "batv",
@@ -26,6 +29,7 @@ type DeviceInfo struct {
 	DeviceId, Company, Network string
 	Start, Stop                string
 	QueryFields                []string
+	Timezone                   *time.Location
 }
 
 type QueryFieldsResponse struct {
