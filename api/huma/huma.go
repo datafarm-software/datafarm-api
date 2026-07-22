@@ -155,7 +155,7 @@ func baseOperation(method string, middlewares *huma.Middlewares) huma.Operation 
 
 func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	mw := &huma.Middlewares{ho.RateLimit, ho.VerifyToken}
-	op := baseOperation("POST", nil)
+	op := baseOperation("POST", &huma.Middlewares{ho.RateLimit})
 	op.Path = "/login"
 	op.Summary = "Login"
 	op.Security = Basic
@@ -221,7 +221,6 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	fh.Detail = "Internal error getting queryFields."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	huma.Register(api, op, ho.GetQueryFields)
-	op.Parameters = []*huma.Param{}
 
 	op = baseOperation("GET", mw)
 	op.Path = "/device/ids"
@@ -243,7 +242,6 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	fh.Detail = "Internal error getting DataBoundary."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	huma.Register(api, op, ho.GetDeviceDataBoundary)
-	op.Parameters = []*huma.Param{}
 }
 
 func Config(mode Mode) (config huma.Config) {
