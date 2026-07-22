@@ -64,7 +64,7 @@ func (a *Api) getDeviceData(
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
-	di, code, err := a.checkAccessToDevice(in.DeviceId, user)
+	di, code, err := a.checkAccessToDevice(in.Hardware.DeviceId, user)
 	if err != nil {
 		switch code {
 		case http.StatusUnauthorized:
@@ -80,16 +80,16 @@ func (a *Api) getDeviceData(
 	}
 	di.Start = in.Start
 	di.Stop = in.Stop
-	di.QueryFields = in.QueryFields
-	if in.QueryFields[0] == "all" {
+	di.QueryFields = in.Hardware.QueryFields
+	if in.Hardware.QueryFields[0] == "all" {
 		if !authstore.HasPermission(authstore.Role(user.Role),
 			authstore.GetAllQueryFields) {
 			return nil, huma.Error500InternalServerError(
 				"Unauthorized for all queryfields.")
 		}
-		qf, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
+		qf, err := a.DeviceInfo.GetQueryFields(in.Hardware.DeviceId)
 		if err != nil {
-			log.Printf("error getting query fields for: %s: %v", in.DeviceId, err)
+			log.Printf("error getting query fields for: %s: %v", in.Hardware.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting query fields for deviceId.")
 		}
@@ -358,24 +358,17 @@ func (a *Api) BatchGetDeviceData(ctx context.Context,
 	}) (*struct {
 	Body *datafetcher.BatchDeviceDataResponse
 }, error) {
-	var dr datafetcher.DeviceDataRequest
 	var dataResp *datafetcher.DeviceDataResponse
 	var deviceErr datafetcher.DeviceDataError
 	var err error
 	errSlice := make([]datafetcher.DeviceDataError, 0, len(in.Body))
 	resultSlice := make(datafetcher.DeviceDataSlice, 0, len(in.Body))
 	for _, bdr := range in.Body {
-		dr = datafetcher.DeviceDataRequest{
-			DeviceId:    bdr.DeviceId,
-			QueryFields: bdr.QueryFields,
-			Start:       bdr.Start,
-			Stop:        bdr.Stop,
-		}
-		dataResp, err = a.GetDeviceData(ctx, &dr)
+		dataResp, err = a.GetDeviceData(ctx, &bdr)
 		if err == nil {
 			resultSlice = append(resultSlice, dataResp.Body...)
 		} else {
-			deviceErr.DeviceId = bdr.DeviceId
+			deviceErr.DeviceId = bdr.Hardware.DeviceId
 			deviceErr.Error = err.Error()
 			errSlice = append(errSlice, deviceErr)
 		}
