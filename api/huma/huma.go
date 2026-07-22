@@ -337,7 +337,7 @@ func SetupApi(humaApi huma.API, a HumaOperator) {
 	}
 	csvMediaType := &huma.MediaType{
 		Schema: &huma.Schema{
-			Description: "Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect these to be included in the CSV.",
+			Description: "Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Timestamps will be in UTC timezone and RFC3339 Format. Should there be any errors, clients can expect these to be included in the CSV.",
 			Type:        "string",
 		},
 	}
