@@ -1565,6 +1565,24 @@ func TestGetQueryFields(t *testing.T) {
 	}
 }
 
+func DefaultBatchRequest() datafetcher.BatchDeviceDataRequest {
+	return datafetcher.BatchDeviceDataRequest{
+		Hardware: []datafetcher.Hardware{
+			{
+				DeviceId:    RegisteredDeviceId,
+				QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+			},
+			{
+				DeviceId:    AnotherRegisteredDeviceId,
+				QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+			},
+		},
+		TimeFrame: datafetcher.TimeFrame{
+			Start: RelativeStart,
+		},
+	}
+}
+
 func TestBatchGetDeviceData(t *testing.T) {
 	tests := map[string]struct {
 		wantErr         bool
@@ -1575,7 +1593,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 		mockDeviceInfo  deviceinfo.Schema
 		mockTokens      map[string]bool
 		token           string
-		deviceRequests  []datafetcher.DeviceDataRequest
+		deviceRequests  datafetcher.BatchDeviceDataRequest
 	}{
 
 		"get multiple deviceIds' data": {
@@ -1657,23 +1675,8 @@ func TestBatchGetDeviceData(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token: ValidToken,
-			deviceRequests: []datafetcher.DeviceDataRequest{
-				{
-					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
-					TimeFrame: datafetcher.TimeFrame{
-						Start: RelativeStart,
-					},
-				},
-				{
-					Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
-					TimeFrame: datafetcher.TimeFrame{
-						Start: RelativeStart,
-					},
-				},
-			},
+			token:          ValidToken,
+			deviceRequests: DefaultBatchRequest(),
 		},
 
 		"admin user can get device data from any company": {
@@ -1755,23 +1758,8 @@ func TestBatchGetDeviceData(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token: ValidToken,
-			deviceRequests: []datafetcher.DeviceDataRequest{
-				{
-					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
-					TimeFrame: datafetcher.TimeFrame{
-						Start: RelativeStart,
-					},
-				},
-				{
-					Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
-					TimeFrame: datafetcher.TimeFrame{
-						Start: RelativeStart,
-					},
-				},
-			},
+			token:          ValidToken,
+			deviceRequests: DefaultBatchRequest(),
 		},
 
 		"admin user can get device data from any network": {
@@ -1853,23 +1841,8 @@ func TestBatchGetDeviceData(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token: ValidToken,
-			deviceRequests: []datafetcher.DeviceDataRequest{
-				{
-					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
-					TimeFrame: datafetcher.TimeFrame{
-						Start: RelativeStart,
-					},
-				},
-				{
-					Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
-					TimeFrame: datafetcher.TimeFrame{
-						Start: RelativeStart,
-					},
-				},
-			},
+			token:          ValidToken,
+			deviceRequests: DefaultBatchRequest(),
 		},
 
 		"network user can get any device data from within network": {
@@ -1951,23 +1924,8 @@ func TestBatchGetDeviceData(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token: ValidToken,
-			deviceRequests: []datafetcher.DeviceDataRequest{
-				{
-					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
-					TimeFrame: datafetcher.TimeFrame{
-						Start: RelativeStart,
-					},
-				},
-				{
-					Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
-					TimeFrame: datafetcher.TimeFrame{
-						Start: RelativeStart,
-					},
-				},
-			},
+			token:          ValidToken,
+			deviceRequests: DefaultBatchRequest(),
 		},
 
 		"network user cant get device data from other network": {
@@ -2041,23 +1999,8 @@ func TestBatchGetDeviceData(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token: ValidToken,
-			deviceRequests: []datafetcher.DeviceDataRequest{
-				{
-					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
-					TimeFrame: datafetcher.TimeFrame{
-						Start: RelativeStart,
-					},
-				},
-				{
-					Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
-					TimeFrame: datafetcher.TimeFrame{
-						Start: RelativeStart,
-					},
-				},
-			},
+			token:          ValidToken,
+			deviceRequests: DefaultBatchRequest(),
 		},
 
 		"user cant get device data from other company": {
@@ -2131,23 +2074,8 @@ func TestBatchGetDeviceData(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token: ValidToken,
-			deviceRequests: []datafetcher.DeviceDataRequest{
-				{
-					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
-					TimeFrame: datafetcher.TimeFrame{
-						Start: RelativeStart,
-					},
-				},
-				{
-					Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
-					TimeFrame: datafetcher.TimeFrame{
-						Start: RelativeStart,
-					},
-				},
-			},
+			token:          ValidToken,
+			deviceRequests: DefaultBatchRequest(),
 		},
 
 		"one successful request, one error": {
@@ -2226,39 +2154,16 @@ func TestBatchGetDeviceData(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token: ValidToken,
-			deviceRequests: []datafetcher.DeviceDataRequest{
-				{
-					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
-					TimeFrame: datafetcher.TimeFrame{
-						Start: RelativeStart,
-					},
-				},
-				{
-					Hardware: datafetcher.Hardware{DeviceId: AnotherRegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
-					TimeFrame: datafetcher.TimeFrame{
-						Start: RelativeStart,
-					},
-				},
-			},
+			token:          ValidToken,
+			deviceRequests: DefaultBatchRequest(),
 		},
 
 		"unknown token": {
-			wantErr:    true,
-			wantStatus: http.StatusUnauthorized,
-			token:      InvalidToken,
-			want:       datafetcher.BatchDeviceDataResponse{},
-			deviceRequests: []datafetcher.DeviceDataRequest{
-				{
-					Hardware: datafetcher.Hardware{DeviceId: RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField}},
-					TimeFrame: datafetcher.TimeFrame{
-						Start: RelativeStart,
-					},
-				},
-			},
+			wantErr:        true,
+			wantStatus:     http.StatusUnauthorized,
+			token:          InvalidToken,
+			want:           datafetcher.BatchDeviceDataResponse{},
+			deviceRequests: DefaultBatchRequest(),
 		},
 	}
 
