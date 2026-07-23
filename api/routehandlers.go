@@ -19,7 +19,7 @@ import (
 	"github.com/datafarm-software/datafarm-api/tokenprovider"
 )
 
-func formatTimestamp(in *datafetcher.DeviceDataRequest) (err error) {
+func formatTimestamp(in *datafetcher.SensorDataRequest) (err error) {
 	in.TimeFrame.Start = strings.TrimSpace(in.TimeFrame.Start)
 	if RELATIVETIME_REGEX.MatchString(in.TimeFrame.Start) {
 		older := CheckOlderThanNinetyDays(in.TimeFrame.Start)
@@ -53,9 +53,9 @@ func formatTimestamp(in *datafetcher.DeviceDataRequest) (err error) {
 	return nil
 }
 
-func (a *Api) getDeviceData(
-	ctx context.Context, in *datafetcher.DeviceDataRequest) (
-	deviceData datafetcher.DeviceDataSlice, err error) {
+func (a *Api) getSensorData(
+	ctx context.Context, in *datafetcher.SensorDataRequest) (
+	sensorData datafetcher.SensorDataSlice, err error) {
 	if err = formatTimestamp(in); err != nil {
 		return nil, err
 	}
@@ -102,27 +102,27 @@ func (a *Api) getDeviceData(
 				"Invalid location. Please try a different IANA Timezone.")
 		}
 	}
-	deviceData, err = a.DataFetcher.GetData(di)
+	sensorData, err = a.DataFetcher.GetData(di)
 	if err != nil {
 		log.Printf("error getting data: %v", err)
 		return nil, huma.Error500InternalServerError(
 			"Internal error fetching data.")
 	}
-	return deviceData, nil
+	return sensorData, nil
 }
 
-func (a *Api) GetDeviceData(ctx context.Context,
-	in *datafetcher.DeviceDataRequest) (out *datafetcher.DeviceDataResponse, err error) {
-	deviceData, err := a.getDeviceData(ctx, in)
+func (a *Api) GetSensorData(ctx context.Context,
+	in *datafetcher.SensorDataRequest) (out *datafetcher.SensorDataResponse, err error) {
+	sensorData, err := a.getSensorData(ctx, in)
 	if err != nil {
 		return nil, err
 	}
-	if len(deviceData) < 1 {
-		return &datafetcher.DeviceDataResponse{Status: http.StatusNoContent}, nil
+	if len(sensorData) < 1 {
+		return &datafetcher.SensorDataResponse{Status: http.StatusNoContent}, nil
 	}
-	return &datafetcher.DeviceDataResponse{
+	return &datafetcher.SensorDataResponse{
 		Status: http.StatusOK,
-		Body:   deviceData,
+		Body:   sensorData,
 	}, nil
 }
 
@@ -352,24 +352,24 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 	return &deviceinfo.QueryFieldsResponse{Body: queryFields}, nil
 }
 
-func (a *Api) BatchGetDeviceData(ctx context.Context,
+func (a *Api) BatchGetSensorData(ctx context.Context,
 	in *struct {
-		Body datafetcher.BatchDeviceDataRequest
+		Body datafetcher.BatchSensorDataRequest
 	}) (*struct {
-	Body *datafetcher.BatchDeviceDataResponse
+	Body *datafetcher.BatchSensorDataResponse
 }, error) {
-	var dataReq *datafetcher.DeviceDataRequest
-	var dataResp *datafetcher.DeviceDataResponse
-	var deviceErr datafetcher.DeviceDataError
+	var dataReq *datafetcher.SensorDataRequest
+	var dataResp *datafetcher.SensorDataResponse
+	var deviceErr datafetcher.SensorDataError
 	var err error
-	errSlice := make([]datafetcher.DeviceDataError, 0, len(in.Body.Hardware))
-	resultSlice := make(datafetcher.DeviceDataSlice, 0, len(in.Body.Hardware))
+	errSlice := make([]datafetcher.SensorDataError, 0, len(in.Body.Hardware))
+	resultSlice := make(datafetcher.SensorDataSlice, 0, len(in.Body.Hardware))
 	for _, hw := range in.Body.Hardware {
-		dataReq = &datafetcher.DeviceDataRequest{
+		dataReq = &datafetcher.SensorDataRequest{
 			Hardware:  hw,
 			TimeFrame: in.Body.TimeFrame,
 		}
-		dataResp, err = a.GetDeviceData(ctx, dataReq)
+		dataResp, err = a.GetSensorData(ctx, dataReq)
 		if err == nil {
 			resultSlice = append(resultSlice, dataResp.Body...)
 		} else {
@@ -379,9 +379,9 @@ func (a *Api) BatchGetDeviceData(ctx context.Context,
 		}
 	}
 	return &struct {
-		Body *datafetcher.BatchDeviceDataResponse
+		Body *datafetcher.BatchSensorDataResponse
 	}{
-		Body: &datafetcher.BatchDeviceDataResponse{
+		Body: &datafetcher.BatchSensorDataResponse{
 			Results: resultSlice,
 			Errors:  errSlice,
 		},
@@ -453,7 +453,7 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	}, nil
 }
 
-func (a *Api) GetDeviceDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
+func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
 	*datafetcher.DataBoundaryResponse, error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {

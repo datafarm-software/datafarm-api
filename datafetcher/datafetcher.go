@@ -11,11 +11,11 @@ import (
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
 )
 
-var EmptyDeviceData = errors.New("empty device data")
+var EmptySensorData = errors.New("empty sensor data")
 
-type DeviceDataResponse struct {
+type SensorDataResponse struct {
 	Status int
-	Body   DeviceDataSlice
+	Body   SensorDataSlice
 }
 
 type Hardware struct {
@@ -29,27 +29,27 @@ type TimeFrame struct {
 	Timezone string `query:"timezone-return" json:"timezone-return" required:"false" pattern:"^(|[a-zA-Z]+/[a-zA-Z]+)$" doc:"Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg"`
 }
 
-type DeviceDataRequest struct {
+type SensorDataRequest struct {
 	Hardware
 	TimeFrame
 }
 
-type BatchDeviceDataRequest struct {
+type BatchSensorDataRequest struct {
 	Hardware []Hardware `json:"hardware" required:"true"`
 	TimeFrame
 }
 
-type DeviceDataError struct {
+type SensorDataError struct {
 	DeviceId string `json:"deviceId"`
 	Error    string `json:"error"`
 }
 
-type BatchDeviceDataResponse struct {
-	Results DeviceDataSlice   `json:"results"`
-	Errors  []DeviceDataError `json:"errors"`
+type BatchSensorDataResponse struct {
+	Results SensorDataSlice   `json:"results"`
+	Errors  []SensorDataError `json:"errors"`
 }
 
-func (b *BatchDeviceDataResponse) Csv() (csvStr string, err error) {
+func (b *BatchSensorDataResponse) Csv() (csvStr string, err error) {
 	csvStr, _ = b.Results.Csv()
 	errStr := strings.Builder{}
 	for _, de := range b.Errors {
@@ -72,17 +72,17 @@ type CsvInfo struct {
 	DeviceIds       []DeviceId
 }
 
-type DeviceDataSlice []DeviceData
+type SensorDataSlice []SensorData
 
-func (d DeviceDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
+func (d SensorDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
 	csvInfo.Headers = make([]string, 0, len(d))
 	csvInfo.DeviceIdIndexes = make(map[DeviceId]Indexes)
 	if len(d) < 1 {
-		return csvInfo, EmptyDeviceData
+		return csvInfo, EmptySensorData
 	}
 	queryFieldSeen := make(map[string]bool)
 	sorted := slices.Clone(d)
-	slices.SortFunc(sorted, func(a, b DeviceData) int {
+	slices.SortFunc(sorted, func(a, b SensorData) int {
 		return a.Timestamp.Compare(b.Timestamp)
 	})
 	var id DeviceId
@@ -107,9 +107,9 @@ func (d DeviceDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
 	return csvInfo, nil
 }
 
-func (d DeviceDataSlice) Csv() (csvStr string, err error) {
+func (d SensorDataSlice) Csv() (csvStr string, err error) {
 	if len(d) < 1 {
-		return csvStr, EmptyDeviceData
+		return csvStr, EmptySensorData
 	}
 	csvInfo, err := d.CsvInfo()
 	if err != nil {
@@ -122,7 +122,7 @@ func (d DeviceDataSlice) Csv() (csvStr string, err error) {
 	if err := writer.Write(blankStartingColumn); err != nil {
 		return csvStr, fmt.Errorf("writing headers: %v", err)
 	}
-	var deviceData DeviceData
+	var sensorData SensorData
 	var indexes Indexes
 OuterLoop:
 	for _, deviceId := range csvInfo.DeviceIds {
@@ -139,8 +139,8 @@ OuterLoop:
 					deviceId, len(d), i)
 				break OuterLoop
 			}
-			deviceData = d[i]
-			err = writeDataRow(csvInfo.Headers, deviceData, writer)
+			sensorData = d[i]
+			err = writeDataRow(csvInfo.Headers, sensorData, writer)
 			if err != nil {
 				err = fmt.Errorf("writing row: %v", err)
 				break OuterLoop
@@ -156,12 +156,12 @@ func writeDeviceIdRow(deviceId string, writer *csv.Writer) (err error) {
 	return writer.Write(deviceIdRow)
 }
 
-func writeDataRow(queryFieldColumns []string, deviceData DeviceData, writer *csv.Writer) error {
-	row := []string{deviceData.Timestamp.Format(time.RFC3339)}
+func writeDataRow(queryFieldColumns []string, sensorData SensorData, writer *csv.Writer) error {
+	row := []string{sensorData.Timestamp.Format(time.RFC3339)}
 	var v float64
 	var ok bool
 	for _, qf := range queryFieldColumns {
-		v, ok = deviceData.SensorData[qf]
+		v, ok = sensorData.SensorData[qf]
 		if ok {
 			row = append(row, fmt.Sprintf("%.3f", v))
 		} else {
@@ -171,7 +171,7 @@ func writeDataRow(queryFieldColumns []string, deviceData DeviceData, writer *csv
 	return writer.Write(row)
 }
 
-type DeviceData struct {
+type SensorData struct {
 	DeviceID   string             `json:"deviceId"`
 	Timestamp  time.Time          `json:"timestamp" doc:"Timestamp will be in UTC timezone and RFC3339 Format."`
 	SensorData map[string]float64 `json:"sensorData"`
@@ -188,12 +188,12 @@ type DataBoundaryRequest struct {
 type DataBoundaryResponse struct{ Body DataBoundary }
 
 type TestingDataFetcher interface {
-	PrepareDb(*deviceinfo.Schema, DeviceDataSlice) error
+	PrepareDb(*deviceinfo.Schema, SensorDataSlice) error
 }
 
 type DataFetcher interface {
 	TestingDataFetcher
-	GetData(metadata deviceinfo.DeviceInfo) (DeviceDataSlice, error)
+	GetData(metadata deviceinfo.DeviceInfo) (SensorDataSlice, error)
 	GetDataBoundary(metadata deviceinfo.DeviceInfo) (DataBoundary, error)
 	Close() error
 }

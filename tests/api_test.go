@@ -152,12 +152,12 @@ func TestLogin(t *testing.T) {
 
 func TestGetSensorData(t *testing.T) {
 	tests := map[string]struct {
-		want []datafetcher.DeviceData
+		want []datafetcher.SensorData
 		gsdt GetSensorDataTest
 	}{
 
 		"successfully get deviceid data": {
-			want: []datafetcher.DeviceData{
+			want: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -183,7 +183,7 @@ func TestGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -211,7 +211,7 @@ func TestGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{
 						QueryFields: []string{RegisteredQueryField},
 					},
@@ -223,7 +223,7 @@ func TestGetSensorData(t *testing.T) {
 		},
 
 		"successfully get deviceid data in Africa/Johannesburg timezone": {
-			want: []datafetcher.DeviceData{
+			want: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange.Local(),
@@ -249,7 +249,7 @@ func TestGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -277,7 +277,7 @@ func TestGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start:    RelativeStart,
@@ -305,7 +305,7 @@ func TestGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -333,7 +333,7 @@ func TestGetSensorData(t *testing.T) {
 					ValidToken: true,
 				},
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start:    RelativeStart,
@@ -344,7 +344,7 @@ func TestGetSensorData(t *testing.T) {
 		},
 
 		"admin user can get all device queryfields": {
-			want: []datafetcher.DeviceData{
+			want: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -371,7 +371,7 @@ func TestGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -403,7 +403,7 @@ func TestGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{"all"}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -413,7 +413,7 @@ func TestGetSensorData(t *testing.T) {
 		},
 
 		"network user can get all device queryfields": {
-			want: []datafetcher.DeviceData{
+			want: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -439,7 +439,7 @@ func TestGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -471,7 +471,7 @@ func TestGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{"all"}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -481,7 +481,7 @@ func TestGetSensorData(t *testing.T) {
 		},
 
 		"user can get all device queryfields": {
-			want: []datafetcher.DeviceData{
+			want: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -507,7 +507,7 @@ func TestGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -539,7 +539,7 @@ func TestGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{"all"}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -554,7 +554,7 @@ func TestGetSensorData(t *testing.T) {
 				wantStatus: http.StatusUnauthorized,
 				token:      InvalidToken,
 				deviceId:   RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -569,7 +569,7 @@ func TestGetSensorData(t *testing.T) {
 				wantStatus: http.StatusBadRequest,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: FutureStart,
@@ -602,7 +602,7 @@ func TestGetSensorData(t *testing.T) {
 				wantStatus: http.StatusBadRequest,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: StartGreaterThanStop,
@@ -630,7 +630,7 @@ func TestGetSensorData(t *testing.T) {
 		},
 
 		"stop time in future": {
-			want: []datafetcher.DeviceData{
+			want: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -662,7 +662,7 @@ func TestGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -697,7 +697,7 @@ func TestGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: Start,
@@ -730,7 +730,7 @@ func TestGetSensorData(t *testing.T) {
 					ValidToken: true,
 				},
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeMoreThanNinetyDays,
@@ -762,7 +762,7 @@ func TestGetSensorData(t *testing.T) {
 					ValidToken: true,
 				},
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: MoreThanNinetyDays,
@@ -773,7 +773,7 @@ func TestGetSensorData(t *testing.T) {
 		},
 
 		"get multiple data points within time range": {
-			want: []datafetcher.DeviceData{
+			want: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -805,7 +805,7 @@ func TestGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -840,7 +840,7 @@ func TestGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -850,7 +850,7 @@ func TestGetSensorData(t *testing.T) {
 		},
 
 		"get multiple queryfields' data": {
-			want: []datafetcher.DeviceData{
+			want: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -884,7 +884,7 @@ func TestGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -921,7 +921,7 @@ func TestGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -931,7 +931,7 @@ func TestGetSensorData(t *testing.T) {
 		},
 
 		"exclude data points outside requested time range": {
-			want: []datafetcher.DeviceData{
+			want: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -963,7 +963,7 @@ func TestGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: OutsideTimeRange,
@@ -1005,7 +1005,7 @@ func TestGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -1015,7 +1015,7 @@ func TestGetSensorData(t *testing.T) {
 		},
 
 		"exclude data points outside requested time range, using relative start time": {
-			want: []datafetcher.DeviceData{
+			want: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -1047,7 +1047,7 @@ func TestGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: OutsideTimeRange,
@@ -1089,7 +1089,7 @@ func TestGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -1116,7 +1116,7 @@ func TestGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -1144,7 +1144,7 @@ func TestGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: "-1h",
@@ -1171,7 +1171,7 @@ func TestGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -1199,7 +1199,7 @@ func TestGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: UnregisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: "-1h",
@@ -1226,7 +1226,7 @@ func TestGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -1254,7 +1254,7 @@ func TestGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -1264,7 +1264,7 @@ func TestGetSensorData(t *testing.T) {
 		},
 
 		"admin user can request deviceid not in user company": {
-			want: []datafetcher.DeviceData{
+			want: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -1289,7 +1289,7 @@ func TestGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -1317,7 +1317,7 @@ func TestGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -1346,7 +1346,7 @@ func TestGetSensorData(t *testing.T) {
 			}
 			defer resp.Result().Body.Close()
 			if !tc.gsdt.wantErr {
-				var dd []datafetcher.DeviceData
+				var dd []datafetcher.SensorData
 				body := resp.Body.Bytes()
 				err = json.Unmarshal(body, &dd)
 				require.Nil(t, err)
@@ -1366,7 +1366,7 @@ func setupHuma(t *testing.T) humatest.TestAPI {
 	return humatest.Wrap(t, humaApi)
 }
 
-func makeQueryParams(dr datafetcher.DeviceDataRequest) string {
+func makeQueryParams(dr datafetcher.SensorDataRequest) string {
 	b := strings.Builder{}
 	start := url.QueryEscape(dr.Start)
 	fmt.Fprintf(&b, "?start=%s", start)
@@ -1565,8 +1565,8 @@ func TestGetQueryFields(t *testing.T) {
 	}
 }
 
-func DefaultBatchRequest() datafetcher.BatchDeviceDataRequest {
-	return datafetcher.BatchDeviceDataRequest{
+func DefaultBatchRequest() datafetcher.BatchSensorDataRequest {
+	return datafetcher.BatchSensorDataRequest{
 		Hardware: []datafetcher.Hardware{
 			{
 				DeviceId:    RegisteredDeviceId,
@@ -1583,25 +1583,25 @@ func DefaultBatchRequest() datafetcher.BatchDeviceDataRequest {
 	}
 }
 
-func TestBatchGetDeviceData(t *testing.T) {
+func TestBatchGetSensorData(t *testing.T) {
 	tests := map[string]struct {
 		wantErr         bool
 		wantStatus      int
-		mockDataFetcher []datafetcher.DeviceData
-		want            datafetcher.BatchDeviceDataResponse
+		mockDataFetcher []datafetcher.SensorData
+		want            datafetcher.BatchSensorDataResponse
 		mockAuthStore   authstore.Schema
 		mockDeviceInfo  deviceinfo.Schema
 		mockTokens      map[string]bool
 		token           string
-		deviceRequests  datafetcher.BatchDeviceDataRequest
+		deviceRequests  datafetcher.BatchSensorDataRequest
 	}{
 
 		"get multiple deviceIds' data": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: datafetcher.BatchDeviceDataResponse{
-				Errors: []datafetcher.DeviceDataError{},
-				Results: []datafetcher.DeviceData{
+			want: datafetcher.BatchSensorDataResponse{
+				Errors: []datafetcher.SensorDataError{},
+				Results: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -1634,7 +1634,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: []datafetcher.DeviceData{
+			mockDataFetcher: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -1679,12 +1679,12 @@ func TestBatchGetDeviceData(t *testing.T) {
 			deviceRequests: DefaultBatchRequest(),
 		},
 
-		"admin user can get device data from any company": {
+		"admin user can get sensor data from any company": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: datafetcher.BatchDeviceDataResponse{
-				Errors: []datafetcher.DeviceDataError{},
-				Results: []datafetcher.DeviceData{
+			want: datafetcher.BatchSensorDataResponse{
+				Errors: []datafetcher.SensorDataError{},
+				Results: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -1717,7 +1717,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: []datafetcher.DeviceData{
+			mockDataFetcher: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -1762,12 +1762,12 @@ func TestBatchGetDeviceData(t *testing.T) {
 			deviceRequests: DefaultBatchRequest(),
 		},
 
-		"admin user can get device data from any network": {
+		"admin user can get sensor data from any network": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: datafetcher.BatchDeviceDataResponse{
-				Errors: []datafetcher.DeviceDataError{},
-				Results: []datafetcher.DeviceData{
+			want: datafetcher.BatchSensorDataResponse{
+				Errors: []datafetcher.SensorDataError{},
+				Results: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -1800,7 +1800,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: []datafetcher.DeviceData{
+			mockDataFetcher: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -1845,12 +1845,12 @@ func TestBatchGetDeviceData(t *testing.T) {
 			deviceRequests: DefaultBatchRequest(),
 		},
 
-		"network user can get any device data from within network": {
+		"network user can get any sensor data from within network": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: datafetcher.BatchDeviceDataResponse{
-				Errors: []datafetcher.DeviceDataError{},
-				Results: []datafetcher.DeviceData{
+			want: datafetcher.BatchSensorDataResponse{
+				Errors: []datafetcher.SensorDataError{},
+				Results: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -1883,7 +1883,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: []datafetcher.DeviceData{
+			mockDataFetcher: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -1928,11 +1928,11 @@ func TestBatchGetDeviceData(t *testing.T) {
 			deviceRequests: DefaultBatchRequest(),
 		},
 
-		"network user cant get device data from other network": {
+		"network user cant get sensor data from other network": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: datafetcher.BatchDeviceDataResponse{
-				Errors: []datafetcher.DeviceDataError{
+			want: datafetcher.BatchSensorDataResponse{
+				Errors: []datafetcher.SensorDataError{
 					{
 						DeviceId: RegisteredDeviceId,
 						Error:    "Unauthorized access to this device.",
@@ -1942,7 +1942,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 						Error:    "Unauthorized access to this device.",
 					},
 				},
-				Results: []datafetcher.DeviceData{},
+				Results: []datafetcher.SensorData{},
 			},
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{
@@ -1958,7 +1958,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: []datafetcher.DeviceData{
+			mockDataFetcher: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -2003,11 +2003,11 @@ func TestBatchGetDeviceData(t *testing.T) {
 			deviceRequests: DefaultBatchRequest(),
 		},
 
-		"user cant get device data from other company": {
+		"user cant get sensor data from other company": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: datafetcher.BatchDeviceDataResponse{
-				Errors: []datafetcher.DeviceDataError{
+			want: datafetcher.BatchSensorDataResponse{
+				Errors: []datafetcher.SensorDataError{
 					{
 						DeviceId: RegisteredDeviceId,
 						Error:    "Unauthorized access to this device.",
@@ -2017,7 +2017,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 						Error:    "Unauthorized access to this device.",
 					},
 				},
-				Results: []datafetcher.DeviceData{},
+				Results: []datafetcher.SensorData{},
 			},
 			mockAuthStore: authstore.Schema{
 				UserInfo: []authstore.UserInfo{
@@ -2033,7 +2033,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: []datafetcher.DeviceData{
+			mockDataFetcher: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -2081,14 +2081,14 @@ func TestBatchGetDeviceData(t *testing.T) {
 		"one successful request, one error": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want: datafetcher.BatchDeviceDataResponse{
-				Errors: []datafetcher.DeviceDataError{
+			want: datafetcher.BatchSensorDataResponse{
+				Errors: []datafetcher.SensorDataError{
 					{
 						DeviceId: AnotherRegisteredDeviceId,
 						Error:    "Unauthorized access to this device.",
 					},
 				},
-				Results: []datafetcher.DeviceData{
+				Results: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -2113,7 +2113,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: []datafetcher.DeviceData{
+			mockDataFetcher: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -2162,7 +2162,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 			wantErr:        true,
 			wantStatus:     http.StatusUnauthorized,
 			token:          InvalidToken,
-			want:           datafetcher.BatchDeviceDataResponse{},
+			want:           datafetcher.BatchSensorDataResponse{},
 			deviceRequests: DefaultBatchRequest(),
 		},
 	}
@@ -2200,7 +2200,7 @@ func TestBatchGetDeviceData(t *testing.T) {
 			}
 			defer resp.Result().Body.Close()
 			if !tc.wantErr {
-				var dd datafetcher.BatchDeviceDataResponse
+				var dd datafetcher.BatchSensorDataResponse
 				body := resp.Body.Bytes()
 				err = json.Unmarshal(body, &dd)
 				require.Nil(t, err)
@@ -2476,7 +2476,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 		},
 
-		"network user cant get device data from other network": {
+		"network user cant get sensor data from other network": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: deviceinfo.BatchQueryFieldsResponse{
@@ -2970,7 +2970,7 @@ func TestGetDataBoundary(t *testing.T) {
 	tests := map[string]struct {
 		wantErr         bool
 		wantStatus      int
-		mockDataFetcher []datafetcher.DeviceData
+		mockDataFetcher []datafetcher.SensorData
 		want            datafetcher.DataBoundary
 		mockAuthStore   authstore.Schema
 		mockDeviceInfo  deviceinfo.Schema
@@ -3001,7 +3001,7 @@ func TestGetDataBoundary(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: []datafetcher.DeviceData{
+			mockDataFetcher: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -3062,7 +3062,7 @@ func TestGetDataBoundary(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: []datafetcher.DeviceData{
+			mockDataFetcher: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -3123,7 +3123,7 @@ func TestGetDataBoundary(t *testing.T) {
 					{Username: RegisteredUsername, Token: ValidToken},
 				},
 			},
-			mockDataFetcher: []datafetcher.DeviceData{
+			mockDataFetcher: []datafetcher.SensorData{
 				{
 					DeviceID:  RegisteredDeviceId,
 					Timestamp: InsideTimeRange,
@@ -3218,14 +3218,14 @@ func TestGetDataBoundary(t *testing.T) {
 type GetSensorDataTest struct {
 	wantErr         bool
 	wantStatus      int
-	mockDataFetcher []datafetcher.DeviceData
+	mockDataFetcher []datafetcher.SensorData
 	mockAuthStore   authstore.Schema
 	mockDeviceInfo  deviceinfo.Schema
 	mockTokens      map[string]bool
 	token           string
 	deviceId        string
-	deviceRequest   datafetcher.DeviceDataRequest
-	batchRequests   datafetcher.BatchDeviceDataRequest
+	deviceRequest   datafetcher.SensorDataRequest
+	batchRequests   datafetcher.BatchSensorDataRequest
 }
 
 func TestCsvGetSensorData(t *testing.T) {
@@ -3254,7 +3254,7 @@ func TestCsvGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -3282,7 +3282,7 @@ func TestCsvGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -3311,7 +3311,7 @@ func TestCsvGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -3339,7 +3339,7 @@ func TestCsvGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start:    RelativeStart,
@@ -3369,7 +3369,7 @@ func TestCsvGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -3398,7 +3398,7 @@ func TestCsvGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -3428,7 +3428,7 @@ func TestCsvGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -3465,7 +3465,7 @@ func TestCsvGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -3495,7 +3495,7 @@ func TestCsvGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -3530,7 +3530,7 @@ func TestCsvGetSensorData(t *testing.T) {
 				},
 				token:    ValidToken,
 				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.DeviceDataRequest{
+				deviceRequest: datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -3602,7 +3602,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -3642,7 +3642,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 					ValidToken: true,
 				},
 				token: ValidToken,
-				batchRequests: datafetcher.BatchDeviceDataRequest{
+				batchRequests: datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId:    RegisteredDeviceId,
@@ -3682,7 +3682,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -3722,7 +3722,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 					ValidToken: true,
 				},
 				token: ValidToken,
-				batchRequests: datafetcher.BatchDeviceDataRequest{
+				batchRequests: datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId:    RegisteredDeviceId,
@@ -3763,7 +3763,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -3805,7 +3805,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 					ValidToken: true,
 				},
 				token: ValidToken,
-				batchRequests: datafetcher.BatchDeviceDataRequest{
+				batchRequests: datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId: RegisteredDeviceId,
@@ -3847,7 +3847,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -3887,7 +3887,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 					ValidToken: true,
 				},
 				token: ValidToken,
-				batchRequests: datafetcher.BatchDeviceDataRequest{
+				batchRequests: datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId: RegisteredDeviceId,
@@ -3926,7 +3926,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -3966,7 +3966,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 					ValidToken: true,
 				},
 				token: ValidToken,
-				batchRequests: datafetcher.BatchDeviceDataRequest{
+				batchRequests: datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId:    RegisteredDeviceId,
@@ -4005,7 +4005,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -4045,7 +4045,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 					ValidToken: true,
 				},
 				token: ValidToken,
-				batchRequests: datafetcher.BatchDeviceDataRequest{
+				batchRequests: datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId:    RegisteredDeviceId,
@@ -4084,7 +4084,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -4125,7 +4125,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 					ValidToken: true,
 				},
 				token: ValidToken,
-				batchRequests: datafetcher.BatchDeviceDataRequest{
+				batchRequests: datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId: RegisteredDeviceId,
@@ -4165,7 +4165,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDataFetcher: []datafetcher.DeviceData{
+				mockDataFetcher: []datafetcher.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
 						Timestamp: InsideTimeRange,
@@ -4205,7 +4205,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 					ValidToken: true,
 				},
 				token: ValidToken,
-				batchRequests: datafetcher.BatchDeviceDataRequest{
+				batchRequests: datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId: RegisteredDeviceId,
