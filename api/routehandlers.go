@@ -487,11 +487,35 @@ func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 	return &datafetcher.DataBoundaryResponse{Body: dataBoundary}, nil
 }
 
-func (a *Api) BatchGetSensorDataBoundary(context.Context, *datafetcher.BatchDataBoundaryRequest) (
+func (a *Api) BatchGetSensorDataBoundary(ctx context.Context, in *datafetcher.BatchDataBoundaryRequest) (
 	*struct {
 		Body datafetcher.BatchDataBoundaryResponse
 	}, error) {
+	var qr datafetcher.DataBoundaryRequest
+	var dataResp *datafetcher.DataBoundaryResponse
+	var deviceErr datafetcher.DataBoundaryError
+	var err error
+	errSlice := make([]datafetcher.DataBoundaryError, 0, len(in.Body))
+	resultSlice := make([]datafetcher.DataBoundary, 0, len(in.Body))
+	for _, deviceId := range in.Body {
+		qr = datafetcher.DataBoundaryRequest{
+			DeviceId: deviceId,
+		}
+		dataResp, err = a.GetSensorDataBoundary(ctx, &qr)
+		if err == nil {
+			resultSlice = append(resultSlice, dataResp.Body)
+		} else {
+			deviceErr.DeviceId = deviceId
+			deviceErr.Error = err.Error()
+			errSlice = append(errSlice, deviceErr)
+		}
+	}
 	return &struct {
 		Body datafetcher.BatchDataBoundaryResponse
-	}{}, fmt.Errorf("not implemented")
+	}{
+		Body: datafetcher.BatchDataBoundaryResponse{
+			Results: resultSlice,
+			Errors:  errSlice,
+		},
+	}, nil
 }
