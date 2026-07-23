@@ -1222,6 +1222,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: datafetcher.BatchDataBoundaryResponse{
+				Errors: []datafetcher.DataBoundaryError{},
 				Results: []datafetcher.DataBoundary{
 					{
 						DeviceId: RegisteredDeviceId,
@@ -1314,6 +1315,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: datafetcher.BatchDataBoundaryResponse{
+				Errors: []datafetcher.DataBoundaryError{},
 				Results: []datafetcher.DataBoundary{
 					{
 						DeviceId: RegisteredDeviceId,
@@ -1406,6 +1408,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: datafetcher.BatchDataBoundaryResponse{
+				Errors: []datafetcher.DataBoundaryError{},
 				Results: []datafetcher.DataBoundary{
 					{
 						DeviceId: RegisteredDeviceId,
@@ -1498,6 +1501,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: datafetcher.BatchDataBoundaryResponse{
+				Errors: []datafetcher.DataBoundaryError{},
 				Results: []datafetcher.DataBoundary{
 					{
 						DeviceId: RegisteredDeviceId,
@@ -1590,6 +1594,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: datafetcher.BatchDataBoundaryResponse{
+				Results: []datafetcher.DataBoundary{},
 				Errors: []datafetcher.DataBoundaryError{
 					{
 						DeviceId: RegisteredDeviceId,
@@ -1680,6 +1685,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: datafetcher.BatchDataBoundaryResponse{
+				Results: []datafetcher.DataBoundary{},
 				Errors: []datafetcher.DataBoundaryError{
 					{
 						DeviceId: RegisteredDeviceId,
@@ -1900,7 +1906,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			}
 			defer resp.Result().Body.Close()
 			if !tc.wantErr {
-				var got datafetcher.DataBoundary
+				var got datafetcher.BatchDataBoundaryResponse
 				body := resp.Body.Bytes()
 				err = json.Unmarshal(body, &got)
 				require.Nil(t, err)
