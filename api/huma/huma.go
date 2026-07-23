@@ -258,7 +258,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 }
 
 func Config(mode Mode) (config huma.Config) {
-	config = huma.DefaultConfig("DataFarm SensorData API", "1.1.3")
+	config = huma.DefaultConfig("DataFarm SensorData API", "1.1.4")
 	config.Info.Description = `
 ## Welcome
 
