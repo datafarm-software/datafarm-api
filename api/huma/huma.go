@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"reflect"
 	"strings"
@@ -63,7 +64,7 @@ func (h *HumaError) MediaType() *huma.MediaType {
 	}
 }
 
-func (h *HumaError) Csv() (csvStr string, err error) {
+func (h HumaError) Csv() (csvStr string, err error) {
 	return fmt.Sprintf("Title, Status, Detail\n%s,%d,%s\n",
 		h.Title, h.Status, h.Detail), nil
 }
@@ -317,6 +318,7 @@ DataFarm welcomes external contribution to the API, through Open Source under th
 				return defaultTransformer.Transform(ctx, status, v)
 			}
 			if errM, ok := v.(*huma.ErrorModel); ok {
+				log.Printf("error: %+v", *errM)
 				return HumaError{
 					Title:  errM.Title,
 					Status: errM.Status,
