@@ -182,10 +182,22 @@ type DataBoundary struct {
 	Start    time.Time `json:"start"`
 	Stop     time.Time `json:"stop"`
 }
+
 type DataBoundaryRequest struct {
 	DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
 }
 type DataBoundaryResponse struct{ Body DataBoundary }
+
+// NOTE: this is exactly the same as deviceinfo.QueryFieldsError struct
+type DataBoundaryError struct {
+	DeviceId string `json:"deviceId"`
+	Error    string `json:"error"`
+}
+
+type BatchDataBoundaryResponse struct {
+	Results []DataBoundary      `json:"results"`
+	Errors  []DataBoundaryError `json:"errors"`
+}
 
 type TestingDataFetcher interface {
 	PrepareDb(*deviceinfo.Schema, SensorDataSlice) error
