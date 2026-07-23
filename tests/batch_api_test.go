@@ -1528,7 +1528,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
 			route := "/batch/device/databoundary"
-			resp := humaTest.Get(route,
+			resp := humaTest.Post(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token), tc.deviceIds)
 			if resp.Code != tc.wantStatus {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)

@@ -487,9 +487,11 @@ func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 	return &datafetcher.DataBoundaryResponse{Body: dataBoundary}, nil
 }
 
-func (a *Api) BatchGetSensorDataBoundary(context.Context, *struct {
-	Body []datafetcher.DataBoundaryRequest
-}) (
-	*datafetcher.BatchDataBoundaryResponse, error) {
-	return &datafetcher.BatchDataBoundaryResponse{}, fmt.Errorf("not implemented")
+func (a *Api) BatchGetSensorDataBoundary(context.Context, *datafetcher.BatchDataBoundaryRequest) (
+	*struct {
+		Body datafetcher.BatchDataBoundaryResponse
+	}, error) {
+	return &struct {
+		Body datafetcher.BatchDataBoundaryResponse
+	}{}, fmt.Errorf("not implemented")
 }

@@ -46,10 +46,10 @@ type HumaOperator interface {
 	GetDeviceIds(context.Context, *struct{}) (*deviceinfo.DeviceIdsResponse, error)
 	GetSensorDataBoundary(context.Context, *datafetcher.DataBoundaryRequest) (
 		*datafetcher.DataBoundaryResponse, error)
-	BatchGetSensorDataBoundary(context.Context, *struct {
-		Body []datafetcher.DataBoundaryRequest
-	}) (
-		*datafetcher.BatchDataBoundaryResponse, error)
+	BatchGetSensorDataBoundary(context.Context, *datafetcher.BatchDataBoundaryRequest) (
+		*struct {
+			Body datafetcher.BatchDataBoundaryResponse
+		}, error)
 }
 
 type HumaError struct {
@@ -189,6 +189,14 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.BatchGetQueryFields)
 
+	op = baseOperation("POST", mw)
+	op.Path = "/batch/device/databoundary"
+	op.Summary = "Batch Get DeviceId DataBoundary"
+	op.Description = "Clients can use this route to get the DataBoundary of multiple devices."
+	op.Responses["500"] = &huma.Response{}
+	op.Responses["404"] = &huma.Response{}
+	huma.Register(api, op, ho.BatchGetSensorDataBoundary)
+
 	deviceIdParam := &huma.Param{
 		Name:     "deviceId",
 		In:       "path",
@@ -247,14 +255,6 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	fh.Detail = "Internal error getting DataBoundary."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	huma.Register(api, op, ho.GetSensorDataBoundary)
-
-	op = baseOperation("GET", mw)
-	op.Path = "/batch/device/databoundary"
-	op.Summary = "Batch Get DeviceId DataBoundary"
-	op.Description = "Clients can use this route to get the DataBoundary of multiple devices."
-	op.Responses["500"] = &huma.Response{}
-	op.Responses["404"] = &huma.Response{}
-	huma.Register(api, op, ho.BatchGetSensorDataBoundary)
 }
 
 func Config(mode Mode) (config huma.Config) {
