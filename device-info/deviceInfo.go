@@ -49,14 +49,14 @@ type QueryFieldsError struct {
 	Error    string `json:"error"`
 }
 
-type BatchQueryFieldsResponse struct {
-	Results []QueryFields      `json:"results"`
-	Errors  []QueryFieldsError `json:"errors"`
-}
-
 type QueryFields struct {
 	DeviceId    string   `json:"deviceId"`
 	QueryFields []string `json:"queryFields"`
+}
+
+type BatchQueryFieldsResponse struct {
+	Results []QueryFields      `json:"results"`
+	Errors  []QueryFieldsError `json:"errors"`
 }
 
 type DeviceIdsResponse struct {
