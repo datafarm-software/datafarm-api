@@ -194,6 +194,10 @@ type DataBoundaryError struct {
 	Error    string `json:"error"`
 }
 
+type BatchDataBoundaryRequest struct {
+	Body []string `json:"deviceIds" doc:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$"`
+}
+
 type BatchDataBoundaryResponse struct {
 	Results []DataBoundary      `json:"results"`
 	Errors  []DataBoundaryError `json:"errors"`
