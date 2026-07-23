@@ -343,6 +343,83 @@ func TestGetSensorData(t *testing.T) {
 			},
 		},
 
+		"unprocessable because more than 5 queryFields requested": {
+			want: nil,
+			gsdt: GetSensorDataTest{wantErr: true,
+				wantStatus: http.StatusUnprocessableEntity,
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.SensorData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField:        23,
+							AnotherRegisteredQueryField: 24,
+							"queryField3":               25,
+							"queryField4":               26,
+							"queryField5":               27,
+							"queryField6":               28,
+						},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId: RegisteredDeviceId,
+							QueryFields: []string{
+								RegisteredQueryField,
+								AnotherRegisteredQueryField,
+								"queryField3",
+								"queryField4",
+								"queryField5",
+								"queryField6",
+							},
+						},
+					},
+				},
+				token: ValidToken,
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+				deviceId: RegisteredDeviceId,
+				deviceRequest: datafetcher.SensorDataRequest{
+					Hardware: datafetcher.Hardware{
+						QueryFields: []string{
+							RegisteredQueryField,
+							AnotherRegisteredQueryField,
+							"queryField3",
+							"queryField4",
+							"queryField5",
+							"queryField6",
+						},
+					},
+					TimeFrame: datafetcher.TimeFrame{
+						Start:    RelativeStart,
+						Timezone: "$ome/Wr0ng/Timezone",
+					},
+				},
+			},
+		},
+
 		"admin user can get all device queryfields": {
 			want: []datafetcher.SensorData{
 				{
