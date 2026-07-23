@@ -27,7 +27,7 @@ func main() {
 		}
 	}
 	router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
-	config := localhuma.Config()
+	config := localhuma.Config(localhuma.Production)
 	humaApi := humamux.New(router, config)
 	a := new(api.Api)
 	localhuma.SetupApi(humaApi, a)

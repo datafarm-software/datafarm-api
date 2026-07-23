@@ -11,33 +11,45 @@ import (
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
 )
 
-var EmptyDeviceData = errors.New("empty device data")
+var EmptySensorData = errors.New("empty sensor data")
 
-type DeviceDataResponse struct {
+type SensorDataResponse struct {
 	Status int
-	Body   DeviceDataSlice
+	Body   SensorDataSlice
 }
 
-type DeviceDataRequest struct {
+type Hardware struct {
 	DeviceId    string   `json:"deviceId" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-	QueryFields []string `query:"queryField,explode" json:"queryFields" required:"true" doc:"If all QueryFields desired, set ?queryField=all. Multiple QueryFields supported using format: ?queryField=temperature&queryField=humidity."`
-	Start       string   `query:"start" json:"start" required:"true" doc:"User specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days."`
-	Stop        string   `query:"stop" json:"stop" required:"false" doc:"User specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop can only ever be in RFC3339 Format."`
+	QueryFields []string `query:"queryField,explode" json:"queryFields" required:"true" doc:"One or more QueryFields to return. Specify \"all\" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField=\"temperature\"&queryField=\"humidity\""`
 }
 
-type BatchDeviceDataRequest []DeviceDataRequest
+type TimeFrame struct {
+	Start    string `query:"start" json:"start" required:"true" doc:"Client specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days."`
+	Stop     string `query:"stop" json:"stop" required:"false" doc:"Client specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop time must be later than Start. Stop can only ever be in RFC3339 Format."`
+	Timezone string `query:"timezone-return" json:"timezone-return" required:"false" pattern:"^(|[a-zA-Z]+/[a-zA-Z]+)$" doc:"Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg"`
+}
 
-type DeviceDataError struct {
+type SensorDataRequest struct {
+	Hardware
+	TimeFrame
+}
+
+type BatchSensorDataRequest struct {
+	Hardware []Hardware `json:"hardware" required:"true"`
+	TimeFrame
+}
+
+type SensorDataError struct {
 	DeviceId string `json:"deviceId"`
 	Error    string `json:"error"`
 }
 
-type BatchDeviceDataResponse struct {
-	Results DeviceDataSlice   `json:"results"`
-	Errors  []DeviceDataError `json:"errors"`
+type BatchSensorDataResponse struct {
+	Results SensorDataSlice   `json:"results"`
+	Errors  []SensorDataError `json:"errors"`
 }
 
-func (b *BatchDeviceDataResponse) Csv() (csvStr string, err error) {
+func (b *BatchSensorDataResponse) Csv() (csvStr string, err error) {
 	csvStr, _ = b.Results.Csv()
 	errStr := strings.Builder{}
 	for _, de := range b.Errors {
@@ -57,24 +69,33 @@ type CsvMarshaller interface {
 type CsvInfo struct {
 	Headers         []string
 	DeviceIdIndexes map[DeviceId]Indexes
+	DeviceIds       []DeviceId
 }
 
-type DeviceDataSlice []DeviceData
+type SensorDataSlice []SensorData
 
-func (d DeviceDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
+func (d SensorDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
 	csvInfo.Headers = make([]string, 0, len(d))
 	csvInfo.DeviceIdIndexes = make(map[DeviceId]Indexes)
 	if len(d) < 1 {
-		return csvInfo, EmptyDeviceData
+		return csvInfo, EmptySensorData
 	}
 	queryFieldSeen := make(map[string]bool)
-	slices.SortFunc(d, func(a, b DeviceData) int {
+	sorted := slices.Clone(d)
+	slices.SortFunc(sorted, func(a, b SensorData) int {
 		return a.Timestamp.Compare(b.Timestamp)
 	})
-	for i, dd := range d {
-		csvInfo.DeviceIdIndexes[DeviceId(dd.DeviceID)] = append(
+	var id DeviceId
+	idSeen := make(map[DeviceId]bool)
+	for i, dd := range sorted {
+		id = DeviceId(dd.DeviceID)
+		csvInfo.DeviceIdIndexes[id] = append(
 			csvInfo.DeviceIdIndexes[DeviceId(dd.DeviceID)], i)
-		for qf, _ := range dd.SensorData {
+		if !idSeen[id] {
+			csvInfo.DeviceIds = append(csvInfo.DeviceIds, id)
+			idSeen[id] = true
+		}
+		for qf := range dd.SensorData {
 			if !queryFieldSeen[qf] {
 				csvInfo.Headers = append(csvInfo.Headers, qf)
 				queryFieldSeen[qf] = true
@@ -82,12 +103,13 @@ func (d DeviceDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
 		}
 	}
 	slices.Sort(csvInfo.Headers)
+	slices.Sort(csvInfo.DeviceIds)
 	return csvInfo, nil
 }
 
-func (d DeviceDataSlice) Csv() (csvStr string, err error) {
+func (d SensorDataSlice) Csv() (csvStr string, err error) {
 	if len(d) < 1 {
-		return csvStr, EmptyDeviceData
+		return csvStr, EmptySensorData
 	}
 	csvInfo, err := d.CsvInfo()
 	if err != nil {
@@ -100,23 +122,25 @@ func (d DeviceDataSlice) Csv() (csvStr string, err error) {
 	if err := writer.Write(blankStartingColumn); err != nil {
 		return csvStr, fmt.Errorf("writing headers: %v", err)
 	}
-	var deviceData DeviceData
+	var sensorData SensorData
+	var indexes Indexes
 OuterLoop:
-	for deviceId, indexes := range csvInfo.DeviceIdIndexes {
-		err = writeDeviceIdRow(string(deviceId), len(csvInfo.Headers), writer)
+	for _, deviceId := range csvInfo.DeviceIds {
+		err = writeDeviceIdRow(string(deviceId), writer)
 		if err != nil {
 			err = fmt.Errorf("writing deviceid row: %v", err)
 			break
 		}
+		indexes = csvInfo.DeviceIdIndexes[deviceId]
 		for _, i := range indexes {
 			if len(d) <= i {
 				err = fmt.Errorf(
-					"deviceid: %s, gave index out of range: len(%d) <= %i",
+					"deviceid: %s, gave index out of range: len(%d) <= %d",
 					deviceId, len(d), i)
 				break OuterLoop
 			}
-			deviceData = d[i]
-			err = writeDataRow(csvInfo.Headers, deviceData, writer)
+			sensorData = d[i]
+			err = writeDataRow(csvInfo.Headers, sensorData, writer)
 			if err != nil {
 				err = fmt.Errorf("writing row: %v", err)
 				break OuterLoop
@@ -127,32 +151,29 @@ OuterLoop:
 	return str.String(), err
 }
 
-func writeDeviceIdRow(deviceId string, columnCount int, writer *csv.Writer) (err error) {
+func writeDeviceIdRow(deviceId string, writer *csv.Writer) (err error) {
 	deviceIdRow := []string{string(deviceId)}
-	for range columnCount {
-		deviceIdRow = append(deviceIdRow, "")
-	}
 	return writer.Write(deviceIdRow)
 }
 
-func writeDataRow(queryFieldColumns []string, deviceData DeviceData, writer *csv.Writer) error {
-	row := []string{deviceData.Timestamp.Local().Format(time.DateTime)}
+func writeDataRow(queryFieldColumns []string, sensorData SensorData, writer *csv.Writer) error {
+	row := []string{sensorData.Timestamp.Format(time.RFC3339)}
 	var v float64
 	var ok bool
 	for _, qf := range queryFieldColumns {
-		v, ok = deviceData.SensorData[qf]
-		if !ok {
-			row = append(row, "")
-		} else {
+		v, ok = sensorData.SensorData[qf]
+		if ok {
 			row = append(row, fmt.Sprintf("%.3f", v))
+		} else {
+			row = append(row, "")
 		}
 	}
 	return writer.Write(row)
 }
 
-type DeviceData struct {
+type SensorData struct {
 	DeviceID   string             `json:"deviceId"`
-	Timestamp  time.Time          `json:"timestamp"`
+	Timestamp  time.Time          `json:"timestamp" doc:"Timestamp will be in UTC timezone and RFC3339 Format."`
 	SensorData map[string]float64 `json:"sensorData"`
 }
 
@@ -161,18 +182,34 @@ type DataBoundary struct {
 	Start    time.Time `json:"start"`
 	Stop     time.Time `json:"stop"`
 }
+
 type DataBoundaryRequest struct {
 	DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
 }
 type DataBoundaryResponse struct{ Body DataBoundary }
 
+// NOTE: this is exactly the same as deviceinfo.QueryFieldsError struct
+type DataBoundaryError struct {
+	DeviceId string `json:"deviceId"`
+	Error    string `json:"error"`
+}
+
+type BatchDataBoundaryRequest struct {
+	Body []string `json:"deviceIds" doc:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$"`
+}
+
+type BatchDataBoundaryResponse struct {
+	Results []DataBoundary      `json:"results"`
+	Errors  []DataBoundaryError `json:"errors"`
+}
+
 type TestingDataFetcher interface {
-	PrepareDb(*deviceinfo.Schema, DeviceDataSlice) error
+	PrepareDb(*deviceinfo.Schema, SensorDataSlice) error
 }
 
 type DataFetcher interface {
 	TestingDataFetcher
-	GetData(metadata deviceinfo.DeviceInfo) (DeviceDataSlice, error)
+	GetData(metadata deviceinfo.DeviceInfo) (SensorDataSlice, error)
 	GetDataBoundary(metadata deviceinfo.DeviceInfo) (DataBoundary, error)
 	Close() error
 }

@@ -19,18 +19,17 @@ import (
 	"github.com/datafarm-software/datafarm-api/tokenprovider"
 )
 
-func formatTimestamp(in *datafetcher.DeviceDataRequest) error {
-	in.Start = strings.TrimSpace(in.Start)
-	if RELATIVETIME_REGEX.MatchString(in.Start) {
-		older := CheckOlderThanNinetyDays(in.Start)
+func formatTimestamp(in *datafetcher.SensorDataRequest) (err error) {
+	in.TimeFrame.Start = strings.TrimSpace(in.TimeFrame.Start)
+	if RELATIVETIME_REGEX.MatchString(in.TimeFrame.Start) {
+		older := CheckOlderThanNinetyDays(in.TimeFrame.Start)
 		if older {
 			return huma.Error400BadRequest("Relative start time older than 90 days.")
 		}
-		in.Stop = ""
+		in.TimeFrame.Stop = ""
 	} else {
-		rfcStart, err := time.Parse(time.RFC3339Nano, in.Start)
+		rfcStart, err := time.Parse(time.RFC3339Nano, in.TimeFrame.Start)
 		if err != nil {
-			log.Printf("parsing start: %v", err)
 			return huma.Error400BadRequest("Start time is invalid rfc.")
 		}
 		if rfcStart.UnixMilli() <= time.Now().Add(-90*24*time.Hour).UnixMilli() {
@@ -39,11 +38,11 @@ func formatTimestamp(in *datafetcher.DeviceDataRequest) error {
 		if rfcStart.UnixMilli() >= time.Now().UnixMilli() {
 			return huma.Error400BadRequest("Start time is in the future.")
 		}
-		if in.Stop == "" {
+		if in.TimeFrame.Stop == "" {
 			return huma.Error400BadRequest("No stop time provided.")
 		}
-		in.Stop = strings.TrimSpace(in.Stop)
-		rfcStop, err := time.Parse(time.RFC3339Nano, in.Stop)
+		in.TimeFrame.Stop = strings.TrimSpace(in.TimeFrame.Stop)
+		rfcStop, err := time.Parse(time.RFC3339Nano, in.TimeFrame.Stop)
 		if err != nil {
 			return huma.Error400BadRequest("Stop time is invalid rfc.")
 		}
@@ -54,9 +53,9 @@ func formatTimestamp(in *datafetcher.DeviceDataRequest) error {
 	return nil
 }
 
-func (a *Api) getDeviceData(
-	ctx context.Context, in *datafetcher.DeviceDataRequest) (
-	deviceData datafetcher.DeviceDataSlice, err error) {
+func (a *Api) getSensorData(
+	ctx context.Context, in *datafetcher.SensorDataRequest) (
+	sensorData datafetcher.SensorDataSlice, err error) {
 	if err = formatTimestamp(in); err != nil {
 		return nil, err
 	}
@@ -65,7 +64,7 @@ func (a *Api) getDeviceData(
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
-	di, code, err := a.checkAccessToDevice(in.DeviceId, user)
+	di, code, err := a.checkAccessToDevice(in.Hardware.DeviceId, user)
 	if err != nil {
 		switch code {
 		case http.StatusUnauthorized:
@@ -79,44 +78,51 @@ func (a *Api) getDeviceData(
 				"Internal error checking acess to DeviceId.")
 		}
 	}
-	di.Start = in.Start
-	di.Stop = in.Stop
-	di.QueryFields = in.QueryFields
-	if in.QueryFields[0] == "all" {
+	di.Start = in.TimeFrame.Start
+	di.Stop = in.TimeFrame.Stop
+	di.QueryFields = in.Hardware.QueryFields
+	if in.Hardware.QueryFields[0] == "all" {
 		if !authstore.HasPermission(authstore.Role(user.Role),
 			authstore.GetAllQueryFields) {
 			return nil, huma.Error500InternalServerError(
 				"Unauthorized for all queryfields.")
 		}
-		qf, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
+		qf, err := a.DeviceInfo.GetQueryFields(in.Hardware.DeviceId)
 		if err != nil {
-			log.Printf("error getting query fields for: %s: %v", in.DeviceId, err)
+			log.Printf("error getting query fields for: %s: %v", in.Hardware.DeviceId, err)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting query fields for deviceId.")
 		}
 		di.QueryFields = qf.QueryFields
 	}
-	deviceData, err = a.DataFetcher.GetData(di)
+	if in.TimeFrame.Timezone != "" {
+		di.Timezone, err = time.LoadLocation(in.TimeFrame.Timezone)
+		if err != nil {
+			return nil, huma.Error400BadRequest(
+				"Invalid location. Please try a different IANA Timezone.")
+		}
+	}
+	sensorData, err = a.DataFetcher.GetData(di)
 	if err != nil {
 		log.Printf("error getting data: %v", err)
 		return nil, huma.Error500InternalServerError(
 			"Internal error fetching data.")
 	}
-	return deviceData, nil
+	return sensorData, nil
 }
 
-func (a *Api) GetDeviceData(ctx context.Context,
-	in *datafetcher.DeviceDataRequest) (out *datafetcher.DeviceDataResponse, err error) {
-	deviceData, err := a.getDeviceData(ctx, in)
+func (a *Api) GetSensorData(ctx context.Context,
+	in *datafetcher.SensorDataRequest) (out *datafetcher.SensorDataResponse, err error) {
+	sensorData, err := a.getSensorData(ctx, in)
 	if err != nil {
 		return nil, err
 	}
-	if len(deviceData) < 1 {
-		return &datafetcher.DeviceDataResponse{Status: http.StatusNoContent}, nil
+	if len(sensorData) < 1 {
+		return &datafetcher.SensorDataResponse{Status: http.StatusNoContent}, nil
 	}
-	return &datafetcher.DeviceDataResponse{
+	return &datafetcher.SensorDataResponse{
 		Status: http.StatusOK,
-		Body:   deviceData,
+		Body:   sensorData,
 	}, nil
 }
 
@@ -346,38 +352,36 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 	return &deviceinfo.QueryFieldsResponse{Body: queryFields}, nil
 }
 
-func (a *Api) BatchGetDeviceData(ctx context.Context,
+func (a *Api) BatchGetSensorData(ctx context.Context,
 	in *struct {
-		Body datafetcher.BatchDeviceDataRequest
+		Body datafetcher.BatchSensorDataRequest
 	}) (*struct {
-	Body *datafetcher.BatchDeviceDataResponse
+	Body *datafetcher.BatchSensorDataResponse
 }, error) {
-	var dr datafetcher.DeviceDataRequest
-	var dataResp *datafetcher.DeviceDataResponse
-	var deviceErr datafetcher.DeviceDataError
+	var dataReq *datafetcher.SensorDataRequest
+	var dataResp *datafetcher.SensorDataResponse
+	var deviceErr datafetcher.SensorDataError
 	var err error
-	errSlice := make([]datafetcher.DeviceDataError, 0, len(in.Body))
-	resultSlice := make(datafetcher.DeviceDataSlice, 0, len(in.Body))
-	for _, bdr := range in.Body {
-		dr = datafetcher.DeviceDataRequest{
-			DeviceId:    bdr.DeviceId,
-			QueryFields: bdr.QueryFields,
-			Start:       bdr.Start,
-			Stop:        bdr.Stop,
+	errSlice := make([]datafetcher.SensorDataError, 0, len(in.Body.Hardware))
+	resultSlice := make(datafetcher.SensorDataSlice, 0, len(in.Body.Hardware))
+	for _, hw := range in.Body.Hardware {
+		dataReq = &datafetcher.SensorDataRequest{
+			Hardware:  hw,
+			TimeFrame: in.Body.TimeFrame,
 		}
-		dataResp, err = a.GetDeviceData(ctx, &dr)
+		dataResp, err = a.GetSensorData(ctx, dataReq)
 		if err == nil {
 			resultSlice = append(resultSlice, dataResp.Body...)
 		} else {
-			deviceErr.DeviceId = bdr.DeviceId
+			deviceErr.DeviceId = hw.DeviceId
 			deviceErr.Error = err.Error()
 			errSlice = append(errSlice, deviceErr)
 		}
 	}
 	return &struct {
-		Body *datafetcher.BatchDeviceDataResponse
+		Body *datafetcher.BatchSensorDataResponse
 	}{
-		Body: &datafetcher.BatchDeviceDataResponse{
+		Body: &datafetcher.BatchSensorDataResponse{
 			Results: resultSlice,
 			Errors:  errSlice,
 		},
@@ -449,7 +453,7 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	}, nil
 }
 
-func (a *Api) GetDeviceDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
+func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
 	*datafetcher.DataBoundaryResponse, error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
@@ -481,4 +485,37 @@ func (a *Api) GetDeviceDataBoundary(ctx context.Context, in *datafetcher.DataBou
 			"Internal error getting DataBoundary.")
 	}
 	return &datafetcher.DataBoundaryResponse{Body: dataBoundary}, nil
+}
+
+func (a *Api) BatchGetSensorDataBoundary(ctx context.Context, in *datafetcher.BatchDataBoundaryRequest) (
+	*struct {
+		Body datafetcher.BatchDataBoundaryResponse
+	}, error) {
+	var qr datafetcher.DataBoundaryRequest
+	var dataResp *datafetcher.DataBoundaryResponse
+	var deviceErr datafetcher.DataBoundaryError
+	var err error
+	errSlice := make([]datafetcher.DataBoundaryError, 0, len(in.Body))
+	resultSlice := make([]datafetcher.DataBoundary, 0, len(in.Body))
+	for _, deviceId := range in.Body {
+		qr = datafetcher.DataBoundaryRequest{
+			DeviceId: deviceId,
+		}
+		dataResp, err = a.GetSensorDataBoundary(ctx, &qr)
+		if err == nil {
+			resultSlice = append(resultSlice, dataResp.Body)
+		} else {
+			deviceErr.DeviceId = deviceId
+			deviceErr.Error = err.Error()
+			errSlice = append(errSlice, deviceErr)
+		}
+	}
+	return &struct {
+		Body datafetcher.BatchDataBoundaryResponse
+	}{
+		Body: datafetcher.BatchDataBoundaryResponse{
+			Results: resultSlice,
+			Errors:  errSlice,
+		},
+	}, nil
 }

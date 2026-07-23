@@ -43,14 +43,16 @@ type ApiOpts struct {
 	Port           string                 `mapstructure:"port" validate:"required"`
 	PrivateKeyFile string                 `mapstructure:"privatekeyfile" validate:"required"`
 	PublicKeyFile  string                 `mapstructure:"publickeyfile" validate:"required"`
+	Mode           localhuma.Mode         `mapstructure:"mode"`
 }
 
 type Api struct {
-	Port          string
 	DeviceInfo    deviceinfo.DeviceInfoFetcher
 	DataFetcher   df.DataFetcher
 	TokenProvider tokenprovider.TokenProvider
 	AuthStore     authstore.AuthStore
+	Port          string
+	mode          localhuma.Mode
 }
 
 func Start(opts ApiOpts) error {
@@ -71,10 +73,11 @@ func Start(opts ApiOpts) error {
 		cleanupOldLimiters(ctx)
 	}()
 	api := &Api{
-		Port:       opts.Port,
 		DeviceInfo: redis, DataFetcher: df,
 		TokenProvider: tokenAuth,
 		AuthStore:     redis,
+		Port:          opts.Port,
+		mode:          opts.Mode,
 	}
 	authstore.InitRoles()
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
@@ -101,7 +104,7 @@ func Start(opts ApiOpts) error {
 }
 
 func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
-	config := localhuma.Config()
+	config := localhuma.Config(a.mode)
 	router := mux.NewRouter()
 	humaApi := humamux.New(router, config)
 	localhuma.SetupApi(humaApi, a)
@@ -122,4 +125,8 @@ func (a *Api) Close() {
 		log.Fatalf("error closing basic auth: %v", err)
 	}
 	log.Println("Api shutdown.")
+}
+
+func (a *Api) Mode() localhuma.Mode {
+	return a.mode
 }

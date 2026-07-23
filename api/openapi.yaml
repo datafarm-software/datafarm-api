@@ -21,10 +21,99 @@ info:
         ### Contributing
 
         DataFarm welcomes external contribution to the API, through Open Source under the GPL-3.0 License. If you would like to contribute please visit the project's Github page to get started: www.github.com/datafarm-software/datafarm-api.
-    version: 1.1.2
+    version: 1.1.3
 servers:
     - url: /v1
 paths:
+    /batch/device/databoundary:
+        post:
+            tags:
+                - POST
+            summary: Batch Get DeviceId DataBoundary
+            description: Clients can use this route to get the DataBoundary of multiple devices.
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: array
+                            description: deviceIds
+                            items:
+                                type: string
+                                pattern: ^[a-zA-Z0-9]{1,30}$
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/BatchDataBoundaryResponse'
+                "400":
+                    description: Bad Request
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Bad Request
+                                status: 400
+                                detail: No Authorization Header Provided.
+                "401":
+                    description: Unauthorized
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Unauthorized
+                                status: 401
+                                detail: Unknown user.
+                "404": {}
+                "500": {}
+            security:
+                - bearer: []
     /batch/device/queryfields:
         post:
             tags:
@@ -78,7 +167,7 @@ paths:
                                 schema: http://localhost:3030/schemas/ErrorModel.json
                                 title: Bad Request
                                 status: 400
-                                detail: Invalid DeviceId.
+                                detail: No Authorization Header Provided.
                 "401":
                     description: Unauthorized
                     content:
@@ -110,68 +199,8 @@ paths:
                                 title: Unauthorized
                                 status: 401
                                 detail: Unknown user.
-                "404":
-                    description: Not Found
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                additionalProperties: false
-                                properties:
-                                    $schema:
-                                        type: string
-                                        description: Link to Object Model.
-                                    detail:
-                                        type: string
-                                        description: Human Readable explanation of what went wrong.
-                                    status:
-                                        type: integer
-                                        description: Http Status Code.
-                                        format: int64
-                                    title:
-                                        type: string
-                                        description: Name associated with error code.
-                                required:
-                                    - $schema
-                                    - title
-                                    - status
-                                    - detail
-                            example:
-                                schema: http://localhost:3030/schemas/ErrorModel.json
-                                title: Not Found
-                                status: 401
-                                detail: Device Not Found.
-                "500":
-                    description: Internal Server Error
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                additionalProperties: false
-                                properties:
-                                    $schema:
-                                        type: string
-                                        description: Link to Object Model.
-                                    detail:
-                                        type: string
-                                        description: Human Readable explanation of what went wrong.
-                                    status:
-                                        type: integer
-                                        description: Http Status Code.
-                                        format: int64
-                                    title:
-                                        type: string
-                                        description: Name associated with error code.
-                                required:
-                                    - $schema
-                                    - title
-                                    - status
-                                    - detail
-                            example:
-                                schema: http://localhost:3030/schemas/ErrorModel.json
-                                title: Internal Server Error
-                                status: 500
-                                detail: Internal error while getting queryfields for the device.
+                "404": {}
+                "500": {}
             security:
                 - bearer: []
     /batch/device/sensordata:
@@ -184,9 +213,7 @@ paths:
                 content:
                     application/json:
                         schema:
-                            type: array
-                            items:
-                                $ref: '#/components/schemas/DeviceDataRequest'
+                            $ref: '#/components/schemas/BatchSensorDataRequest'
                 required: true
             responses:
                 "200":
@@ -194,11 +221,42 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/BatchDeviceDataResponse'
+                                $ref: '#/components/schemas/BatchSensorDataResponse'
                         text/csv:
                             schema:
                                 type: string
-                                description: Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect these to be included in the CSV.
+                                description: Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Timestamps will be in UTC timezone and RFC3339 Format. Should there be any errors, clients can expect these to be included in the CSV.
+                "400":
+                    description: Bad Request
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Bad Request
+                                status: 400
+                                detail: No Authorization Header Provided.
                 "401":
                     description: Unauthorized
                     content:
@@ -230,37 +288,8 @@ paths:
                                 title: Unauthorized
                                 status: 401
                                 detail: Unknown user.
-                "500":
-                    description: Internal Server Error
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                additionalProperties: false
-                                properties:
-                                    $schema:
-                                        type: string
-                                        description: Link to Object Model.
-                                    detail:
-                                        type: string
-                                        description: Human Readable explanation of what went wrong.
-                                    status:
-                                        type: integer
-                                        description: Http Status Code.
-                                        format: int64
-                                    title:
-                                        type: string
-                                        description: Name associated with error code.
-                                required:
-                                    - $schema
-                                    - title
-                                    - status
-                                    - detail
-                            example:
-                                schema: http://localhost:3030/schemas/ErrorModel.json
-                                title: Internal Server Error
-                                status: 500
-                                detail: Internal error while getting data for the device.
+                "404": {}
+                "500": {}
             security:
                 - bearer: []
     /device/{deviceId}/databoundary:
@@ -316,7 +345,7 @@ paths:
                                 schema: http://localhost:3030/schemas/ErrorModel.json
                                 title: Bad Request
                                 status: 400
-                                detail: No auth header provided.
+                                detail: No Authorization Header Provided.
                 "401":
                     description: Unauthorized
                     content:
@@ -421,7 +450,7 @@ paths:
             parameters:
                 - name: deviceId
                   in: path
-                  description: Device Id to get QueryField information from.
+                  description: Device Id to get DataBoundary information from.
                   required: true
                   schema:
                     type: string
@@ -465,7 +494,7 @@ paths:
                                 schema: http://localhost:3030/schemas/ErrorModel.json
                                 title: Bad Request
                                 status: 400
-                                detail: No auth header provided.
+                                detail: No Authorization Header Provided.
                 "401":
                     description: Unauthorized
                     content:
@@ -570,36 +599,44 @@ paths:
             parameters:
                 - name: deviceId
                   in: path
-                  description: Device Id to request data from.
+                  description: Device Id to get DataBoundary information from.
                   required: true
                   schema:
                     type: string
                     pattern: ^\w{1,30}$
                 - name: queryField
                   in: query
-                  description: 'If all QueryFields desired, set ?queryField=all. Multiple QueryFields supported using format: ?queryField=temperature&queryField=humidity.'
+                  description: One or more QueryFields to return. Specify "all" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField="temperature"&queryField="humidity"
                   required: true
                   explode: true
                   schema:
                     type: array
-                    description: 'If all QueryFields desired, set ?queryField=all. Multiple QueryFields supported using format: ?queryField=temperature&queryField=humidity.'
+                    description: One or more QueryFields to return. Specify "all" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField="temperature"&queryField="humidity"
                     items:
                         type: string
                 - name: start
                   in: query
-                  description: User specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days.
+                  description: Client specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days.
                   required: true
                   explode: false
                   schema:
                     type: string
-                    description: User specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days.
+                    description: Client specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days.
                 - name: stop
                   in: query
-                  description: User specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop can only ever be in RFC3339 Format.
+                  description: Client specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop time must be later than Start. Stop can only ever be in RFC3339 Format.
                   explode: false
                   schema:
                     type: string
-                    description: User specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop can only ever be in RFC3339 Format.
+                    description: Client specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop time must be later than Start. Stop can only ever be in RFC3339 Format.
+                - name: timezone-return
+                  in: query
+                  description: Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg
+                  explode: false
+                  schema:
+                    type: string
+                    description: Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg
+                    pattern: ^(|[a-zA-Z]+/[a-zA-Z]+)$
             requestBody:
                 content: {}
             responses:
@@ -610,13 +647,12 @@ paths:
                             schema:
                                 type: array
                                 items:
-                                    $ref: '#/components/schemas/DeviceData'
+                                    $ref: '#/components/schemas/SensorData'
                         text/csv:
                             schema:
                                 type: string
-                                description: Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Should there be any errors, clients can expect these to be included in the CSV.
-                "204":
-                    description: No SensorData for the requested time period.
+                                description: Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Timestamps will be in UTC timezone and RFC3339 Format. Should there be any errors, clients can expect these to be included in the CSV.
+                "204": {}
                 "400":
                     description: Bad Request
                     content:
@@ -647,7 +683,7 @@ paths:
                                 schema: http://localhost:3030/schemas/ErrorModel.json
                                 title: Bad Request
                                 status: 400
-                                detail: Invalid start time.
+                                detail: No Authorization Header Provided.
                 "401":
                     description: Unauthorized
                     content:
@@ -762,6 +798,37 @@ paths:
                                 items:
                                     type: string
                                     pattern: ^[a-zA-Z0-9]{1,30}$
+                "400":
+                    description: Bad Request
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Bad Request
+                                status: 400
+                                detail: No Authorization Header Provided.
                 "401":
                     description: Unauthorized
                     content:
@@ -793,6 +860,7 @@ paths:
                                 title: Unauthorized
                                 status: 401
                                 detail: Unknown user.
+                "404": {}
                 "500":
                     description: Internal Server Error
                     content:
@@ -872,7 +940,7 @@ paths:
                                 schema: http://localhost:3030/schemas/ErrorModel.json
                                 title: Bad Request
                                 status: 400
-                                detail: No auth header provided.
+                                detail: No Authorization Header Provided.
                 "401":
                     description: Unauthorized
                     content:
@@ -904,6 +972,7 @@ paths:
                                 title: Unauthorized
                                 status: 401
                                 detail: Unknown user.
+                "404": {}
                 "500":
                     description: Internal Server Error
                     content:
@@ -939,7 +1008,7 @@ paths:
                 - basic: []
 components:
     schemas:
-        BatchDeviceDataResponse:
+        BatchDataBoundaryResponse:
             type: object
             additionalProperties: false
             properties:
@@ -948,16 +1017,16 @@ components:
                     description: A URL to the JSON Schema for this object.
                     format: uri
                     examples:
-                        - https://example.com/schemas/BatchDeviceDataResponse.json
+                        - https://example.com/schemas/BatchDataBoundaryResponse.json
                     readOnly: true
                 errors:
                     type: array
                     items:
-                        $ref: '#/components/schemas/DeviceDataError'
+                        $ref: '#/components/schemas/DataBoundaryError'
                 results:
                     type: array
                     items:
-                        $ref: '#/components/schemas/DeviceData'
+                        $ref: '#/components/schemas/DataBoundary'
             required:
                 - results
                 - errors
@@ -980,6 +1049,56 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/QueryFields'
+            required:
+                - results
+                - errors
+        BatchSensorDataRequest:
+            type: object
+            additionalProperties: false
+            properties:
+                $schema:
+                    type: string
+                    description: A URL to the JSON Schema for this object.
+                    format: uri
+                    examples:
+                        - https://example.com/schemas/BatchSensorDataRequest.json
+                    readOnly: true
+                hardware:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Hardware'
+                start:
+                    type: string
+                    description: Client specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days.
+                stop:
+                    type: string
+                    description: Client specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop time must be later than Start. Stop can only ever be in RFC3339 Format.
+                timezone-return:
+                    type: string
+                    description: Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg
+                    pattern: ^(|[a-zA-Z]+/[a-zA-Z]+)$
+            required:
+                - hardware
+                - start
+        BatchSensorDataResponse:
+            type: object
+            additionalProperties: false
+            properties:
+                $schema:
+                    type: string
+                    description: A URL to the JSON Schema for this object.
+                    format: uri
+                    examples:
+                        - https://example.com/schemas/BatchSensorDataResponse.json
+                    readOnly: true
+                errors:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/SensorDataError'
+                results:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/SensorData'
             required:
                 - results
                 - errors
@@ -1006,25 +1125,7 @@ components:
                 - deviceId
                 - start
                 - stop
-        DeviceData:
-            type: object
-            additionalProperties: false
-            properties:
-                deviceId:
-                    type: string
-                sensorData:
-                    type: object
-                    additionalProperties:
-                        type: number
-                        format: double
-                timestamp:
-                    type: string
-                    format: date-time
-            required:
-                - deviceId
-                - timestamp
-                - sensorData
-        DeviceDataError:
+        DataBoundaryError:
             type: object
             additionalProperties: false
             properties:
@@ -1035,28 +1136,6 @@ components:
             required:
                 - deviceId
                 - error
-        DeviceDataRequest:
-            type: object
-            additionalProperties: false
-            properties:
-                deviceId:
-                    type: string
-                    pattern: ^[a-zA-Z0-9]{1,30}$
-                queryFields:
-                    type: array
-                    description: 'If all QueryFields desired, set ?queryField=all. Multiple QueryFields supported using format: ?queryField=temperature&queryField=humidity.'
-                    items:
-                        type: string
-                start:
-                    type: string
-                    description: User specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days.
-                stop:
-                    type: string
-                    description: User specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop can only ever be in RFC3339 Format.
-            required:
-                - deviceId
-                - queryFields
-                - start
         ErrorDetail:
             type: object
             additionalProperties: false
@@ -1107,6 +1186,21 @@ components:
                     default: about:blank
                     examples:
                         - https://example.com/errors/example
+        Hardware:
+            type: object
+            additionalProperties: false
+            properties:
+                deviceId:
+                    type: string
+                    pattern: ^[a-zA-Z0-9]{1,30}$
+                queryFields:
+                    type: array
+                    description: One or more QueryFields to return. Specify "all" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField="temperature"&queryField="humidity"
+                    items:
+                        type: string
+            required:
+                - deviceId
+                - queryFields
         QueryFields:
             type: object
             additionalProperties: false
@@ -1128,6 +1222,36 @@ components:
                 - deviceId
                 - queryFields
         QueryFieldsError:
+            type: object
+            additionalProperties: false
+            properties:
+                deviceId:
+                    type: string
+                error:
+                    type: string
+            required:
+                - deviceId
+                - error
+        SensorData:
+            type: object
+            additionalProperties: false
+            properties:
+                deviceId:
+                    type: string
+                sensorData:
+                    type: object
+                    additionalProperties:
+                        type: number
+                        format: double
+                timestamp:
+                    type: string
+                    description: Timestamp will be in UTC timezone and RFC3339 Format.
+                    format: date-time
+            required:
+                - deviceId
+                - timestamp
+                - sensorData
+        SensorDataError:
             type: object
             additionalProperties: false
             properties:

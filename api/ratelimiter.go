@@ -28,20 +28,23 @@ func (a *Api) RateLimit(ctx huma.Context, next func(huma.Context)) {
 	r, w := humamux.Unwrap(ctx)
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		log.Println("no auth header provided")
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-	parts := strings.Split(authHeader, "Bearer")
-	if len(parts) != 2 {
-		log.Println("Invalid Authorization header format")
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, "No Authorization Header Provided.", http.StatusBadRequest)
 		return
 	}
 	var lr tokenprovider.LoginResponse
-	lr.Body = strings.TrimSpace(parts[1])
-	lr.Body = strings.Trim(lr.Body, `"`)
-	key := "token:" + lr.Body
+	var key string
+	parts := strings.Split(authHeader, "Bearer")
+	if len(parts) == 2 {
+		lr.Body = strings.TrimSpace(parts[1])
+		lr.Body = strings.Trim(lr.Body, `"`)
+		key = "token:" + lr.Body
+	} else {
+		ip := r.Header.Get("X-Forwarded-For")
+		if ip == "" {
+			ip = r.RemoteAddr
+		}
+		key = "anon:" + ip
+	}
 	limiter := a.getLimiter(key)
 	if !limiter.Allow() {
 		http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
