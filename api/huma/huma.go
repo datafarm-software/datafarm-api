@@ -28,12 +28,12 @@ type HumaOperator interface {
 	Mode() Mode
 	RateLimit(ctx huma.Context, next func(huma.Context))
 	VerifyToken(ctx huma.Context, next func(huma.Context))
-	GetDeviceData(context.Context,
-		*datafetcher.DeviceDataRequest) (*datafetcher.DeviceDataResponse, error)
-	BatchGetDeviceData(context.Context, *struct {
-		Body datafetcher.BatchDeviceDataRequest
+	GetSensorData(context.Context,
+		*datafetcher.SensorDataRequest) (*datafetcher.SensorDataResponse, error)
+	BatchGetSensorData(context.Context, *struct {
+		Body datafetcher.BatchSensorDataRequest
 	}) (*struct {
-		Body *datafetcher.BatchDeviceDataResponse
+		Body *datafetcher.BatchSensorDataResponse
 	}, error)
 	Login(context.Context, *tokenprovider.LoginRequest) (
 		*tokenprovider.LoginResponse, error)
@@ -44,7 +44,7 @@ type HumaOperator interface {
 			Body deviceinfo.BatchQueryFieldsResponse
 		}, error)
 	GetDeviceIds(context.Context, *struct{}) (*deviceinfo.DeviceIdsResponse, error)
-	GetDeviceDataBoundary(context.Context, *datafetcher.DataBoundaryRequest) (
+	GetSensorDataBoundary(context.Context, *datafetcher.DataBoundaryRequest) (
 		*datafetcher.DataBoundaryResponse, error)
 }
 
@@ -174,7 +174,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Description = "Clients can use this route to request data from multiple device ids."
 	op.Responses["500"] = &huma.Response{}
 	op.Responses["404"] = &huma.Response{}
-	huma.Register(api, op, ho.BatchGetDeviceData)
+	huma.Register(api, op, ho.BatchGetSensorData)
 
 	op = baseOperation("POST", mw)
 	op.Path = "/batch/device/queryfields"
@@ -208,7 +208,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	fh = FiveHundredExample()
 	fh.Detail = "Internal error while getting data for the device."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
-	huma.Register(api, op, ho.GetDeviceData)
+	huma.Register(api, op, ho.GetSensorData)
 	op.Responses["204"] = &huma.Response{}
 	op.Parameters = []*huma.Param{}
 
@@ -242,7 +242,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	fh = FiveHundredExample()
 	fh.Detail = "Internal error getting DataBoundary."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
-	huma.Register(api, op, ho.GetDeviceDataBoundary)
+	huma.Register(api, op, ho.GetSensorDataBoundary)
 }
 
 func Config(mode Mode) (config huma.Config) {

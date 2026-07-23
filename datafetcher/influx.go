@@ -60,7 +60,7 @@ func (i *InfluxDatafetcher) Close() error {
 }
 
 func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
-	DeviceDataSlice, error) {
+	SensorDataSlice, error) {
 	formattedQueryRange, err := i.formatQueryRange(metadata.Start, metadata.Stop)
 	if err != nil {
 		return nil, err
@@ -74,11 +74,11 @@ func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
 	if err != nil {
 		return nil, fmt.Errorf("error processing query result: %v", err)
 	}
-	dd, err := i.dataRows2DeviceData(dataRows, metadata.Timezone)
+	sd, err := i.dataRows2SensorData(dataRows, metadata.Timezone)
 	if err != nil {
 		return nil, err
 	}
-	return dd, nil
+	return sd, nil
 }
 
 func (i *InfluxDatafetcher) generateFluxQuery(metadata deviceinfo.DeviceInfo, queryRange string) string {
@@ -116,8 +116,8 @@ func (i *InfluxDatafetcher) extractValue(result *influxApi.QueryTableResult) ([]
 	return records, nil
 }
 
-func (i *InfluxDatafetcher) dataRows2DeviceData(data []DataRow, loc *time.Location) ([]DeviceData, error) {
-	var deviceDataSlice []DeviceData
+func (i *InfluxDatafetcher) dataRows2SensorData(data []DataRow, loc *time.Location) ([]SensorData, error) {
+	var sensorDataSlice []SensorData
 	var found bool
 	var value float64
 	var timestampWithin10Seconds bool
@@ -134,30 +134,30 @@ func (i *InfluxDatafetcher) dataRows2DeviceData(data []DataRow, loc *time.Locati
 			value = float64(0)
 		}
 		//TODO: 10 seconds seems too long, check this
-		for i, deviceData := range deviceDataSlice {
+		for i, sensorData := range sensorDataSlice {
 			timestampWithin10Seconds = math.Abs(float64(
-				deviceData.Timestamp.Sub(row.Time).Seconds())) <= 10
-			if deviceData.DeviceID == row.DeviceID &&
+				sensorData.Timestamp.Sub(row.Time).Seconds())) <= 10
+			if sensorData.DeviceID == row.DeviceID &&
 				timestampWithin10Seconds {
-				deviceDataSlice[i].SensorData[row.Field] = value
+				sensorDataSlice[i].SensorData[row.Field] = value
 				found = true
 				break
 			}
 		}
 		if !found {
-			newDeviceData := DeviceData{
+			newSensorData := SensorData{
 				DeviceID:   row.DeviceID,
 				SensorData: map[string]float64{row.Field: value},
 			}
 			if loc == nil {
-				newDeviceData.Timestamp = row.Time
+				newSensorData.Timestamp = row.Time
 			} else {
-				newDeviceData.Timestamp = row.Time.In(loc)
+				newSensorData.Timestamp = row.Time.In(loc)
 			}
-			deviceDataSlice = append(deviceDataSlice, newDeviceData)
+			sensorDataSlice = append(sensorDataSlice, newSensorData)
 		}
 	}
-	return deviceDataSlice, nil
+	return sensorDataSlice, nil
 }
 
 func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string, error) {
@@ -212,7 +212,7 @@ func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
 	return dataBoundary, nil
 }
 
-func (i *InfluxDatafetcher) PrepareDb(*deviceinfo.Schema, DeviceDataSlice) error {
+func (i *InfluxDatafetcher) PrepareDb(*deviceinfo.Schema, SensorDataSlice) error {
 	return nil
 }
 
@@ -269,11 +269,11 @@ func (t *TestingInflux) Close() error {
 	return t.influx.Close()
 }
 
-func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, deviceData DeviceDataSlice) error {
+func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, sensorData SensorDataSlice) error {
 	if allDevicesInfo == nil {
 		return nil
 	}
-	if deviceData == nil {
+	if sensorData == nil {
 		return nil
 	}
 	deviceInfoMap := deviceInfoMap(allDevicesInfo)
@@ -303,23 +303,23 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, deviceData 
 	var writeApi influxApi.WriteAPI
 	var ok bool
 	var deviceInfo deviceinfo.DeviceInfo
-	for _, dd := range deviceData {
+	for _, sd := range sensorData {
 		fields := make(map[string]any)
-		for key, value := range dd.SensorData {
+		for key, value := range sd.SensorData {
 			fields[key] = value
 		}
-		deviceInfo, ok = deviceInfoMap[dd.DeviceID]
+		deviceInfo, ok = deviceInfoMap[sd.DeviceID]
 		if !ok {
-			err = fmt.Errorf("could not find deviceInfo: %s", dd.DeviceID)
+			err = fmt.Errorf("could not find deviceInfo: %s", sd.DeviceID)
 		}
 		writeApi = t.influx.db.WriteAPI(testingInfluxOpts.Org, deviceInfo.Network)
 		p := influxdb2.NewPoint(
 			deviceInfo.Company,
 			map[string]string{
-				"deviceID": dd.DeviceID,
+				"deviceID": sd.DeviceID,
 			},
 			fields,
-			dd.Timestamp,
+			sd.Timestamp,
 		)
 		writeApi.WritePoint(p)
 	}
@@ -347,7 +347,7 @@ func deviceInfoMap(allDevicesInfo *deviceinfo.Schema) map[string]deviceinfo.Devi
 }
 
 func (t *TestingInflux) GetData(metadata deviceinfo.DeviceInfo) (
-	DeviceDataSlice, error) {
+	SensorDataSlice, error) {
 	return t.influx.GetData(metadata)
 }
 
