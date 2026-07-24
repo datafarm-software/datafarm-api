@@ -281,7 +281,7 @@ func TestGetSensorData(t *testing.T) {
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start:    RelativeStart,
-						Timezone: "Africa/Johannesburg",
+						Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
 					},
 				},
 			},
@@ -337,7 +337,7 @@ func TestGetSensorData(t *testing.T) {
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start:    RelativeStart,
-						Timezone: "$ome/Wr0ng/Timezone",
+						Timezone: datafetcher.Timezone{Timezone: "$ome/Wr0ng/Timezone"},
 					},
 				},
 			},
@@ -2277,7 +2277,7 @@ func TestCsvGetSensorData(t *testing.T) {
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start:    RelativeStart,
-						Timezone: "Africa/Johannesburg",
+						Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
 					},
 				},
 			},
