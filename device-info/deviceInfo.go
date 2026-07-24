@@ -26,10 +26,10 @@ type ScopeRestriction struct {
 }
 
 type DeviceInfo struct {
-	DeviceId, Company, Network string
-	Start, Stop                string
 	QueryFields                []string
 	Timezone                   *time.Location
+	DeviceId, Company, Network string
+	Start, Stop                string
 }
 
 type QueryFieldsResponse struct {
