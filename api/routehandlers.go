@@ -476,6 +476,11 @@ func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 		authstore.GetDataBoundary) {
 		return nil, huma.Error500InternalServerError("Access denied to DataBoundary.")
 	}
+	di.Timezone, err = in.Timezone.Location()
+	if err != nil {
+		return nil, huma.Error400BadRequest(
+			"Invalid location. Please try a different IANA Timezone.")
+	}
 	dataBoundary, err := a.DataFetcher.GetDataBoundary(di)
 	if err != nil {
 		log.Printf("%s getting data boundary: %v", user.Username, err)
