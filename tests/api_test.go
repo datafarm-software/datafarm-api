@@ -1499,7 +1499,7 @@ func makeQueryParams(dr datafetcher.SensorDataRequest) string {
 	for _, q := range dr.QueryFields {
 		fmt.Fprintf(&b, "&queryField=%s", q)
 	}
-	fmt.Fprintf(&b, "&timezone-return=%s", dr.Timezone)
+	fmt.Fprintf(&b, "&timezone-return=%s", dr.Timezone.Timezone)
 	return b.String()
 }
 
@@ -1973,7 +1973,6 @@ func TestGetDataBoundary(t *testing.T) {
 			token: ValidToken,
 			req: datafetcher.DataBoundaryRequest{
 				DeviceId: RegisteredDeviceId,
-				Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
 			},
 		},
 
@@ -2037,6 +2036,7 @@ func TestGetDataBoundary(t *testing.T) {
 			token: ValidToken,
 			req: datafetcher.DataBoundaryRequest{
 				DeviceId: RegisteredDeviceId,
+				Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
 			},
 		},
 

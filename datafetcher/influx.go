@@ -61,6 +61,9 @@ func (i *InfluxDatafetcher) Close() error {
 
 func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
 	SensorDataSlice, error) {
+	if metadata.Timezone == nil {
+		return SensorDataSlice{}, fmt.Errorf("nil timezone")
+	}
 	formattedQueryRange, err := i.formatQueryRange(metadata.Start, metadata.Stop)
 	if err != nil {
 		return nil, err
@@ -149,11 +152,7 @@ func (i *InfluxDatafetcher) dataRows2SensorData(data []DataRow, loc *time.Locati
 				DeviceID:   row.DeviceID,
 				SensorData: map[string]float64{row.Field: value},
 			}
-			if loc == nil {
-				newSensorData.Timestamp = row.Time
-			} else {
-				newSensorData.Timestamp = row.Time.In(loc)
-			}
+			newSensorData.Timestamp = row.Time.In(loc)
 			sensorDataSlice = append(sensorDataSlice, newSensorData)
 		}
 	}
@@ -184,6 +183,9 @@ func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string
 func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
 	DataBoundary, error) {
 	dataBoundary := DataBoundary{DeviceId: deviceInfo.DeviceId}
+	if deviceInfo.Timezone == nil {
+		return dataBoundary, fmt.Errorf("nil timezone")
+	}
 	queryBuilder := strings.Builder{}
 	fmt.Fprintf(&queryBuilder, `data = from(bucket: "%s") `, deviceInfo.Network)
 	fmt.Fprintf(&queryBuilder, "|> range(start: 0) ")
@@ -207,8 +209,8 @@ func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
 	if len(dataRows) != 2 {
 		return dataBoundary, fmt.Errorf("dataBoundary dataRows returned is not 2, instead: %d", len(dataRows))
 	}
-	dataBoundary.Start = dataRows[0].Time
-	dataBoundary.Stop = dataRows[1].Time
+	dataBoundary.Start = dataRows[0].Time.In(deviceInfo.Timezone)
+	dataBoundary.Stop = dataRows[1].Time.In(deviceInfo.Timezone)
 	return dataBoundary, nil
 }
 
