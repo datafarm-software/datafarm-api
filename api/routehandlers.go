@@ -396,9 +396,9 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 	var dataResp *deviceinfo.QueryFieldsResponse
 	var deviceErr deviceinfo.QueryFieldsError
 	var err error
-	errSlice := make([]deviceinfo.QueryFieldsError, 0, len(in.Body))
-	resultSlice := make([]deviceinfo.QueryFields, 0, len(in.Body))
-	for _, deviceId := range in.Body {
+	errSlice := make([]deviceinfo.QueryFieldsError, 0, len(in.Body.DeviceIds))
+	resultSlice := make([]deviceinfo.QueryFields, 0, len(in.Body.DeviceIds))
+	for _, deviceId := range in.Body.DeviceIds {
 		qr = deviceinfo.QueryFieldsRequest{
 			DeviceId: deviceId,
 		}
