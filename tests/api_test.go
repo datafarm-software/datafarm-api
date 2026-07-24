@@ -1910,7 +1910,7 @@ func TestGetDataBoundary(t *testing.T) {
 		mockDeviceInfo  deviceinfo.Schema
 		mockTokens      map[string]bool
 		token           string
-		deviceId        string
+		req             datafetcher.DataBoundaryRequest
 	}{
 
 		"user get deviceid data boundary": {
@@ -1970,8 +1970,74 @@ func TestGetDataBoundary(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token:    ValidToken,
-			deviceId: RegisteredDeviceId,
+			token: ValidToken,
+			req: datafetcher.DataBoundaryRequest{
+				DeviceId: RegisteredDeviceId,
+				Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
+			},
+		},
+
+		"user get deviceid data boundary in specific timezone": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: datafetcher.DataBoundary{
+				DeviceId: RegisteredDeviceId,
+				Start:    InsideTimeRange.Local(),
+				Stop:     AlsoInsideTimeRange.Local(),
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     int(authstore.User),
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDataFetcher: []datafetcher.SensorData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+						"batv":               3.4,
+					},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+						"batv":               3.4,
+					},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			req: datafetcher.DataBoundaryRequest{
+				DeviceId: RegisteredDeviceId,
+			},
 		},
 
 		"network user get deviceid data boundary": {
@@ -2031,8 +2097,10 @@ func TestGetDataBoundary(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token:    ValidToken,
-			deviceId: RegisteredDeviceId,
+			token: ValidToken,
+			req: datafetcher.DataBoundaryRequest{
+				DeviceId: RegisteredDeviceId,
+			},
 		},
 
 		"admin user get deviceid data boundary": {
@@ -2092,8 +2160,10 @@ func TestGetDataBoundary(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token:    ValidToken,
-			deviceId: RegisteredDeviceId,
+			token: ValidToken,
+			req: datafetcher.DataBoundaryRequest{
+				DeviceId: RegisteredDeviceId,
+			},
 		},
 
 		"unknown token": {
@@ -2101,7 +2171,9 @@ func TestGetDataBoundary(t *testing.T) {
 			wantStatus: http.StatusUnauthorized,
 			token:      InvalidToken,
 			want:       datafetcher.DataBoundary{},
-			deviceId:   RegisteredDeviceId,
+			req: datafetcher.DataBoundaryRequest{
+				DeviceId: RegisteredDeviceId,
+			},
 		},
 	}
 	db, err := miniredis.Run()
@@ -2129,7 +2201,8 @@ func TestGetDataBoundary(t *testing.T) {
 			require.Nil(t, err)
 			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
-			route := "/device/" + tc.deviceId + "/databoundary"
+			route := "/device/" + tc.req.DeviceId + "/databoundary"
+			route += fmt.Sprintf(`?timezone-return=%s`, tc.req.Timezone.Timezone)
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
 			if resp.Code != tc.wantStatus {

@@ -501,6 +501,7 @@ func (a *Api) BatchGetSensorDataBoundary(ctx context.Context,
 	for _, deviceId := range in.Body.DeviceIds {
 		qr = datafetcher.DataBoundaryRequest{
 			DeviceId: deviceId,
+			Timezone: in.Body.Timezone,
 		}
 		dataResp, err = a.GetSensorDataBoundary(ctx, &qr)
 		if err == nil {
