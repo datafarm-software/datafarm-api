@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"reflect"
 	"strings"
@@ -333,7 +332,6 @@ DataFarm welcomes external contribution to the API, through Open Source under th
 				return defaultTransformer.Transform(ctx, status, v)
 			}
 			if errM, ok := v.(*huma.ErrorModel); ok {
-				log.Printf("error: %+v", *errM)
 				return HumaError{
 					Title:  errM.Title,
 					Status: errM.Status,
