@@ -847,9 +847,11 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				Body: []string{
-					RegisteredDeviceId,
-					AnotherRegisteredDeviceId,
+				Body: deviceinfo.DeviceBatch{
+					DeviceIds: []string{
+						RegisteredDeviceId,
+						AnotherRegisteredDeviceId,
+					},
 				},
 			},
 		},
@@ -910,9 +912,11 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				Body: []string{
-					RegisteredDeviceId,
-					AnotherRegisteredDeviceId,
+				Body: deviceinfo.DeviceBatch{
+					DeviceIds: []string{
+						RegisteredDeviceId,
+						AnotherRegisteredDeviceId,
+					},
 				},
 			},
 		},
@@ -973,9 +977,11 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				Body: []string{
-					RegisteredDeviceId,
-					AnotherRegisteredDeviceId,
+				Body: deviceinfo.DeviceBatch{
+					DeviceIds: []string{
+						RegisteredDeviceId,
+						AnotherRegisteredDeviceId,
+					},
 				},
 			},
 		},
@@ -1036,9 +1042,11 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				Body: []string{
-					RegisteredDeviceId,
-					AnotherRegisteredDeviceId,
+				Body: deviceinfo.DeviceBatch{
+					DeviceIds: []string{
+						RegisteredDeviceId,
+						AnotherRegisteredDeviceId,
+					},
 				},
 			},
 		},
@@ -1098,7 +1106,12 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				Body: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				Body: deviceinfo.DeviceBatch{
+					DeviceIds: []string{
+						RegisteredDeviceId,
+						AnotherRegisteredDeviceId,
+					},
+				},
 			},
 		},
 
@@ -1157,7 +1170,12 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				Body: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				Body: deviceinfo.DeviceBatch{
+					DeviceIds: []string{
+						RegisteredDeviceId,
+						AnotherRegisteredDeviceId,
+					},
+				},
 			},
 		},
 
@@ -1218,7 +1236,11 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				Body: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				Body: deviceinfo.DeviceBatch{
+					DeviceIds: []string{
+						RegisteredDeviceId, AnotherRegisteredDeviceId,
+					},
+				},
 			},
 		},
 
@@ -1265,7 +1287,11 @@ func TestBatchGetQueryFields(t *testing.T) {
 			},
 			token: ValidToken,
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				Body: []string{RegisteredDeviceId, InvalidDeviceId},
+				Body: deviceinfo.DeviceBatch{
+					DeviceIds: []string{
+						RegisteredDeviceId, InvalidDeviceId,
+					},
+				},
 			},
 		},
 
@@ -1275,7 +1301,11 @@ func TestBatchGetQueryFields(t *testing.T) {
 			token:      InvalidToken,
 			want:       deviceinfo.BatchQueryFieldsResponse{},
 			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
-				Body: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				Body: deviceinfo.DeviceBatch{
+					DeviceIds: []string{
+						RegisteredDeviceId, AnotherRegisteredDeviceId,
+					},
+				},
 			},
 		},
 	}

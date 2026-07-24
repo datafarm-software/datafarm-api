@@ -20,7 +20,7 @@ type SensorDataResponse struct {
 
 type Hardware struct {
 	DeviceId    string   `json:"deviceId" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-	QueryFields []string `query:"queryField,explode" json:"queryFields" required:"true" maxItems:"20" uniqueItems:"true" doc:"One or more QueryFields to return. Specify \"all\" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField=\"temperature\"&queryField=\"humidity\""`
+	QueryFields []string `query:"queryField,explode" json:"queryFields" required:"true" minItems:"1" maxItems:"20" uniqueItems:"true" doc:"One or more QueryFields to return. Specify \"all\" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField=\"temperature\"&queryField=\"humidity\""`
 }
 
 type TimeFrame struct {
@@ -35,7 +35,7 @@ type SensorDataRequest struct {
 }
 
 type BatchSensorDataRequest struct {
-	Hardware []Hardware `json:"hardware" required:"true" maxItems:"5"`
+	Hardware []Hardware `json:"hardware" required:"true" minItems:"2" maxItems:"5"`
 	TimeFrame
 }
 
@@ -173,7 +173,7 @@ func writeDataRow(queryFieldColumns []string, sensorData SensorData, writer *csv
 
 type SensorData struct {
 	DeviceID   string             `json:"deviceId"`
-	Timestamp  time.Time          `json:"timestamp" doc:"Timestamp will be in UTC timezone and RFC3339 Format."`
+	Timestamp  time.Time          `json:"timestamp" doc:"Timestamp will be in RFC3339 Format. Default timezone is UTC."`
 	SensorData map[string]float64 `json:"sensorData"`
 }
 
@@ -195,7 +195,7 @@ type DataBoundaryError struct {
 }
 
 type BatchDataBoundaryRequest struct {
-	Body []string `json:"deviceIds" doc:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$" maxItems:"5"`
+	Body []string `json:"deviceIds" doc:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$" minItems:"2" maxItems:"5"`
 }
 
 type BatchDataBoundaryResponse struct {
