@@ -12,6 +12,7 @@ import (
 )
 
 var EmptySensorData = errors.New("empty sensor data")
+var EmptyTimeZone = errors.New("empty time zone")
 
 type SensorDataResponse struct {
 	Status int
@@ -23,10 +24,25 @@ type Hardware struct {
 	QueryFields []string `query:"queryField,explode" json:"queryFields" required:"true" minItems:"1" maxItems:"20" uniqueItems:"true" doc:"One or more QueryFields to return. Specify \"all\" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField=\"temperature\"&queryField=\"humidity\""`
 }
 
-type TimeFrame struct {
-	Start    string `query:"start" json:"start" required:"true" doc:"Client specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days."`
-	Stop     string `query:"stop" json:"stop" required:"false" doc:"Client specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop time must be later than Start. Stop can only ever be in RFC3339 Format."`
+type Timezone struct {
 	Timezone string `query:"timezone-return" json:"timezone-return" required:"false" pattern:"^(|[a-zA-Z]+/[a-zA-Z]+)$" doc:"Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg"`
+}
+
+func (t Timezone) IsEmpty() bool {
+	return t.Timezone == ""
+}
+
+func (t Timezone) Location() (*time.Location, error) {
+	if t.IsEmpty() {
+		t.Timezone = "UTC"
+	}
+	return time.LoadLocation(string(t.Timezone))
+}
+
+type TimeFrame struct {
+	Timezone
+	Start string `query:"start" json:"start" required:"true" doc:"Client specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days."`
+	Stop  string `query:"stop" json:"stop" required:"false" doc:"Client specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop time must be later than Start. Stop can only ever be in RFC3339 Format."`
 }
 
 type SensorDataRequest struct {
@@ -195,7 +211,8 @@ type DataBoundaryError struct {
 }
 
 type BatchDataBoundaryRequest struct {
-	Body []string `json:"deviceIds" doc:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$" minItems:"2" maxItems:"5"`
+	deviceinfo.DeviceBatch
+	Timezone
 }
 
 type BatchDataBoundaryResponse struct {
