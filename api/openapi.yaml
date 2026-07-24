@@ -35,12 +35,7 @@ paths:
                 content:
                     application/json:
                         schema:
-                            type: array
-                            description: deviceIds
-                            items:
-                                type: string
-                                pattern: ^[a-zA-Z0-9]{1,30}$
-                            maxItems: 5
+                            $ref: '#/components/schemas/BatchDataBoundaryRequest'
                 required: true
             responses:
                 "200":
@@ -125,12 +120,7 @@ paths:
                 content:
                     application/json:
                         schema:
-                            type: array
-                            description: deviceIds
-                            items:
-                                type: string
-                                pattern: ^[a-zA-Z0-9]{1,30}$
-                            maxItems: 5
+                            $ref: '#/components/schemas/DeviceBatch'
                 required: true
             responses:
                 "200":
@@ -308,6 +298,14 @@ paths:
                   schema:
                     type: string
                     pattern: ^\w{1,30}$
+                - name: timezone-return
+                  in: query
+                  description: Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg
+                  explode: false
+                  schema:
+                    type: string
+                    description: Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg
+                    pattern: ^(|[a-zA-Z]+/[a-zA-Z]+)$
             requestBody:
                 content: {}
             responses:
@@ -616,8 +614,17 @@ paths:
                     description: One or more QueryFields to return. Specify "all" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField="temperature"&queryField="humidity"
                     items:
                         type: string
+                    minItems: 1
                     maxItems: 20
                     uniqueItems: true
+                - name: timezone-return
+                  in: query
+                  description: Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg
+                  explode: false
+                  schema:
+                    type: string
+                    description: Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg
+                    pattern: ^(|[a-zA-Z]+/[a-zA-Z]+)$
                 - name: start
                   in: query
                   description: Client specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days.
@@ -633,14 +640,6 @@ paths:
                   schema:
                     type: string
                     description: Client specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop time must be later than Start. Stop can only ever be in RFC3339 Format.
-                - name: timezone-return
-                  in: query
-                  description: Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg
-                  explode: false
-                  schema:
-                    type: string
-                    description: Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg
-                    pattern: ^(|[a-zA-Z]+/[a-zA-Z]+)$
             requestBody:
                 content: {}
             responses:
@@ -1012,6 +1011,30 @@ paths:
                 - basic: []
 components:
     schemas:
+        BatchDataBoundaryRequest:
+            type: object
+            additionalProperties: false
+            properties:
+                $schema:
+                    type: string
+                    description: A URL to the JSON Schema for this object.
+                    format: uri
+                    examples:
+                        - https://example.com/schemas/BatchDataBoundaryRequest.json
+                    readOnly: true
+                deviceIds:
+                    type: array
+                    items:
+                        type: string
+                        pattern: ^[a-zA-Z0-9]{1,30}$
+                    minItems: 2
+                    maxItems: 5
+                timezone-return:
+                    type: string
+                    description: Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg
+                    pattern: ^(|[a-zA-Z]+/[a-zA-Z]+)$
+            required:
+                - deviceIds
         BatchDataBoundaryResponse:
             type: object
             additionalProperties: false
@@ -1071,6 +1094,7 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/Hardware'
+                    minItems: 2
                     maxItems: 5
                 start:
                     type: string
@@ -1141,6 +1165,26 @@ components:
             required:
                 - deviceId
                 - error
+        DeviceBatch:
+            type: object
+            additionalProperties: false
+            properties:
+                $schema:
+                    type: string
+                    description: A URL to the JSON Schema for this object.
+                    format: uri
+                    examples:
+                        - https://example.com/schemas/DeviceBatch.json
+                    readOnly: true
+                deviceIds:
+                    type: array
+                    items:
+                        type: string
+                        pattern: ^[a-zA-Z0-9]{1,30}$
+                    minItems: 2
+                    maxItems: 5
+            required:
+                - deviceIds
         ErrorDetail:
             type: object
             additionalProperties: false
@@ -1203,6 +1247,7 @@ components:
                     description: One or more QueryFields to return. Specify "all" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField="temperature"&queryField="humidity"
                     items:
                         type: string
+                    minItems: 1
                     maxItems: 20
                     uniqueItems: true
             required:
@@ -1252,7 +1297,7 @@ components:
                         format: double
                 timestamp:
                     type: string
-                    description: Timestamp will be in UTC timezone and RFC3339 Format.
+                    description: Timestamp will be in RFC3339 Format. Default timezone is UTC.
                     format: date-time
             required:
                 - deviceId
