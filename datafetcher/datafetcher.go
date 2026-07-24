@@ -201,6 +201,7 @@ type DataBoundary struct {
 
 type DataBoundaryRequest struct {
 	DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+	Timezone
 }
 type DataBoundaryResponse struct{ Body DataBoundary }
 
