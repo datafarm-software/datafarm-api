@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"reflect"
 	"strings"
@@ -46,7 +45,10 @@ type HumaOperator interface {
 	GetDeviceIds(context.Context, *struct{}) (*deviceinfo.DeviceIdsResponse, error)
 	GetSensorDataBoundary(context.Context, *datafetcher.DataBoundaryRequest) (
 		*datafetcher.DataBoundaryResponse, error)
-	BatchGetSensorDataBoundary(context.Context, *datafetcher.BatchDataBoundaryRequest) (
+	BatchGetSensorDataBoundary(context.Context,
+		*struct {
+			Body datafetcher.BatchDataBoundaryRequest
+		}) (
 		*struct {
 			Body datafetcher.BatchDataBoundaryResponse
 		}, error)
@@ -258,7 +260,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 }
 
 func Config(mode Mode) (config huma.Config) {
-	config = huma.DefaultConfig("DataFarm SensorData API", "1.1.3")
+	config = huma.DefaultConfig("DataFarm SensorData API", "1.1.4")
 	config.Info.Description = `
 ## Welcome
 
@@ -330,7 +332,6 @@ DataFarm welcomes external contribution to the API, through Open Source under th
 				return defaultTransformer.Transform(ctx, status, v)
 			}
 			if errM, ok := v.(*huma.ErrorModel); ok {
-				log.Printf("error: %+v", *errM)
 				return HumaError{
 					Title:  errM.Title,
 					Status: errM.Status,

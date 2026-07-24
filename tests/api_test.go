@@ -281,7 +281,7 @@ func TestGetSensorData(t *testing.T) {
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start:    RelativeStart,
-						Timezone: "Africa/Johannesburg",
+						Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
 					},
 				},
 			},
@@ -337,7 +337,129 @@ func TestGetSensorData(t *testing.T) {
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start:    RelativeStart,
-						Timezone: "$ome/Wr0ng/Timezone",
+						Timezone: datafetcher.Timezone{Timezone: "$ome/Wr0ng/Timezone"},
+					},
+				},
+			},
+		},
+
+		"unprocessable because more than 20 queryFields requested": {
+			want: nil,
+			gsdt: GetSensorDataTest{
+				wantErr:    true,
+				wantStatus: http.StatusUnprocessableEntity,
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.SensorData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField:        23,
+							AnotherRegisteredQueryField: 24,
+							"queryField3":               25,
+							"queryField4":               26,
+							"queryField5":               27,
+							"queryField6":               28,
+							"queryField7":               29,
+							"queryField8":               30,
+							"queryField9":               31,
+							"queryField10":              32,
+							"queryField11":              33,
+							"queryField12":              34,
+							"queryField13":              35,
+							"queryField14":              36,
+							"queryField15":              37,
+							"queryField16":              38,
+							"queryField17":              39,
+							"queryField18":              40,
+							"queryField19":              41,
+							"queryField20":              42,
+							"queryField21":              43,
+						},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId: RegisteredDeviceId,
+							QueryFields: []string{
+								RegisteredQueryField,
+								AnotherRegisteredQueryField,
+								"queryField3",
+								"queryField4",
+								"queryField5",
+								"queryField6",
+								"queryField7",
+								"queryField8",
+								"queryField9",
+								"queryField10",
+								"queryField11",
+								"queryField12",
+								"queryField13",
+								"queryField14",
+								"queryField15",
+								"queryField16",
+								"queryField17",
+								"queryField18",
+								"queryField19",
+								"queryField20",
+								"queryField21",
+							},
+						},
+					},
+				},
+				token: ValidToken,
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+				deviceId: RegisteredDeviceId,
+				deviceRequest: datafetcher.SensorDataRequest{
+					Hardware: datafetcher.Hardware{
+						QueryFields: []string{
+							RegisteredQueryField,
+							AnotherRegisteredQueryField,
+							"queryField3",
+							"queryField4",
+							"queryField5",
+							"queryField6",
+							"queryField7",
+							"queryField8",
+							"queryField9",
+							"queryField10",
+							"queryField11",
+							"queryField12",
+							"queryField13",
+							"queryField14",
+							"queryField15",
+							"queryField16",
+							"queryField17",
+							"queryField18",
+							"queryField19",
+							"queryField20",
+							"queryField21",
+						},
+					},
+					TimeFrame: datafetcher.TimeFrame{
+						Start: RelativeStart,
 					},
 				},
 			},
@@ -1377,7 +1499,7 @@ func makeQueryParams(dr datafetcher.SensorDataRequest) string {
 	for _, q := range dr.QueryFields {
 		fmt.Fprintf(&b, "&queryField=%s", q)
 	}
-	fmt.Fprintf(&b, "&timezone-return=%s", dr.Timezone)
+	fmt.Fprintf(&b, "&timezone-return=%s", dr.Timezone.Timezone)
 	return b.String()
 }
 
@@ -1788,7 +1910,7 @@ func TestGetDataBoundary(t *testing.T) {
 		mockDeviceInfo  deviceinfo.Schema
 		mockTokens      map[string]bool
 		token           string
-		deviceId        string
+		req             datafetcher.DataBoundaryRequest
 	}{
 
 		"user get deviceid data boundary": {
@@ -1848,8 +1970,74 @@ func TestGetDataBoundary(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token:    ValidToken,
-			deviceId: RegisteredDeviceId,
+			token: ValidToken,
+			req: datafetcher.DataBoundaryRequest{
+				DeviceId: RegisteredDeviceId,
+			},
+		},
+
+		"user get deviceid data boundary in specific timezone": {
+			wantErr:    false,
+			wantStatus: http.StatusOK,
+			want: datafetcher.DataBoundary{
+				DeviceId: RegisteredDeviceId,
+				Start:    InsideTimeRange.Local(),
+				Stop:     AlsoInsideTimeRange.Local(),
+			},
+			mockAuthStore: authstore.Schema{
+				UserInfo: []authstore.UserInfo{
+					{
+						Username: RegisteredUsername,
+						Company:  RegisteredCompany,
+						Role:     int(authstore.User),
+						Password: RegisteredPassword,
+						Network:  RegisteredNetwork,
+					},
+				},
+				UserTokens: []authstore.UserToken{
+					{Username: RegisteredUsername, Token: ValidToken},
+				},
+			},
+			mockDataFetcher: []datafetcher.SensorData{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: InsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+						"batv":               3.4,
+					},
+				},
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+						"batv":               3.4,
+					},
+				},
+			},
+			mockDeviceInfo: deviceinfo.Schema{
+				DeviceCompanies: []deviceinfo.DeviceToCompany{
+					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+				},
+				DeviceNetworks: []deviceinfo.DeviceToNetwork{
+					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+				},
+				DeviceToQF: []deviceinfo.DeviceToQueryFields{
+					{
+						DeviceId:    RegisteredDeviceId,
+						QueryFields: []string{RegisteredQueryField},
+					},
+				},
+			},
+			mockTokens: map[string]bool{
+				ValidToken: true,
+			},
+			token: ValidToken,
+			req: datafetcher.DataBoundaryRequest{
+				DeviceId: RegisteredDeviceId,
+				Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
+			},
 		},
 
 		"network user get deviceid data boundary": {
@@ -1909,8 +2097,10 @@ func TestGetDataBoundary(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token:    ValidToken,
-			deviceId: RegisteredDeviceId,
+			token: ValidToken,
+			req: datafetcher.DataBoundaryRequest{
+				DeviceId: RegisteredDeviceId,
+			},
 		},
 
 		"admin user get deviceid data boundary": {
@@ -1970,8 +2160,10 @@ func TestGetDataBoundary(t *testing.T) {
 			mockTokens: map[string]bool{
 				ValidToken: true,
 			},
-			token:    ValidToken,
-			deviceId: RegisteredDeviceId,
+			token: ValidToken,
+			req: datafetcher.DataBoundaryRequest{
+				DeviceId: RegisteredDeviceId,
+			},
 		},
 
 		"unknown token": {
@@ -1979,7 +2171,9 @@ func TestGetDataBoundary(t *testing.T) {
 			wantStatus: http.StatusUnauthorized,
 			token:      InvalidToken,
 			want:       datafetcher.DataBoundary{},
-			deviceId:   RegisteredDeviceId,
+			req: datafetcher.DataBoundaryRequest{
+				DeviceId: RegisteredDeviceId,
+			},
 		},
 	}
 	db, err := miniredis.Run()
@@ -2007,7 +2201,8 @@ func TestGetDataBoundary(t *testing.T) {
 			require.Nil(t, err)
 			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
 			require.Nil(t, err)
-			route := "/device/" + tc.deviceId + "/databoundary"
+			route := "/device/" + tc.req.DeviceId + "/databoundary"
+			route += fmt.Sprintf(`?timezone-return=%s`, tc.req.Timezone.Timezone)
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
 			if resp.Code != tc.wantStatus {
@@ -2155,7 +2350,7 @@ func TestCsvGetSensorData(t *testing.T) {
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start:    RelativeStart,
-						Timezone: "Africa/Johannesburg",
+						Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
 					},
 				},
 			},

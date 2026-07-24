@@ -95,12 +95,10 @@ func (a *Api) getSensorData(
 		}
 		di.QueryFields = qf.QueryFields
 	}
-	if in.TimeFrame.Timezone != "" {
-		di.Timezone, err = time.LoadLocation(in.TimeFrame.Timezone)
-		if err != nil {
-			return nil, huma.Error400BadRequest(
-				"Invalid location. Please try a different IANA Timezone.")
-		}
+	di.Timezone, err = in.Timezone.Location()
+	if err != nil {
+		return nil, huma.Error400BadRequest(
+			"Invalid location. Please try a different IANA Timezone.")
 	}
 	sensorData, err = a.DataFetcher.GetData(di)
 	if err != nil {
@@ -396,9 +394,9 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 	var dataResp *deviceinfo.QueryFieldsResponse
 	var deviceErr deviceinfo.QueryFieldsError
 	var err error
-	errSlice := make([]deviceinfo.QueryFieldsError, 0, len(in.Body))
-	resultSlice := make([]deviceinfo.QueryFields, 0, len(in.Body))
-	for _, deviceId := range in.Body {
+	errSlice := make([]deviceinfo.QueryFieldsError, 0, len(in.Body.DeviceIds))
+	resultSlice := make([]deviceinfo.QueryFields, 0, len(in.Body.DeviceIds))
+	for _, deviceId := range in.Body.DeviceIds {
 		qr = deviceinfo.QueryFieldsRequest{
 			DeviceId: deviceId,
 		}
@@ -478,6 +476,11 @@ func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 		authstore.GetDataBoundary) {
 		return nil, huma.Error500InternalServerError("Access denied to DataBoundary.")
 	}
+	di.Timezone, err = in.Timezone.Location()
+	if err != nil {
+		return nil, huma.Error400BadRequest(
+			"Invalid location. Please try a different IANA Timezone.")
+	}
 	dataBoundary, err := a.DataFetcher.GetDataBoundary(di)
 	if err != nil {
 		log.Printf("%s getting data boundary: %v", user.Username, err)
@@ -487,7 +490,10 @@ func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 	return &datafetcher.DataBoundaryResponse{Body: dataBoundary}, nil
 }
 
-func (a *Api) BatchGetSensorDataBoundary(ctx context.Context, in *datafetcher.BatchDataBoundaryRequest) (
+func (a *Api) BatchGetSensorDataBoundary(ctx context.Context,
+	in *struct {
+		Body datafetcher.BatchDataBoundaryRequest
+	}) (
 	*struct {
 		Body datafetcher.BatchDataBoundaryResponse
 	}, error) {
@@ -495,11 +501,12 @@ func (a *Api) BatchGetSensorDataBoundary(ctx context.Context, in *datafetcher.Ba
 	var dataResp *datafetcher.DataBoundaryResponse
 	var deviceErr datafetcher.DataBoundaryError
 	var err error
-	errSlice := make([]datafetcher.DataBoundaryError, 0, len(in.Body))
-	resultSlice := make([]datafetcher.DataBoundary, 0, len(in.Body))
-	for _, deviceId := range in.Body {
+	errSlice := make([]datafetcher.DataBoundaryError, 0, len(in.Body.DeviceIds))
+	resultSlice := make([]datafetcher.DataBoundary, 0, len(in.Body.DeviceIds))
+	for _, deviceId := range in.Body.DeviceIds {
 		qr = datafetcher.DataBoundaryRequest{
 			DeviceId: deviceId,
+			Timezone: in.Body.Timezone,
 		}
 		dataResp, err = a.GetSensorDataBoundary(ctx, &qr)
 		if err == nil {

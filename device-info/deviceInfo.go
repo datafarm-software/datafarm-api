@@ -26,10 +26,10 @@ type ScopeRestriction struct {
 }
 
 type DeviceInfo struct {
-	DeviceId, Company, Network string
-	Start, Stop                string
 	QueryFields                []string
 	Timezone                   *time.Location
+	DeviceId, Company, Network string
+	Start, Stop                string
 }
 
 type QueryFieldsResponse struct {
@@ -40,8 +40,10 @@ type QueryFieldsRequest struct {
 	DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
 }
 
-type BatchQueryFieldsRequest struct {
-	Body []string `json:"deviceIds" doc:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$"`
+type BatchQueryFieldsRequest struct{ Body DeviceBatch }
+
+type DeviceBatch struct {
+	DeviceIds []string `json:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$" minItems:"2" maxItems:"5"`
 }
 
 type QueryFieldsError struct {
