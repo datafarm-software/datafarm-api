@@ -10,21 +10,21 @@ import (
 	"go.uber.org/zap"
 )
 
-type OtlpLogger struct {
-	*zap.Logger
-}
+type Shutdown func(context.Context) error
 
-func NewOtlpLogger() (*OtlpLogger, error) {
-	o := &OtlpLogger{}
+func NewOtlpLogger(l *zap.Logger) (*zap.Logger, Shutdown, error) {
+	if l == nil {
+		return nil, nil, fmt.Errorf("logger nil")
+	}
 	ctx := context.Background()
 	otlpexp, err := autoexport.NewLogExporter(ctx)
 	if err != nil {
-		return o, fmt.Errorf("newLogExporter: %v", err)
+		return nil, nil, fmt.Errorf("newLogExporter: %v", err)
 	}
 	lp := log.NewLoggerProvider(
 		log.WithProcessor(log.NewBatchProcessor(otlpexp)),
 	)
-	o.Logger = zap.New(otelzap.NewCore("datafarm-rest-go",
+	l = zap.New(otelzap.NewCore("datafarm-rest-go",
 		otelzap.WithLoggerProvider(lp)))
-	return o, nil
+	return l, lp.Shutdown, nil
 }
