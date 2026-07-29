@@ -4,15 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/datafarm-software/datafarm-api/telemetry"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/sdk/log"
 	"go.uber.org/zap"
 )
 
-type Shutdown func(context.Context) error
-
-func NewOtlpLogger(l *zap.Logger) (*zap.Logger, Shutdown, error) {
+func NewOtlpLogger(l *zap.Logger) (*zap.Logger, telemetry.Shutdown, error) {
 	if l == nil {
 		return nil, nil, fmt.Errorf("logger nil")
 	}

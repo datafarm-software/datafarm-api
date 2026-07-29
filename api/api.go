@@ -17,7 +17,10 @@ import (
 	"github.com/datafarm-software/datafarm-api/datafetcher"
 	df "github.com/datafarm-software/datafarm-api/datafetcher"
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
+	"github.com/datafarm-software/datafarm-api/telemetry"
+	"github.com/datafarm-software/datafarm-api/telemetry/logging"
 	"github.com/datafarm-software/datafarm-api/tokenprovider"
+	"go.uber.org/zap"
 
 	"github.com/datafarm-software/datafarm-api/redis"
 	"github.com/gorilla/mux"
@@ -53,6 +56,7 @@ type Api struct {
 	AuthStore     authstore.AuthStore
 	Port          string
 	mode          localhuma.Mode
+	Logger        *zap.Logger
 }
 
 func Start(opts ApiOpts) error {
@@ -73,12 +77,15 @@ func Start(opts ApiOpts) error {
 		cleanupOldLimiters(ctx)
 	}()
 	api := &Api{
-		DeviceInfo: redis, DataFetcher: df,
+		DeviceInfo:    redis,
+		DataFetcher:   df,
 		TokenProvider: tokenAuth,
 		AuthStore:     redis,
 		Port:          opts.Port,
 		mode:          opts.Mode,
 	}
+	logger, loggerShutdown, err := logging.NewOtlpLogger(&zap.Logger{})
+	api.Logger = logger
 	authstore.InitRoles()
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
 		router, _ := api.SetupHumaRouter()
@@ -95,7 +102,9 @@ func Start(opts ApiOpts) error {
 			}
 		})
 		hooks.OnStop(func() {
-			api.Close()
+			api.Close([]telemetry.Shutdown{
+				loggerShutdown,
+			}...)
 			server.Shutdown(ctx)
 		})
 	})
@@ -111,18 +120,25 @@ func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
 	return router, &config
 }
 
-func (a *Api) Close() {
-	if err := a.DeviceInfo.Close(); err != nil {
-		log.Fatalf("error closing metadatafetcher: %v", err)
+func (a *Api) Close(shutdownFuncs ...telemetry.Shutdown) {
+	var err error
+	if err = a.DeviceInfo.Close(); err != nil {
+		log.Printf("error closing metadatafetcher: %v", err)
 	}
-	if err := a.DataFetcher.Close(); err != nil {
-		log.Fatalf("error closing datafetcher: %v", err)
+	if err = a.DataFetcher.Close(); err != nil {
+		log.Printf("error closing datafetcher: %v", err)
 	}
-	if err := a.TokenProvider.Close(); err != nil {
-		log.Fatalf("error closing token auth: %v", err)
+	if err = a.TokenProvider.Close(); err != nil {
+		log.Printf("error closing token auth: %v", err)
 	}
-	if err := a.AuthStore.Close(); err != nil {
-		log.Fatalf("error closing basic auth: %v", err)
+	if err = a.AuthStore.Close(); err != nil {
+		log.Printf("error closing basic auth: %v", err)
+	}
+	for _, s := range shutdownFuncs {
+		err = errors.Join(err, s(ctx))
+	}
+	if err != nil {
+		log.Printf("telemetry shutdown funcs: %v", err)
 	}
 	log.Println("Api shutdown.")
 }
