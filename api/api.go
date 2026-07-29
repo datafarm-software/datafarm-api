@@ -20,6 +20,7 @@ import (
 	"github.com/datafarm-software/datafarm-api/telemetry"
 	"github.com/datafarm-software/datafarm-api/telemetry/logging"
 	"github.com/datafarm-software/datafarm-api/tokenprovider"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.uber.org/zap"
 
 	"github.com/datafarm-software/datafarm-api/redis"
@@ -60,6 +61,10 @@ type Api struct {
 }
 
 func Start(opts ApiOpts) error {
+	ctx = context.Background()
+	go func() {
+		cleanupOldLimiters(ctx)
+	}()
 	redis, err := redis.NewRedis(opts.RedisOpts)
 	if err != nil {
 		return err
@@ -72,10 +77,6 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("error initializing jwt authstore: %v", err)
 	}
-	ctx = context.Background()
-	go func() {
-		cleanupOldLimiters(ctx)
-	}()
 	api := &Api{
 		DeviceInfo:    redis,
 		DataFetcher:   df,
@@ -84,7 +85,14 @@ func Start(opts ApiOpts) error {
 		Port:          opts.Port,
 		mode:          opts.Mode,
 	}
-	logger, loggerShutdown, err := logging.NewOtlpLogger(&zap.Logger{})
+	res, err := resource.New(ctx, resource.WithContainer())
+	if err != nil {
+		return fmt.Errorf("init resource: %v", err)
+	}
+	logger, loggerShutdown, err := logging.NewOtlpLogger(res)
+	if err != nil {
+		return fmt.Errorf("init logger: %v", err)
+	}
 	api.Logger = logger
 	authstore.InitRoles()
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
