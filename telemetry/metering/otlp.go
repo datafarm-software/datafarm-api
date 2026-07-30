@@ -3,6 +3,7 @@ package metering
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"sync/atomic"
 	"time"
 
@@ -79,6 +80,25 @@ func (o *Otlp) setupRequestLatency(ms meterSetup) (err error) {
 	)
 	if err != nil {
 		err = fmt.Errorf("init histogram: %v", err)
+	}
+	return err
+}
+
+func (o *Otlp) setupMemoryGauge(ms meterSetup) (err error) {
+	meter := ms.meterProvider.Meter(ms.name)
+	_, err = meter.Int64ObservableGauge(
+		ms.name+".memory.heap",
+		metric.WithDescription("Memory usage of the allocated heap objects."),
+		metric.WithUnit("By"),
+		metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+			o.Observe(int64(m.HeapAlloc))
+			return nil
+		}),
+	)
+	if err != nil {
+		return fmt.Errorf("init gauge: %v", err)
 	}
 	return err
 }
