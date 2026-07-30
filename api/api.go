@@ -99,7 +99,7 @@ func Start(opts ApiOpts) error {
 		return fmt.Errorf("init logger: %v", err)
 	}
 	api.Logger = logger
-	tracer, err := tracing.NewOtlpTracer(res)
+	tracer, traceShutdown, err := tracing.NewOtlpTracer(res)
 	if err != nil {
 		return fmt.Errorf("init tracer: %v", err)
 	}
@@ -126,7 +126,7 @@ func Start(opts ApiOpts) error {
 		})
 		hooks.OnStop(func() {
 			api.Close([]telemetry.Shutdown{
-				loggerShutdown,
+				loggerShutdown, traceShutdown,
 			}...)
 			server.Shutdown(ctx)
 		})

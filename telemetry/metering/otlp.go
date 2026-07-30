@@ -16,7 +16,7 @@ import (
 type Otlp struct {
 	mp               *sdkmetric.MeterProvider
 	apiCounter       metric.Int64Counter
-	activeUsersGauge metric.Int64ObservableGauge
+	activeUsersCount atomic.Int64
 	requestLatency   metric.Float64Histogram
 }
 
@@ -55,13 +55,12 @@ func (o *Otlp) setupApiCounter(ms meterSetup) (err error) {
 
 func (o *Otlp) setupActiveUsersGauge(ms *meterSetup) (err error) {
 	meter := ms.meterProvider.Meter(ms.name)
-	var activeUsersCount atomic.Int64
-	o.activeUsersGauge, err = meter.Int64ObservableGauge(
+	_, err = meter.Int64ObservableGauge(
 		ms.name+".active.users.gauge",
 		metric.WithDescription("Active Users Gauge"),
 		metric.WithUnit("By"),
-		metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
-			o.Observe(activeUsersCount.Load())
+		metric.WithInt64Callback(func(_ context.Context, ob metric.Int64Observer) error {
+			ob.Observe(o.activeUsersCount.Load())
 			return nil
 		}),
 	)
@@ -103,6 +102,14 @@ func (o *Otlp) setupMemoryGauge(ms meterSetup) (err error) {
 	return err
 }
 
-func (o *Otlp) RecordLatency(dur time.Duration) error {
+func (o *Otlp) RecordLatency(ctx context.Context, dur time.Duration) error {
 	return fmt.Errorf("not implemented")
+}
+
+func (o *Otlp) ActiveUsersCountAdd(i int) {
+	o.activeUsersCount.Add(int64(i))
+}
+
+func (o *Otlp) ApiCountAdd(ctx context.Context, i int) {
+	o.apiCounter.Add(ctx, int64(i))
 }
