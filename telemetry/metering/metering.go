@@ -1,7 +1,12 @@
 package metering
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type MetricProvider interface {
-	RecordLatency(time.Duration) error
+	RecordLatency(context.Context, time.Duration) error
+	ApiCountAdd(context.Context, int)
+	ActiveUsersCountAdd(int)
 }
