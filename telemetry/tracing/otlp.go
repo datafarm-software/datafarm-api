@@ -9,10 +9,11 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func NewOtlpTracer(res *resource.Resource) (
-	*sdktrace.TracerProvider, error) {
+	trace.Tracer, error) {
 	exporter, err := autoexport.NewSpanExporter(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("init exporter: %v", err)
@@ -21,9 +22,13 @@ func NewOtlpTracer(res *resource.Resource) (
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(res),
 	)
+	defer func() {
+		tp.Shutdown(context.Background())
+	}()
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{}, propagation.Baggage{},
 	))
-	return tp, nil
+	tracer := tp.Tracer("github.com:datafarm-software/datafarm-api/telemetry/tracing")
+	return tracer, nil
 }
