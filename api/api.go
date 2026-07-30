@@ -19,8 +19,10 @@ import (
 	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
 	"github.com/datafarm-software/datafarm-api/telemetry"
 	"github.com/datafarm-software/datafarm-api/telemetry/logging"
+	"github.com/datafarm-software/datafarm-api/telemetry/metering"
 	"github.com/datafarm-software/datafarm-api/telemetry/tracing"
 	"github.com/datafarm-software/datafarm-api/tokenprovider"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
@@ -61,6 +63,7 @@ type Api struct {
 	mode          localhuma.Mode
 	Logger        *zap.Logger
 	Tracer        *sdktrace.TracerProvider
+	Meter         *metric.MeterProvider
 }
 
 func Start(opts ApiOpts) error {
@@ -102,6 +105,11 @@ func Start(opts ApiOpts) error {
 		return fmt.Errorf("init tracer: %v", err)
 	}
 	api.Tracer = tracer
+	meter, err := metering.NewOtlpMeter(res)
+	if err != nil {
+		return fmt.Errorf("init meter: %v", err)
+	}
+	api.Meter = meter
 	authstore.InitRoles()
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
 		router, _ := api.SetupHumaRouter()
