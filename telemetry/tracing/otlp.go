@@ -11,7 +11,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func NewOtlpTracer(endpoint string, res *resource.Resource) (
+func NewOtlpTracer(res *resource.Resource) (
 	*sdktrace.TracerProvider, error) {
 	exporter, err := autoexport.NewSpanExporter(context.Background())
 	if err != nil {
