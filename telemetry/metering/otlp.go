@@ -28,16 +28,36 @@ func NewOtlpMeter(res *resource.Resource) (MetricProvider, error) {
 	reader := sdkmetric.NewPeriodicReader(exporter)
 	mp := sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(reader), sdkmetric.WithResource(res))
+	o := &Otlp{mp: mp}
 	ms := meterSetup{
 		meterProvider: mp,
 		name:          "github.com:datafarm-software/datafarm-api/telemetry/metering",
 	}
-	return &Otlp{mp: mp}, nil
+	if err = o.setup(ms); err != nil {
+		return nil, fmt.Errorf("setup meter: %v", err)
+	}
+	return o, nil
 }
 
 type meterSetup struct {
 	meterProvider *sdkmetric.MeterProvider
 	name          string
+}
+
+func (o *Otlp) setup(ms meterSetup) (err error) {
+	if err = o.setupApiCounter(ms); err != nil {
+		return fmt.Errorf("setupApiCounter: %v", err)
+	}
+	if err = o.setupActiveUsersGauge(ms); err != nil {
+		return fmt.Errorf("setupActiveUsersGauge: %v")
+	}
+	if err = o.setupMemoryGauge(ms); err != nil {
+		return fmt.Errorf("setupMemoryGauge: %v", err)
+	}
+	if err = o.setupRequestLatency(ms); err != nil {
+		return fmt.Errorf("setupRequestLatency: %v", err)
+	}
+	return nil
 }
 
 func (o *Otlp) setupApiCounter(ms meterSetup) (err error) {
@@ -53,7 +73,7 @@ func (o *Otlp) setupApiCounter(ms meterSetup) (err error) {
 	return err
 }
 
-func (o *Otlp) setupActiveUsersGauge(ms *meterSetup) (err error) {
+func (o *Otlp) setupActiveUsersGauge(ms meterSetup) (err error) {
 	meter := ms.meterProvider.Meter(ms.name)
 	_, err = meter.Int64ObservableGauge(
 		ms.name+".active.users.gauge",
