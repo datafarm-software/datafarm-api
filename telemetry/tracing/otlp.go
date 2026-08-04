@@ -27,6 +27,6 @@ func NewOtlpTracer(res *resource.Resource) (
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{}, propagation.Baggage{},
 	))
-	tracer := tp.Tracer("github.com:datafarm-software/datafarm-api/telemetry/tracing")
+	tracer := tp.Tracer("datafarm-api/telemetry/tracing")
 	return tracer, tp.Shutdown, nil
 }

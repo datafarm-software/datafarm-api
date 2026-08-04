@@ -31,7 +31,7 @@ func NewOtlpMeter(res *resource.Resource) (MetricProvider, error) {
 	o := &Otlp{mp: mp}
 	ms := meterSetup{
 		meterProvider: mp,
-		name:          "github.com:datafarm-software/datafarm-api/telemetry/metering",
+		name:          "datafarm-api/telemetry/metering",
 	}
 	if err = o.setup(ms); err != nil {
 		return nil, fmt.Errorf("setup meter: %v", err)
