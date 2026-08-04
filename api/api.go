@@ -58,11 +58,11 @@ type Api struct {
 	DataFetcher    df.DataFetcher
 	TokenProvider  tokenprovider.TokenProvider
 	AuthStore      authstore.AuthStore
-	MetricProvider metering.MetricProvider
+	MetricRecorder metering.MetricRecorder
+	Tracer         trace.Tracer
+	Logger         *zap.Logger
 	Port           string
 	mode           localhuma.Mode
-	Logger         *zap.Logger
-	Tracer         trace.Tracer
 }
 
 func Start(opts ApiOpts) error {
@@ -82,14 +82,6 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("error initializing jwt authstore: %v", err)
 	}
-	api := &Api{
-		DeviceInfo:    redis,
-		DataFetcher:   df,
-		TokenProvider: tokenAuth,
-		AuthStore:     redis,
-		Port:          opts.Port,
-		mode:          opts.Mode,
-	}
 	res, err := resource.New(ctx, resource.WithContainer())
 	if err != nil {
 		return fmt.Errorf("init resource: %v", err)
@@ -98,17 +90,25 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("init logger: %v", err)
 	}
-	api.Logger = logger
 	tracer, traceShutdown, err := tracing.NewOtlpTracer(res)
 	if err != nil {
 		return fmt.Errorf("init tracer: %v", err)
 	}
-	api.Tracer = tracer
 	meter, err := metering.NewOtlpMeter(res)
 	if err != nil {
 		return fmt.Errorf("init meter: %v", err)
 	}
-	api.MetricProvider = meter
+	api := &Api{
+		DeviceInfo:     redis,
+		DataFetcher:    df,
+		TokenProvider:  tokenAuth,
+		AuthStore:      redis,
+		Port:           opts.Port,
+		mode:           opts.Mode,
+		Logger:         logger,
+		Tracer:         tracer,
+		MetricRecorder: meter,
+	}
 	authstore.InitRoles()
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
 		router, _ := api.SetupHumaRouter()

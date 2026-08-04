@@ -20,7 +20,7 @@ type Otlp struct {
 	requestLatency   metric.Float64Histogram
 }
 
-func NewOtlpMeter(res *resource.Resource) (MetricProvider, error) {
+func NewOtlpMeter(res *resource.Resource) (MetricRecorder, error) {
 	exporter, err := otlpmetrichttp.New(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("init exporter: %v", err)
@@ -49,7 +49,7 @@ func (o *Otlp) setup(ms meterSetup) (err error) {
 		return fmt.Errorf("setupApiCounter: %v", err)
 	}
 	if err = o.setupActiveUsersGauge(ms); err != nil {
-		return fmt.Errorf("setupActiveUsersGauge: %v")
+		return fmt.Errorf("setupActiveUsersGauge: %v", err)
 	}
 	if err = o.setupMemoryGauge(ms); err != nil {
 		return fmt.Errorf("setupMemoryGauge: %v", err)
