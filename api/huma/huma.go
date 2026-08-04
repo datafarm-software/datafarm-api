@@ -25,6 +25,7 @@ const MajorApiVersionRoutePrefix = "/v1"
 
 type HumaOperator interface {
 	Mode() Mode
+	CountApiRequest(ctx huma.Context, next func(huma.Context))
 	RecordLatency(ctx huma.Context, next func(huma.Context))
 	RateLimit(ctx huma.Context, next func(huma.Context))
 	VerifyToken(ctx huma.Context, next func(huma.Context))
@@ -162,7 +163,7 @@ func baseOperation(method string, middlewares *huma.Middlewares) huma.Operation 
 }
 
 func RegisterHumaOperations(api huma.API, ho HumaOperator) {
-	mw := &huma.Middlewares{ho.RateLimit, ho.RecordLatency, ho.VerifyToken}
+	mw := &huma.Middlewares{ho.RateLimit, ho.CountApiRequest, ho.RecordLatency, ho.VerifyToken}
 	op := baseOperation("POST", &huma.Middlewares{ho.RateLimit, ho.RecordLatency})
 	op.Path = "/login"
 	op.Summary = "Login"

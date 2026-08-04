@@ -7,6 +7,6 @@ import (
 
 type MetricRecorder interface {
 	RecordLatency(context.Context, time.Duration) error
-	ApiCountAdd(context.Context, int)
+	CountApiRequest(context.Context, int)
 	ActiveUsersCountAdd(int)
 }

@@ -130,6 +130,6 @@ func (o *Otlp) ActiveUsersCountAdd(i int) {
 	o.activeUsersCount.Add(int64(i))
 }
 
-func (o *Otlp) ApiCountAdd(ctx context.Context, i int) {
+func (o *Otlp) CountApiRequest(ctx context.Context, i int) {
 	o.apiCounter.Add(ctx, int64(i))
 }

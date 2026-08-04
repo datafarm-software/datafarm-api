@@ -2,7 +2,6 @@ package api
 
 import (
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -16,10 +15,15 @@ func (a *Api) RecordLatency(humaCtx huma.Context, next func(huma.Context)) {
 	defer func() {
 		duration := time.Since(start)
 		if err := a.MetricRecorder.RecordLatency(ctx, duration); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Internal error while recording latency of the request."))
+			w.Write([]byte("Internal error while recording latency of the request. Please notify a system administrator."))
 			log.Printf("recordLatency: %v", err)
 		}
 	}()
 	next(humaCtx)
+}
+
+func (a *Api) CountApiRequest(humaCtx huma.Context, next func(huma.Context)) {
+	r, _ := humamux.Unwrap(humaCtx)
+	ctx := r.Context()
+	a.MetricRecorder.CountApiRequest(ctx, 1)
 }
