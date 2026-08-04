@@ -47,6 +47,7 @@ var SPECIAL_CHARS_REGEX = regexp.MustCompile(`[@$!%*?&#]`)
 type ApiOpts struct {
 	RedisOpts      redis.RedisOpts        `mapstructure:"Redis" validate:"required"`
 	InfluxOpts     datafetcher.InfluxOpts `mapstructure:"Influx" validate:"required"`
+	TelemetryOpts  telemetry.Opts         `mapstructure:"telemetry" validate:"required"`
 	Port           string                 `mapstructure:"port" validate:"required"`
 	PrivateKeyFile string                 `mapstructure:"privatekeyfile" validate:"required"`
 	PublicKeyFile  string                 `mapstructure:"publickeyfile" validate:"required"`
@@ -94,7 +95,7 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("init tracer: %v", err)
 	}
-	meter, err := metering.NewOtlpMeter(res)
+	meter, meterShutdown, err := metering.NewOtlpMeter(res, opts.TelemetryOpts.MeterEndpoint)
 	if err != nil {
 		return fmt.Errorf("init meter: %v", err)
 	}
@@ -126,7 +127,7 @@ func Start(opts ApiOpts) error {
 		})
 		hooks.OnStop(func() {
 			api.Close([]telemetry.Shutdown{
-				loggerShutdown, traceShutdown,
+				loggerShutdown, traceShutdown, meterShutdown,
 			}...)
 			server.Shutdown(ctx)
 		})

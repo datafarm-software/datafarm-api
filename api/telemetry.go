@@ -26,4 +26,5 @@ func (a *Api) CountApiRequest(humaCtx huma.Context, next func(huma.Context)) {
 	r, _ := humamux.Unwrap(humaCtx)
 	ctx := r.Context()
 	a.MetricRecorder.CountApiRequest(ctx, 1)
+	next(humaCtx)
 }

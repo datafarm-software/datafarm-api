@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/datafarm-software/datafarm-api/telemetry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -20,10 +21,13 @@ type Otlp struct {
 	requestLatency   metric.Float64Histogram
 }
 
-func NewOtlpMeter(res *resource.Resource) (MetricRecorder, error) {
-	exporter, err := otlpmetrichttp.New(context.Background())
+// NOTE: This uses insecure HTTP
+func NewOtlpMeter(res *resource.Resource, endpoint string) (MetricRecorder, telemetry.Shutdown, error) {
+	exporter, err := otlpmetrichttp.New(
+		context.Background(), otlpmetrichttp.WithEndpoint(endpoint),
+		otlpmetrichttp.WithInsecure())
 	if err != nil {
-		return nil, fmt.Errorf("init exporter: %v", err)
+		return nil, nil, fmt.Errorf("init exporter: %v", err)
 	}
 	reader := sdkmetric.NewPeriodicReader(exporter)
 	mp := sdkmetric.NewMeterProvider(
@@ -34,9 +38,9 @@ func NewOtlpMeter(res *resource.Resource) (MetricRecorder, error) {
 		name:          "datafarm-api/telemetry/metering",
 	}
 	if err = o.setup(ms); err != nil {
-		return nil, fmt.Errorf("setup meter: %v", err)
+		return nil, nil, fmt.Errorf("setup meter: %v", err)
 	}
-	return o, nil
+	return o, mp.Shutdown, nil
 }
 
 type meterSetup struct {
@@ -123,7 +127,8 @@ func (o *Otlp) setupMemoryGauge(ms meterSetup) (err error) {
 }
 
 func (o *Otlp) RecordLatency(ctx context.Context, dur time.Duration) error {
-	return fmt.Errorf("not implemented")
+	o.requestLatency.Record(ctx, float64(dur))
+	return nil
 }
 
 func (o *Otlp) ActiveUsersCountAdd(i int) {
