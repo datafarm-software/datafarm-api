@@ -55,15 +55,15 @@ type ApiOpts struct {
 }
 
 type Api struct {
-	DeviceInfo     deviceinfo.DeviceInfoFetcher
-	DataFetcher    df.DataFetcher
-	TokenProvider  tokenprovider.TokenProvider
-	AuthStore      authstore.AuthStore
-	MetricRecorder metering.MetricRecorder
-	Tracer         trace.Tracer
-	Logger         *zap.Logger
-	Port           string
-	mode           localhuma.Mode
+	DeviceInfo    deviceinfo.DeviceInfoFetcher
+	DataFetcher   df.DataFetcher
+	TokenProvider tokenprovider.TokenProvider
+	AuthStore     authstore.AuthStore
+	Recorder      *metering.OtlpRecorder
+	Tracer        trace.Tracer
+	Logger        *zap.Logger
+	Port          string
+	mode          localhuma.Mode
 }
 
 func Start(opts ApiOpts) error {
@@ -95,20 +95,20 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("init tracer: %v", err)
 	}
-	meter, meterShutdown, err := metering.NewOtlpMeter(res, opts.TelemetryOpts.MeterEndpoint)
+	meter, meterShutdown, err := metering.NewOtlpRecorder(res, opts.TelemetryOpts.MeterEndpoint)
 	if err != nil {
 		return fmt.Errorf("init meter: %v", err)
 	}
 	api := &Api{
-		DeviceInfo:     redis,
-		DataFetcher:    df,
-		TokenProvider:  tokenAuth,
-		AuthStore:      redis,
-		Port:           opts.Port,
-		mode:           opts.Mode,
-		Logger:         logger,
-		Tracer:         tracer,
-		MetricRecorder: meter,
+		DeviceInfo:    redis,
+		DataFetcher:   df,
+		TokenProvider: tokenAuth,
+		AuthStore:     redis,
+		Port:          opts.Port,
+		mode:          opts.Mode,
+		Logger:        logger,
+		Tracer:        tracer,
+		Recorder:      meter,
 	}
 	authstore.InitRoles()
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
