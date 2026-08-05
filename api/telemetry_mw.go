@@ -14,7 +14,7 @@ func (a *Api) RecordLatency(humaCtx huma.Context, next func(huma.Context)) {
 	start := time.Now()
 	defer func() {
 		duration := time.Since(start)
-		if err := a.MetricRecorder.RecordLatency(ctx, duration); err != nil {
+		if err := a.Metric.RecordLatency(ctx, duration); err != nil {
 			w.Write([]byte("Internal error while recording latency of the request. Please notify a system administrator."))
 			log.Printf("recordLatency: %v", err)
 		}
@@ -25,6 +25,6 @@ func (a *Api) RecordLatency(humaCtx huma.Context, next func(huma.Context)) {
 func (a *Api) CountApiRequest(humaCtx huma.Context, next func(huma.Context)) {
 	r, _ := humamux.Unwrap(humaCtx)
 	ctx := r.Context()
-	a.MetricRecorder.CountApiRequest(ctx, 1)
+	a.Metric.CountApiRequest(ctx, 1)
 	next(humaCtx)
 }

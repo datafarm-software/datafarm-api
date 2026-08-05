@@ -314,7 +314,7 @@ func (a *Api) Login(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error linking the token to the user.")
 	}
-	a.Recorder.ActiveUsersCountAdd(1)
+	a.Metric.ActiveUsersCountAdd(1)
 	return &tokenprovider.LoginResponse{Body: ut.Token}, nil
 }
 
