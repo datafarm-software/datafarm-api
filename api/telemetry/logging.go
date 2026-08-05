@@ -1,10 +1,9 @@
-package logging
+package telemetry
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/datafarm-software/datafarm-api/telemetry"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -12,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewOtlpLogger(res *resource.Resource) (*zap.Logger, telemetry.Shutdown, error) {
+func NewOtlpLogger(res *resource.Resource) (*zap.Logger, Shutdown, error) {
 	if res == nil {
 		return nil, nil, fmt.Errorf("resource nil")
 	}

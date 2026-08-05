@@ -3,7 +3,7 @@ package redis
 import (
 	"fmt"
 
-	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
+	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
 	"github.com/redis/go-redis/v9"
 )
 

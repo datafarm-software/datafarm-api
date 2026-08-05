@@ -1,10 +1,9 @@
-package tracing
+package telemetry
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/datafarm-software/datafarm-api/telemetry"
 	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
@@ -14,7 +13,7 @@ import (
 )
 
 func NewOtlpTracer(res *resource.Resource) (
-	trace.Tracer, telemetry.Shutdown, error) {
+	trace.Tracer, Shutdown, error) {
 	exporter, err := autoexport.NewSpanExporter(context.Background())
 	if err != nil {
 		return nil, nil, fmt.Errorf("init exporter: %v", err)

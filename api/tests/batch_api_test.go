@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/datafarm-software/datafarm-api/authstore"
-	"github.com/datafarm-software/datafarm-api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
-	"github.com/datafarm-software/datafarm-api/redis"
-	"github.com/datafarm-software/datafarm-api/tokenprovider"
+	"github.com/datafarm-software/datafarm-api/api/authstore"
+	"github.com/datafarm-software/datafarm-api/api/datafetcher"
+	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/redis"
+	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 )

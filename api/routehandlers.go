@@ -13,10 +13,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
-	"github.com/datafarm-software/datafarm-api/authstore"
-	"github.com/datafarm-software/datafarm-api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
-	"github.com/datafarm-software/datafarm-api/tokenprovider"
+	"github.com/datafarm-software/datafarm-api/api/authstore"
+	"github.com/datafarm-software/datafarm-api/api/datafetcher"
+	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 )
 
 func formatTimestamp(in *datafetcher.SensorDataRequest) (err error) {
@@ -314,7 +314,7 @@ func (a *Api) Login(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Internal error linking the token to the user.")
 	}
-	a.MetricRecorder.ActiveUsersCountAdd(1)
+	a.Recorder.ActiveUsersCountAdd(1)
 	return &tokenprovider.LoginResponse{Body: ut.Token}, nil
 }
 

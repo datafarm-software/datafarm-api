@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
+	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
 )
 
 var EmptySensorData = errors.New("empty sensor data")

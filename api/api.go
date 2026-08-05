@@ -12,21 +12,17 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/danielgtaylor/huma/v2/humacli"
+	"github.com/datafarm-software/datafarm-api/api/authstore"
+	"github.com/datafarm-software/datafarm-api/api/datafetcher"
+	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
 	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
-	"github.com/datafarm-software/datafarm-api/authstore"
-	"github.com/datafarm-software/datafarm-api/datafetcher"
-	df "github.com/datafarm-software/datafarm-api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
-	"github.com/datafarm-software/datafarm-api/telemetry"
-	"github.com/datafarm-software/datafarm-api/telemetry/logging"
-	"github.com/datafarm-software/datafarm-api/telemetry/metering"
-	"github.com/datafarm-software/datafarm-api/telemetry/tracing"
-	"github.com/datafarm-software/datafarm-api/tokenprovider"
+	"github.com/datafarm-software/datafarm-api/api/telemetry"
+	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
-	"github.com/datafarm-software/datafarm-api/redis"
+	"github.com/datafarm-software/datafarm-api/api/redis"
 	"github.com/gorilla/mux"
 )
 
@@ -56,10 +52,10 @@ type ApiOpts struct {
 
 type Api struct {
 	DeviceInfo    deviceinfo.DeviceInfoFetcher
-	DataFetcher   df.DataFetcher
+	DataFetcher   datafetcher.DataFetcher
 	TokenProvider tokenprovider.TokenProvider
 	AuthStore     authstore.AuthStore
-	Recorder      *metering.OtlpRecorder
+	Recorder      *telemetry.OtlpRecorder
 	Tracer        trace.Tracer
 	Logger        *zap.Logger
 	Port          string
@@ -87,15 +83,15 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("init resource: %v", err)
 	}
-	logger, loggerShutdown, err := logging.NewOtlpLogger(res)
+	logger, loggerShutdown, err := telemetry.NewOtlpLogger(res)
 	if err != nil {
 		return fmt.Errorf("init logger: %v", err)
 	}
-	tracer, traceShutdown, err := tracing.NewOtlpTracer(res)
+	tracer, traceShutdown, err := telemetry.NewOtlpTracer(res)
 	if err != nil {
 		return fmt.Errorf("init tracer: %v", err)
 	}
-	meter, meterShutdown, err := metering.NewOtlpRecorder(res, opts.TelemetryOpts.MeterEndpoint)
+	meter, meterShutdown, err := telemetry.NewOtlpRecorder(res, opts.TelemetryOpts.MeterEndpoint)
 	if err != nil {
 		return fmt.Errorf("init meter: %v", err)
 	}

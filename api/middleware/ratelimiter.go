@@ -10,7 +10,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
-	"github.com/datafarm-software/datafarm-api/tokenprovider"
+	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 	"golang.org/x/time/rate"
 )
 

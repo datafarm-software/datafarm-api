@@ -1,4 +1,4 @@
-package metering
+package telemetry
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/datafarm-software/datafarm-api/telemetry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -22,7 +21,7 @@ type OtlpRecorder struct {
 }
 
 // NOTE: This uses insecure HTTP
-func NewOtlpMeter(res *resource.Resource, endpoint string) (*OtlpRecorder, telemetry.Shutdown, error) {
+func NewOtlpRecorder(res *resource.Resource, endpoint string) (*OtlpRecorder, Shutdown, error) {
 	exporter, err := otlpmetrichttp.New(
 		context.Background(), otlpmetrichttp.WithEndpoint(endpoint),
 		otlpmetrichttp.WithInsecure())

@@ -10,7 +10,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/datafarm-software/datafarm-api/authstore"
+	"github.com/datafarm-software/datafarm-api/api/authstore"
 	"github.com/golang-jwt/jwt/v5"
 )
 

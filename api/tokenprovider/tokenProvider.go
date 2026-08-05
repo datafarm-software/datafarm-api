@@ -1,7 +1,7 @@
 package tokenprovider
 
 import (
-	"github.com/datafarm-software/datafarm-api/authstore"
+	"github.com/datafarm-software/datafarm-api/api/authstore"
 )
 
 type LoginRequest struct {

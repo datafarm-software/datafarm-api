@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/datafarm-software/datafarm-api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
-	"github.com/datafarm-software/datafarm-api/tokenprovider"
+	"github.com/datafarm-software/datafarm-api/api/datafetcher"
+	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 )
 
 type Mode int

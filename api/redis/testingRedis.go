@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/datafarm-software/datafarm-api/authstore"
-	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/authstore"
+	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
 	cfy "github.com/geraud22/config-from-yaml"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
