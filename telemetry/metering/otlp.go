@@ -33,41 +33,33 @@ func NewOtlpMeter(res *resource.Resource, endpoint string) (MetricRecorder, tele
 	mp := sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(reader), sdkmetric.WithResource(res))
 	o := &Otlp{mp: mp}
-	ms := meterSetup{
-		meterProvider: mp,
-		name:          "datafarm-api/telemetry/metering",
-	}
-	if err = o.setup(ms); err != nil {
+	name := "datafarm-api/telemetry/metering"
+	if err = o.setup(name); err != nil {
 		return nil, nil, fmt.Errorf("setup meter: %v", err)
 	}
 	return o, mp.Shutdown, nil
 }
 
-type meterSetup struct {
-	meterProvider *sdkmetric.MeterProvider
-	name          string
-}
-
-func (o *Otlp) setup(ms meterSetup) (err error) {
-	if err = o.setupApiCounter(ms); err != nil {
+func (o *Otlp) setup(name string) (err error) {
+	if err = o.setupApiCounter(name); err != nil {
 		return fmt.Errorf("setupApiCounter: %v", err)
 	}
-	if err = o.setupActiveUsersGauge(ms); err != nil {
+	if err = o.setupActiveUsersGauge(name); err != nil {
 		return fmt.Errorf("setupActiveUsersGauge: %v", err)
 	}
-	if err = o.setupMemoryGauge(ms); err != nil {
+	if err = o.setupMemoryGauge(name); err != nil {
 		return fmt.Errorf("setupMemoryGauge: %v", err)
 	}
-	if err = o.setupRequestLatency(ms); err != nil {
+	if err = o.setupRequestLatency(name); err != nil {
 		return fmt.Errorf("setupRequestLatency: %v", err)
 	}
 	return nil
 }
 
-func (o *Otlp) setupApiCounter(ms meterSetup) (err error) {
-	meter := ms.meterProvider.Meter(ms.name)
+func (o *Otlp) setupApiCounter(name string) (err error) {
+	meter := o.mp.Meter(name)
 	o.apiCounter, err = meter.Int64Counter(
-		ms.name+".api.counter",
+		name+".api.counter",
 		metric.WithDescription("Number of API calls."),
 		metric.WithUnit("{call}"),
 	)
@@ -77,12 +69,12 @@ func (o *Otlp) setupApiCounter(ms meterSetup) (err error) {
 	return err
 }
 
-func (o *Otlp) setupActiveUsersGauge(ms meterSetup) (err error) {
-	meter := ms.meterProvider.Meter(ms.name)
+func (o *Otlp) setupActiveUsersGauge(name string) (err error) {
+	meter := o.mp.Meter(name)
 	_, err = meter.Int64ObservableGauge(
-		ms.name+".active.users.gauge",
+		name+".active.users.gauge",
 		metric.WithDescription("Active Users Gauge"),
-		metric.WithUnit("By"),
+		metric.WithUnit("{users}"),
 		metric.WithInt64Callback(func(_ context.Context, ob metric.Int64Observer) error {
 			ob.Observe(o.activeUsersCount.Load())
 			return nil
@@ -94,10 +86,10 @@ func (o *Otlp) setupActiveUsersGauge(ms meterSetup) (err error) {
 	return err
 }
 
-func (o *Otlp) setupRequestLatency(ms meterSetup) (err error) {
-	meter := ms.meterProvider.Meter(ms.name)
+func (o *Otlp) setupRequestLatency(name string) (err error) {
+	meter := o.mp.Meter(name)
 	o.requestLatency, err = meter.Float64Histogram(
-		ms.name+".task.duration",
+		name+".task.duration",
 		metric.WithDescription("The duration of task execution."),
 		metric.WithUnit("s"),
 	)
@@ -107,10 +99,10 @@ func (o *Otlp) setupRequestLatency(ms meterSetup) (err error) {
 	return err
 }
 
-func (o *Otlp) setupMemoryGauge(ms meterSetup) (err error) {
-	meter := ms.meterProvider.Meter(ms.name)
+func (o *Otlp) setupMemoryGauge(name string) (err error) {
+	meter := o.mp.Meter(name)
 	_, err = meter.Int64ObservableGauge(
-		ms.name+".memory.heap",
+		name+".memory.heap",
 		metric.WithDescription("Memory usage of the allocated heap objects."),
 		metric.WithUnit("By"),
 		metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
@@ -136,5 +128,5 @@ func (o *Otlp) ActiveUsersCountAdd(i int) {
 }
 
 func (o *Otlp) CountApiRequest(ctx context.Context, i int) {
-	o.apiCounter.Add(ctx, int64(i))
+	o.apiCounter.Add(ctx, int64(i), metric.WithAttributes())
 }
