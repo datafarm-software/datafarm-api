@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -126,6 +127,6 @@ func (o *OtlpRecorder) ActiveUsersCountAdd(i int) {
 	o.activeUsersCount.Add(int64(i))
 }
 
-func (o *OtlpRecorder) CountApiRequest(ctx context.Context, i int) {
-	o.apiCounter.Add(ctx, int64(i), metric.WithAttributes())
+func (o *OtlpRecorder) CountApiRequest(ctx context.Context, i int, attr ...attribute.KeyValue) {
+	o.apiCounter.Add(ctx, int64(i), metric.WithAttributes(attr...))
 }

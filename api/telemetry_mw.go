@@ -6,6 +6,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func (a *Api) RecordLatency(humaCtx huma.Context, next func(huma.Context)) {
@@ -25,6 +26,9 @@ func (a *Api) RecordLatency(humaCtx huma.Context, next func(huma.Context)) {
 func (a *Api) CountApiRequest(humaCtx huma.Context, next func(huma.Context)) {
 	r, _ := humamux.Unwrap(humaCtx)
 	ctx := r.Context()
-	a.Metric.CountApiRequest(ctx, 1)
+	a.Metric.CountApiRequest(ctx, 1,
+		attribute.String("http.route", r.URL.Path),
+		attribute.String("http.method", r.Method),
+	)
 	next(humaCtx)
 }
