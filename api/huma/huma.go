@@ -164,7 +164,7 @@ func baseOperation(method string, middlewares *huma.Middlewares) huma.Operation 
 
 func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	mw := &huma.Middlewares{ho.RateLimit, ho.CountApiRequest, ho.RecordLatency, ho.VerifyToken}
-	op := baseOperation("POST", &huma.Middlewares{ho.RateLimit, ho.RecordLatency})
+	op := baseOperation("POST", &huma.Middlewares{ho.RateLimit, ho.CountApiRequest, ho.RecordLatency})
 	op.Path = "/login"
 	op.Summary = "Login"
 	op.Security = Basic
