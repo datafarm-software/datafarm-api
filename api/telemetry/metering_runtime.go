@@ -16,11 +16,13 @@ var runtimeSamples = []metrics.Sample{
 func (o *OtlpRecorder) setupRuntime(processName string) (err error) {
 	metrics.Read(runtimeSamples)
 	var sampleName string
-	var value metrics.Value
+	var sampleValue metrics.Value
 	meter := o.mp.Meter(processName)
+
 	for _, sample := range runtimeSamples {
-		sampleName, value = sample.Name, sample.Value
-		switch value.Kind() {
+		sampleName, sampleValue = sample.Name, sample.Value
+
+		switch sampleValue.Kind() {
 		case metrics.KindUint64:
 			_, err = meter.Int64ObservableGauge(
 				processName+sampleName,
@@ -30,15 +32,45 @@ func (o *OtlpRecorder) setupRuntime(processName string) (err error) {
 				}),
 			)
 			if err != nil {
-				err = fmt.Errorf("init gauge: %v", err)
+				err = fmt.Errorf("%s, int64Observable: %v",
+					sampleName, err)
 			}
 		case metrics.KindFloat64:
+			_, err = meter.Float64ObservableGauge(
+				processName+sampleName,
+				metric.WithFloat64Callback(
+					func(_ context.Context, ob metric.Float64Observer) error {
+						ob.Observe(sample.Value.Float64())
+						return nil
+					}),
+			)
+			if err != nil {
+				err = fmt.Errorf("%s, float64Observable: %v",
+					sampleName, err)
+			}
 		case metrics.KindFloat64Histogram:
+			_, err = meter.Int64ObservableGauge(
+				processName+sampleName,
+				metric.WithInt64Callback(func(_ context.Context, ob metric.Int64Observer) error {
+					ob.Observe(int64(sample.Value.Uint64()))
+					return nil
+				}),
+			)
+			if err != nil {
+				err = fmt.Errorf("%s, int64Observable: %v",
+					sampleName, err)
+			}
 		case metrics.KindBad:
-			return fmt.Errorf("%s returned metrics.KindBad", sampleName)
+			err = fmt.Errorf("%s returned metrics.KindBad", sampleName)
 		default:
-			log.Printf("%s, unexpected metric Kind: %v\n", sampleName, value.Kind())
+			log.Printf("%s, unexpected metric Kind: %v\n", sampleName, sample.Value.Kind())
 		}
+		if err != nil {
+			break
+		}
+	}
+	if err != nil {
+		return err
 	}
 	return nil
 }
