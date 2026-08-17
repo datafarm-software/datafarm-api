@@ -53,6 +53,9 @@ func (o *OtlpRecorder) setup(name string) (err error) {
 	if err = o.setupRequestLatency(name); err != nil {
 		return fmt.Errorf("setupRequestLatency: %v", err)
 	}
+	if err = o.setupUptimeGauge(name); err != nil {
+		return fmt.Errorf("setupUptimeGauge: %v", err)
+	}
 	return nil
 }
 
@@ -77,6 +80,25 @@ func (o *OtlpRecorder) setupActiveUsersGauge(name string) (err error) {
 		metric.WithUnit("{users}"),
 		metric.WithInt64Callback(func(_ context.Context, ob metric.Int64Observer) error {
 			ob.Observe(o.activeUsersCount.Load())
+			return nil
+		}),
+	)
+	if err != nil {
+		err = fmt.Errorf("init gauge: %v", err)
+	}
+	return err
+}
+
+var processStart = time.Now().Unix()
+
+func (o *OtlpRecorder) setupUptimeGauge(name string) (err error) {
+	meter := o.mp.Meter(name)
+	_, err = meter.Int64ObservableGauge(
+		name+".uptime",
+		metric.WithDescription("Process Uptime"),
+		metric.WithUnit("s"),
+		metric.WithInt64Callback(func(_ context.Context, ob metric.Int64Observer) error {
+			ob.Observe(processStart)
 			return nil
 		}),
 	)

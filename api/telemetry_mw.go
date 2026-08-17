@@ -27,8 +27,8 @@ func (a *Api) RecordLatency(humaCtx huma.Context, next func(huma.Context)) {
 func (a *Api) CountApiRequest(humaCtx huma.Context, next func(huma.Context)) {
 	r, _ := humamux.Unwrap(humaCtx)
 	ctx := r.Context()
+	path := r.URL.Path
 	route := mux.CurrentRoute(r)
-	var path string
 	if route != nil {
 		path, _ = route.GetPathTemplate()
 	}
