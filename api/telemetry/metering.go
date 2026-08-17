@@ -56,6 +56,9 @@ func (o *OtlpRecorder) setup(name string) (err error) {
 	if err = o.setupUptimeGauge(name); err != nil {
 		return fmt.Errorf("setupUptimeGauge: %v", err)
 	}
+	if err = o.setupRuntime(name); err != nil {
+		return fmt.Errorf("setupRuntime: %v", err)
+	}
 	return nil
 }
 
