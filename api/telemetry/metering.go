@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	otelruntime "go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/metric"
@@ -29,7 +30,8 @@ func NewOtlpRecorder(res *resource.Resource, endpoint string) (*OtlpRecorder, Sh
 	if err != nil {
 		return nil, nil, fmt.Errorf("init exporter: %v", err)
 	}
-	reader := sdkmetric.NewPeriodicReader(exporter)
+	reader := sdkmetric.NewPeriodicReader(exporter,
+		sdkmetric.WithProducer(otelruntime.NewProducer()))
 	mp := sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(reader), sdkmetric.WithResource(res))
 	o := &OtlpRecorder{mp: mp}
@@ -56,8 +58,8 @@ func (o *OtlpRecorder) setup(name string) (err error) {
 	if err = o.setupUptimeGauge(name); err != nil {
 		return fmt.Errorf("setupUptimeGauge: %v", err)
 	}
-	if err = o.setupRuntime(name); err != nil {
-		return fmt.Errorf("setupRuntime: %v", err)
+	if err = otelruntime.Start(); err != nil {
+		return fmt.Errorf("otelruntime Start: %v", err)
 	}
 	return nil
 }
