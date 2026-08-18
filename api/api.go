@@ -18,6 +18,7 @@ import (
 	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
 	"github.com/datafarm-software/datafarm-api/api/telemetry"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -79,7 +80,11 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("error initializing jwt authstore: %v", err)
 	}
-	res, err := resource.New(pkgCtx, resource.WithContainer())
+	res, err := resource.New(pkgCtx, resource.WithContainer(),
+		resource.WithAttributes(
+			attribute.String("service.name", "datafarm-sensordata-api"),
+		),
+	)
 	if err != nil {
 		return fmt.Errorf("init resource: %v", err)
 	}
