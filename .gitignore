@@ -35,3 +35,6 @@ config.yml
 
 # all generated files
 *.generated.*
+
+# startup script
+start.sh

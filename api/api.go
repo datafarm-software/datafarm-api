@@ -28,7 +28,7 @@ import (
 
 const EmptyPayloadLength int = 16
 
-var ctx context.Context
+var pkgCtx context.Context
 
 var QUERYFIELD_REGEX = regexp.MustCompile(`^[a-zA-Z0-9_\-\s:]*$`)
 
@@ -63,9 +63,9 @@ type Api struct {
 }
 
 func Start(opts ApiOpts) error {
-	ctx = context.Background()
+	pkgCtx = context.Background()
 	go func() {
-		cleanupOldLimiters(ctx)
+		cleanupOldLimiters(pkgCtx)
 	}()
 	redis, err := redis.NewRedis(opts.RedisOpts)
 	if err != nil {
@@ -79,7 +79,7 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("error initializing jwt authstore: %v", err)
 	}
-	res, err := resource.New(ctx, resource.WithContainer())
+	res, err := resource.New(pkgCtx, resource.WithContainer())
 	if err != nil {
 		return fmt.Errorf("init resource: %v", err)
 	}
@@ -125,7 +125,7 @@ func Start(opts ApiOpts) error {
 			api.Close([]telemetry.Shutdown{
 				loggerShutdown, traceShutdown, meterShutdown,
 			}...)
-			server.Shutdown(ctx)
+			server.Shutdown(pkgCtx)
 		})
 	})
 	cli.Run()
@@ -155,7 +155,7 @@ func (a *Api) Close(shutdownFuncs ...telemetry.Shutdown) {
 		log.Printf("error closing basic auth: %v", err)
 	}
 	for _, s := range shutdownFuncs {
-		err = errors.Join(err, s(ctx))
+		err = errors.Join(err, s(pkgCtx))
 	}
 	if err != nil {
 		log.Printf("telemetry shutdown funcs: %v", err)

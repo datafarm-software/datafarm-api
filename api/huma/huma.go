@@ -25,6 +25,7 @@ const MajorApiVersionRoutePrefix = "/v1"
 
 type HumaOperator interface {
 	Mode() Mode
+	TraceRequest(ctx huma.Context, next func(huma.Context))
 	CountApiRequest(ctx huma.Context, next func(huma.Context))
 	RecordLatency(ctx huma.Context, next func(huma.Context))
 	RateLimit(ctx huma.Context, next func(huma.Context))
@@ -163,8 +164,13 @@ func baseOperation(method string, middlewares *huma.Middlewares) huma.Operation 
 }
 
 func RegisterHumaOperations(api huma.API, ho HumaOperator) {
-	mw := &huma.Middlewares{ho.RateLimit, ho.CountApiRequest, ho.RecordLatency, ho.VerifyToken}
-	op := baseOperation("POST", &huma.Middlewares{ho.RateLimit, ho.CountApiRequest, ho.RecordLatency})
+	mw := []func(ctx huma.Context, next func(huma.Context)){
+		ho.TraceRequest, ho.RateLimit, ho.CountApiRequest, ho.RecordLatency,
+		ho.VerifyToken,
+	}
+	noTokenVerification := huma.Middlewares(mw[:len(mw)-1])
+	allMw := huma.Middlewares(mw)
+	op := baseOperation("POST", &noTokenVerification)
 	op.Path = "/login"
 	op.Summary = "Login"
 	op.Security = Basic
@@ -176,7 +182,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.Login)
 
-	op = baseOperation("POST", mw)
+	op = baseOperation("POST", &allMw)
 	op.Path = "/batch/device/sensordata"
 	op.Summary = "Batch Get Sensor Data"
 	op.Description = "Clients can use this route to request data from multiple device ids."
@@ -184,7 +190,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.BatchGetSensorData)
 
-	op = baseOperation("POST", mw)
+	op = baseOperation("POST", &allMw)
 	op.Path = "/batch/device/queryfields"
 	op.Summary = "Batch Get DeviceId QueryFields"
 	op.Description =
@@ -193,7 +199,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.BatchGetQueryFields)
 
-	op = baseOperation("POST", mw)
+	op = baseOperation("POST", &allMw)
 	op.Path = "/batch/device/databoundary"
 	op.Summary = "Batch Get DeviceId DataBoundary"
 	op.Description = "Clients can use this route to get the DataBoundary of multiple devices."
@@ -211,7 +217,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 		},
 	}
 
-	op = baseOperation("GET", mw)
+	op = baseOperation("GET", &allMw)
 	op.Path = "/device/{deviceId}/sensordata"
 	deviceIdParam.Description = "Device Id to request data from."
 	op.Parameters = []*huma.Param{deviceIdParam}
@@ -228,7 +234,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["204"] = &huma.Response{}
 	op.Parameters = []*huma.Param{}
 
-	op = baseOperation("GET", mw)
+	op = baseOperation("GET", &allMw)
 	op.Path = "/device/{deviceId}/queryfields"
 	op.Summary = "Get DeviceId QueryFields"
 	op.Description = "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor might have a 'temperature' QueryField."
@@ -239,7 +245,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	huma.Register(api, op, ho.GetQueryFields)
 
-	op = baseOperation("GET", mw)
+	op = baseOperation("GET", &allMw)
 	op.Path = "/device/ids"
 	op.Summary = "Get Client DeviceIds"
 	op.Description = "Clients can use this route to get the DeviceIds they have access to."
@@ -249,7 +255,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.GetDeviceIds)
 
-	op = baseOperation("GET", mw)
+	op = baseOperation("GET", &allMw)
 	op.Path = "/device/{deviceId}/databoundary"
 	op.Summary = "Get DeviceId DataBoundary"
 	op.Description = "Clients can use this route to get the device's DataBoundary. A DataBoundary contains the oldest and most recent sensordata timestamps for the device."
