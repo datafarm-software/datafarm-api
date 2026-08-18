@@ -14,5 +14,5 @@ type LoginResponse struct {
 type TokenProvider interface {
 	Close() error
 	GenerateToken(username string) (authstore.UserToken, error)
-	IsValidToken(LoginResponse) bool
+	ValidToken(LoginResponse) bool
 }

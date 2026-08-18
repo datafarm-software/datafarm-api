@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"time"
 
 	"github.com/datafarm-software/datafarm-api/api/authstore"
@@ -121,12 +120,7 @@ func (j *jwtAuth) ValidToken(tr LoginResponse) bool {
 			}
 			return j.getPublicKey(), nil
 		})
-	if err != nil {
-		log.Printf("token parsing error: %v", err)
-		return false
-	}
-	if !token.Valid {
-		log.Println("Invalid token provided")
+	if err != nil || !token.Valid {
 		return false
 	}
 	return true

@@ -88,7 +88,7 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("init resource: %v", err)
 	}
-	logger, loggerShutdown, err := telemetry.NewOtlpLogger(res)
+	logger, loggerShutdown, err := telemetry.NewOtlpLogger(res, opts.TelemetryOpts.MeterEndpoint)
 	if err != nil {
 		return fmt.Errorf("init logger: %v", err)
 	}
