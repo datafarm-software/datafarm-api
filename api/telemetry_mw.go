@@ -2,6 +2,7 @@ package api
 
 import (
 	"log"
+	"math"
 	"net/http"
 	"time"
 
@@ -70,28 +71,46 @@ func (w *statusWriter) Write(b []byte) (int, error) {
 	return w.ResponseWriter.Write(b)
 }
 
+type KnownUserRequest struct {
+	authstore.UserInfo
+}
+
 func (a *Api) LogRequest(humaCtx huma.Context, next func(huma.Context)) {
 	w, r, path := getPath(humaCtx)
 	sw := &statusWriter{ResponseWriter: w}
 	op := humaCtx.Operation()
 	humaCtx = humamux.NewContext(op, r, sw)
+	kur := &KnownUserRequest{}
+	humaCtx = huma.WithValue(humaCtx, "log-known-user", kur)
 	next(humaCtx)
-	r, w = humamux.Unwrap(humaCtx)
-	ctx := r.Context()
 	fields := []zap.Field{
 		zap.String("http.method", r.Method),
 		zap.String("http.route", path),
 		zap.Int("http.status_code", sw.status),
 	}
-	user, _ := ctx.Value("user").(authstore.UserInfo)
-	if user.Username != "" {
+	if kur.Username != "" {
 		fields = append(fields,
-			zap.String("client.username", user.Username),
-			zap.String("client.company", user.Company),
-			zap.String("client.network", user.Network),
+			zap.String("client.username", kur.Username),
+			zap.String("client.company", kur.Company),
+			zap.String("client.network", kur.Network),
 		)
 	}
-	a.Logger.Info("HTTP Client Request", fields...)
+	switch getFirstDigit(sw.status) {
+	case 4:
+		a.Logger.Warn("HTTP Client Error", fields...)
+	case 5:
+		a.Logger.Error("HTTP Internal Error", fields...)
+	default:
+		a.Logger.Info("HTTP Client Request", fields...)
+	}
+}
+
+func getFirstDigit(n int) int {
+	n = int(math.Abs(float64(n)))
+	for n >= 10 {
+		n /= 10
+	}
+	return n
 }
 
 func getPath(humaCtx huma.Context) (w http.ResponseWriter, r *http.Request, path string) {

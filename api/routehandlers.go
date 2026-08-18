@@ -213,6 +213,8 @@ func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
 			http.StatusInternalServerError)
 		return
 	}
+	kur, _ := ctx.Context().Value("log-known-user").(*KnownUserRequest)
+	kur.UserInfo = user
 	ctx = huma.WithValue(ctx, "user", user)
 	next(ctx)
 }
