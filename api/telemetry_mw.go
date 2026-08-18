@@ -8,7 +8,9 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/gorilla/mux"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -38,12 +40,14 @@ func (a *Api) CountApiRequest(humaCtx huma.Context, next func(huma.Context)) {
 
 func (a *Api) TraceRequest(humaCtx huma.Context, next func(huma.Context)) {
 	r, path := getPath(humaCtx)
-	ctx := r.Context()
-	_, span := a.Tracer.Start(
-		ctx, path, trace.WithSpanKind(trace.SpanKindClient),
+	ctx := otel.GetTextMapPropagator().Extract(
+		r.Context(), propagation.HeaderCarrier(r.Header),
+	)
+	ctx, span := a.Tracer.Start(
+		ctx, path, trace.WithSpanKind(trace.SpanKindServer),
 		trace.WithAttributes(attribute.String("http.method", r.Method)),
 	)
-	next(humaCtx)
+	next(huma.WithContext(humaCtx, ctx))
 	span.End()
 }
 
