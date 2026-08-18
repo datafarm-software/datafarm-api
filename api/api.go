@@ -122,7 +122,7 @@ func Start(opts ApiOpts) error {
 			log.Println("Server started on ", server.Addr)
 			if err := server.ListenAndServe(); err != nil {
 				if !errors.Is(err, http.ErrServerClosed) {
-					log.Fatalf("HTTP server error: %v", err)
+					log.Printf("HTTP server close: %v", err)
 				}
 			}
 		})

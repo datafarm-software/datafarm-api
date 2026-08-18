@@ -24,7 +24,7 @@ func NewOtlpLogger(res *resource.Resource) (*zap.Logger, Shutdown, error) {
 		log.WithProcessor(log.NewBatchProcessor(otlpexp)),
 		log.WithResource(res),
 	)
-	l := zap.New(otelzap.NewCore("github.com:datafarm-software/datafarm-api/telemetry/logging",
+	l := zap.New(otelzap.NewCore("datafarm-api",
 		otelzap.WithLoggerProvider(lp)))
 	return l, lp.Shutdown, nil
 }
