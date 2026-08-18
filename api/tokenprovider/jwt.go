@@ -112,7 +112,7 @@ func (j *jwtAuth) GenerateToken(username string) (authstore.UserToken, error) {
 	}, nil
 }
 
-func (j *jwtAuth) IsValidToken(tr LoginResponse) bool {
+func (j *jwtAuth) ValidToken(tr LoginResponse) bool {
 	claims := jwt.MapClaims{}
 	token, err := jwt.ParseWithClaims(tr.Body, claims,
 		func(token *jwt.Token) (any, error) {
