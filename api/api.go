@@ -87,11 +87,11 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("init logger: %v", err)
 	}
-	tracer, traceShutdown, err := telemetry.NewOtlpTracer(res)
+	tracer, traceShutdown, err := telemetry.NewOtlpTracer(res, opts.TelemetryOpts.MeterEndpoint)
 	if err != nil {
 		return fmt.Errorf("init tracer: %v", err)
 	}
-	meter, meterShutdown, err := telemetry.NewOtlpRecorder(res, opts.TelemetryOpts.MeterEndpoint)
+	meter, meterShutdown, err := telemetry.NewOtlpMeter(res, opts.TelemetryOpts.MeterEndpoint)
 	if err != nil {
 		return fmt.Errorf("init meter: %v", err)
 	}

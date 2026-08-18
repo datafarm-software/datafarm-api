@@ -23,7 +23,7 @@ type OtlpRecorder struct {
 }
 
 // NOTE: This uses insecure HTTP
-func NewOtlpRecorder(res *resource.Resource, endpoint string) (*OtlpRecorder, Shutdown, error) {
+func NewOtlpMeter(res *resource.Resource, endpoint string) (*OtlpRecorder, Shutdown, error) {
 	exporter, err := otlpmetrichttp.New(
 		context.Background(), otlpmetrichttp.WithEndpoint(endpoint),
 		otlpmetrichttp.WithInsecure())

@@ -4,17 +4,21 @@ import (
 	"context"
 	"fmt"
 
-	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
 
-func NewOtlpTracer(res *resource.Resource) (
+func NewOtlpTracer(res *resource.Resource, endpoint string) (
 	trace.Tracer, Shutdown, error) {
-	exporter, err := autoexport.NewSpanExporter(context.Background())
+	exporter, err := otlptracehttp.New(
+		context.Background(),
+		otlptracehttp.WithEndpoint(endpoint),
+		otlptracehttp.WithInsecure(),
+	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("init exporter: %v", err)
 	}
