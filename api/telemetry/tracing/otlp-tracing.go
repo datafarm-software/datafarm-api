@@ -1,9 +1,10 @@
-package telemetry
+package tracing
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/datafarm-software/datafarm-api/api/telemetry"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
@@ -13,7 +14,7 @@ import (
 )
 
 func NewOtlpTracer(res *resource.Resource, endpoint string) (
-	trace.Tracer, Shutdown, error) {
+	trace.Tracer, telemetry.Shutdown, error) {
 	exporter, err := otlptracehttp.New(
 		context.Background(),
 		otlptracehttp.WithEndpoint(endpoint),

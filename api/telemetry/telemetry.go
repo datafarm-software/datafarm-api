@@ -3,7 +3,7 @@ package telemetry
 import "context"
 
 type Opts struct {
-	MeterEndpoint string `mapstructure:"meterendpoint" validate:"required"`
+	CollectorEndpoint string `mapstructure:"collectorendpoint" validate:"required"`
 }
 
 type Shutdown func(context.Context) error

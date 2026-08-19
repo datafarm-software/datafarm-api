@@ -17,6 +17,9 @@ import (
 	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
 	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
 	"github.com/datafarm-software/datafarm-api/api/telemetry"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/metering"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/tracing"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -56,7 +59,7 @@ type Api struct {
 	DataFetcher   datafetcher.DataFetcher
 	TokenProvider tokenprovider.TokenProvider
 	AuthStore     authstore.AuthStore
-	Metric        *telemetry.OtlpRecorder
+	Metric        *metering.OtlpRecorder
 	Tracer        trace.Tracer
 	Logger        *zap.Logger
 	Port          string
@@ -88,15 +91,15 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("init resource: %v", err)
 	}
-	logger, loggerShutdown, err := telemetry.NewOtlpLogger(res, opts.TelemetryOpts.MeterEndpoint)
+	logger, loggerShutdown, err := logging.NewOtlpLogger(res, opts.TelemetryOpts.CollectorEndpoint)
 	if err != nil {
 		return fmt.Errorf("init logger: %v", err)
 	}
-	tracer, traceShutdown, err := telemetry.NewOtlpTracer(res, opts.TelemetryOpts.MeterEndpoint)
+	tracer, traceShutdown, err := tracing.NewOtlpTracer(res, opts.TelemetryOpts.CollectorEndpoint)
 	if err != nil {
 		return fmt.Errorf("init tracer: %v", err)
 	}
-	meter, meterShutdown, err := telemetry.NewOtlpMeter(res, opts.TelemetryOpts.MeterEndpoint)
+	meter, meterShutdown, err := metering.NewOtlpMeter(res, opts.TelemetryOpts.CollectorEndpoint)
 	if err != nil {
 		return fmt.Errorf("init meter: %v", err)
 	}

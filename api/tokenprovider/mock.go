@@ -29,7 +29,7 @@ func (m *MockTokenProvider) GenerateToken(username string) (authstore.UserToken,
 	}, nil
 }
 
-func (m *MockTokenProvider) IsValidToken(t LoginResponse) bool {
+func (m *MockTokenProvider) ValidToken(t LoginResponse) bool {
 	return m.Tokens[t.Body]
 }
 
