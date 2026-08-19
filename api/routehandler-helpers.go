@@ -17,6 +17,13 @@ import (
 	"go.uber.org/zap"
 )
 
+func logF(ctx context.Context, fields ...zap.Field) {
+	rl, _ := ctx.Value("request-log").(*requestLog)
+	if rl != nil {
+		rl.fields = append(rl.fields, fields...)
+	}
+}
+
 const MaxDays = 90
 const MaxMinutes = 129600
 const MaxSeconds = 7776000
@@ -140,13 +147,6 @@ func (a *Api) checkAccessToDevice(deviceId string, user authstore.UserInfo) (
 	di.Company = deviceCompany
 	di.Network = deviceNetwork
 	return di, http.StatusOK, nil
-}
-
-func logF(ctx context.Context, fields ...zap.Field) {
-	rl, _ := ctx.Value("request-log").(*requestLog)
-	if rl != nil {
-		rl.fields = append(rl.fields, fields...)
-	}
 }
 
 func (a *Api) getSensorData(
