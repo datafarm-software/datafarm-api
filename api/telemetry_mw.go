@@ -7,7 +7,6 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
-	"github.com/datafarm-software/datafarm-api/api/authstore"
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -57,40 +56,28 @@ func (a *Api) TraceRequest(humaCtx huma.Context, next func(huma.Context)) {
 	span.End()
 }
 
-type KnownUserRequest struct {
-	authstore.UserInfo
-}
-
 func (a *Api) LogRequest(humaCtx huma.Context, next func(huma.Context)) {
-	span := trace.SpanFromContext(humaCtx.Context())
-	kur := &KnownUserRequest{}
-	humaCtx = huma.WithValue(humaCtx, "log-known-user", kur)
-	next(humaCtx)
 	fields := []zap.Field{
 		zap.String("http.method", humaCtx.Method()),
 		zap.String("http.route", getPath(humaCtx)),
-		zap.Int("http.status_code", humaCtx.Status()),
 	}
-	if kur.Username != "" {
-		fields = append(fields,
-			zap.String("client.username", kur.Username),
-			zap.String("client.company", kur.Company),
-			zap.String("client.network", kur.Network),
-		)
-	}
+	span := trace.SpanFromContext(humaCtx.Context())
 	if span.SpanContext().IsValid() {
 		fields = append(fields,
 			zap.String("trace_id", span.SpanContext().TraceID().String()),
 			zap.String("span_id", span.SpanContext().SpanID().String()),
 		)
 	}
+	reqLogger := a.Logger.With(fields...)
+	next(huma.WithValue(humaCtx, "request-logger", reqLogger))
+	reqLogger = reqLogger.With(zap.Int("http.status_code", humaCtx.Status()))
 	switch getFirstDigit(humaCtx.Status()) {
 	case 4:
-		a.Logger.Warn("HTTP Client Error", fields...)
+		reqLogger.Warn("HTTP Client Error")
 	case 5:
-		a.Logger.Error("HTTP Internal Error", fields...)
+		reqLogger.Error("HTTP Internal Error")
 	default:
-		a.Logger.Info("HTTP Client Request", fields...)
+		reqLogger.Info("HTTP Client Request")
 	}
 }
 

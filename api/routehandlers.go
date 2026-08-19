@@ -17,6 +17,7 @@ import (
 	"github.com/datafarm-software/datafarm-api/api/datafetcher"
 	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
+	"go.uber.org/zap"
 )
 
 func formatTimestamp(in *datafetcher.SensorDataRequest) (err error) {
@@ -213,8 +214,14 @@ func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
 			http.StatusInternalServerError)
 		return
 	}
-	kur, _ := ctx.Context().Value("log-known-user").(*KnownUserRequest)
-	kur.UserInfo = user
+	reqLogger, _ := ctx.Context().Value("request-logger").(*zap.Logger)
+	if reqLogger != nil {
+		reqLogger = reqLogger.With(
+			zap.String("client.username", user.Username),
+			zap.String("client.company", user.Company),
+			zap.String("client.network", user.Network),
+		)
+	}
 	ctx = huma.WithValue(ctx, "user", user)
 	next(ctx)
 }
