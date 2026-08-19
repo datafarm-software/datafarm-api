@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap"
 )
 
 func (a *Api) RecordLatency(humaCtx huma.Context, next func(huma.Context)) {
@@ -59,30 +59,28 @@ func (a *Api) TraceRequest(humaCtx huma.Context, next func(huma.Context)) {
 }
 
 type requestLog struct {
-	fields []zap.Field
+	metadata map[string]string
 }
 
 func (a *Api) LogRequest(humaCtx huma.Context, next func(huma.Context)) {
-	rl := &requestLog{[]zap.Field{
-		zap.String("http.method", humaCtx.Method()),
-		zap.String("http.route", getPath(humaCtx)),
+	rl := &requestLog{map[string]string{
+		"http.method": humaCtx.Method(),
+		"http.route":  getPath(humaCtx),
 	}}
 	span := trace.SpanFromContext(humaCtx.Context())
 	if span.SpanContext().IsValid() {
-		rl.fields = append(rl.fields,
-			zap.String("trace_id", span.SpanContext().TraceID().String()),
-			zap.String("span_id", span.SpanContext().SpanID().String()),
-		)
+		rl.metadata["trace_id"] = span.SpanContext().TraceID().String()
+		rl.metadata["span_id"] = span.SpanContext().SpanID().String()
 	}
 	next(huma.WithValue(humaCtx, "request-log", rl))
-	rl.fields = append(rl.fields, zap.Int("http.status_code", humaCtx.Status()))
+	rl.metadata["http.status_code"] = fmt.Sprintf("%d", humaCtx.Status())
 	switch getFirstDigit(humaCtx.Status()) {
 	case 4:
-		a.Logger.Warn("HTTP Client Error", rl.fields...)
+		a.Logger.Warn("HTTP Client Error", rl.metadata)
 	case 5:
-		a.Logger.Error("HTTP Internal Error", rl.fields...)
+		a.Logger.Error("HTTP Internal Error", rl.metadata)
 	default:
-		a.Logger.Info("HTTP Client Request", rl.fields...)
+		a.Logger.Info("HTTP Client Request", rl.metadata)
 	}
 }
 

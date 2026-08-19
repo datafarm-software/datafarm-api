@@ -14,13 +14,14 @@ import (
 	"github.com/datafarm-software/datafarm-api/api/authstore"
 	"github.com/datafarm-software/datafarm-api/api/datafetcher"
 	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
-	"go.uber.org/zap"
 )
 
-func logF(ctx context.Context, fields ...zap.Field) {
+func logF(ctx context.Context, fields map[string]string) {
 	rl, _ := ctx.Value("request-log").(*requestLog)
 	if rl != nil {
-		rl.fields = append(rl.fields, fields...)
+		for k, v := range fields {
+			rl.metadata[k] = v
+		}
 	}
 }
 
@@ -157,8 +158,8 @@ func (a *Api) getSensorData(
 	}
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
-		logF(ctx, zap.String("domain.error.message",
-			"authstore.UserInfo not found in context"))
+		logF(ctx, map[string]string{
+			"domain.error.message": "authstore.UserInfo not found in context"})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
@@ -172,7 +173,7 @@ func (a *Api) getSensorData(
 			return nil, huma.Error404NotFound(
 				"Device Not Found.")
 		default:
-			logF(ctx, zap.String("deviceinfo.error.message", err.Error()))
+			logF(ctx, map[string]string{"deviceinfo.error.message": err.Error()})
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking acess to DeviceId.")
 		}
@@ -189,10 +190,9 @@ func (a *Api) getSensorData(
 		qf, err := a.DeviceInfo.GetQueryFields(in.Hardware.DeviceId)
 		if err != nil {
 			logF(ctx,
-				zap.String("deviceinof.error.message",
-					fmt.Sprintf(
-						"error getting query fields for: %s: %v",
-						in.Hardware.DeviceId, err)),
+				map[string]string{"deviceinof.error.message": fmt.Sprintf(
+					"error getting query fields for: %s: %v",
+					in.Hardware.DeviceId, err)},
 			)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting QueryFields for Device.")
@@ -206,9 +206,8 @@ func (a *Api) getSensorData(
 	}
 	sensorData, err = a.DataFetcher.GetData(di)
 	if err != nil {
-		logF(ctx, zap.String("datafetcher.error.message",
-			fmt.Sprintf("error getting data: %v", err)),
-		)
+		logF(ctx, map[string]string{"datafetcher.error.message": fmt.Sprintf(
+			"error getting data: %v", err)})
 		return nil, huma.Error500InternalServerError(
 			"Internal error fetching data.")
 	}
