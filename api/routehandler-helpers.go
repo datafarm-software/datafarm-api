@@ -117,8 +117,7 @@ func (a *Api) checkAccessToDevice(deviceId string, user authstore.UserInfo) (
 			return di, http.StatusNotFound, fmt.Errorf(
 				"Device not found.")
 		}
-		return di, http.StatusInternalServerError, fmt.Errorf(
-			"Internal error checking device company.")
+		return di, http.StatusInternalServerError, err
 	}
 	if user.Company != deviceCompany {
 		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyCompany) {
@@ -131,8 +130,7 @@ func (a *Api) checkAccessToDevice(deviceId string, user authstore.UserInfo) (
 			return di, http.StatusNotFound, fmt.Errorf(
 				"Device not found.")
 		}
-		return di, http.StatusInternalServerError, fmt.Errorf(
-			"Internal error checking device network.")
+		return di, http.StatusInternalServerError, err
 	}
 	if user.Network != deviceNetwork {
 		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyNetwork) {
@@ -159,6 +157,8 @@ func (a *Api) getSensorData(
 	}
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
+		logF(ctx, zap.String("domain.error.message",
+			"authstore.UserInfo not found in context"))
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
@@ -172,7 +172,7 @@ func (a *Api) getSensorData(
 			return nil, huma.Error404NotFound(
 				"Device Not Found.")
 		default:
-			logF(ctx, zap.String(""))
+			logF(ctx, zap.String("deviceinfo.error.message", err.Error()))
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking acess to DeviceId.")
 		}
@@ -183,14 +183,19 @@ func (a *Api) getSensorData(
 	if in.Hardware.QueryFields[0] == "all" {
 		if !authstore.HasPermission(authstore.Role(user.Role),
 			authstore.GetAllQueryFields) {
-			return nil, huma.Error500InternalServerError(
+			return nil, huma.Error401Unauthorized(
 				"Unauthorized for all queryfields.")
 		}
 		qf, err := a.DeviceInfo.GetQueryFields(in.Hardware.DeviceId)
 		if err != nil {
-			log.Printf("error getting query fields for: %s: %v", in.Hardware.DeviceId, err)
+			logF(ctx,
+				zap.String("deviceinof.error.message",
+					fmt.Sprintf(
+						"error getting query fields for: %s: %v",
+						in.Hardware.DeviceId, err)),
+			)
 			return nil, huma.Error500InternalServerError(
-				"Internal error getting query fields for deviceId.")
+				"Internal error getting QueryFields for Device.")
 		}
 		di.QueryFields = qf.QueryFields
 	}
@@ -201,7 +206,9 @@ func (a *Api) getSensorData(
 	}
 	sensorData, err = a.DataFetcher.GetData(di)
 	if err != nil {
-		log.Printf("error getting data: %v", err)
+		logF(ctx, zap.String("datafetcher.error.message",
+			fmt.Sprintf("error getting data: %v", err)),
+		)
 		return nil, huma.Error500InternalServerError(
 			"Internal error fetching data.")
 	}
