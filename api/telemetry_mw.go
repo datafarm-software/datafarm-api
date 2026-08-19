@@ -46,7 +46,8 @@ func (a *Api) TraceRequest(humaCtx huma.Context, next func(huma.Context)) {
 	ctx := otel.GetTextMapPropagator().Extract(
 		r.Context(), propagation.HeaderCarrier(r.Header),
 	)
-	ctx, span := a.Tracer.Start(
+	var span trace.Span
+	ctx, span = a.Tracer.Start(
 		ctx, path, trace.WithSpanKind(trace.SpanKindServer),
 		trace.WithAttributes(attribute.String("http.method", r.Method)),
 	)
@@ -79,6 +80,8 @@ func (a *Api) LogRequest(humaCtx huma.Context, next func(huma.Context)) {
 	w, r, path := getPath(humaCtx)
 	sw := &statusWriter{ResponseWriter: w}
 	op := humaCtx.Operation()
+	//NOTE: important to get span before NewContext call
+	span := trace.SpanFromContext(humaCtx.Context())
 	humaCtx = humamux.NewContext(op, r, sw)
 	kur := &KnownUserRequest{}
 	humaCtx = huma.WithValue(humaCtx, "log-known-user", kur)
@@ -93,6 +96,12 @@ func (a *Api) LogRequest(humaCtx huma.Context, next func(huma.Context)) {
 			zap.String("client.username", kur.Username),
 			zap.String("client.company", kur.Company),
 			zap.String("client.network", kur.Network),
+		)
+	}
+	if span.SpanContext().IsValid() {
+		fields = append(fields,
+			zap.String("trace_id", span.SpanContext().TraceID().String()),
+			zap.String("span_id", span.SpanContext().SpanID().String()),
 		)
 	}
 	switch getFirstDigit(sw.status) {
