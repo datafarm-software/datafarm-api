@@ -15,7 +15,6 @@ import (
 	"github.com/datafarm-software/datafarm-api/api/datafetcher"
 	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
-	"go.uber.org/zap"
 )
 
 func (a *Api) GetSensorData(ctx context.Context,
@@ -50,7 +49,7 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 	lr.Body = strings.Trim(lr.Body, `"`)
 	if !a.TokenProvider.ValidToken(lr) {
 		if err := a.AuthStore.DeleteToken(authstore.UserToken{Token: lr.Body}); err != nil {
-			logF(humaCtx.Context(), zap.String("authstore.error.message", err.Error()))
+			logF(humaCtx.Context(), map[string]string{"authstore.error.message": err.Error()})
 			http.Error(w,
 				`Your token is invalid. Please login again. 
 				There was an internal error while deleting the invalid token.`,
@@ -62,17 +61,16 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 	}
 	user, err := a.AuthStore.GetUser(lr.Body)
 	if err != nil {
-		logF(humaCtx.Context(), zap.String("authstore.error.message",
-			fmt.Sprintf("getting user: %v", err)))
+		logF(humaCtx.Context(), map[string]string{"authstore.error.message": fmt.Sprintf("getting user: %v", err)})
 		http.Error(w, "Internal error while getting user information.",
 			http.StatusInternalServerError)
 		return
 	}
 	logF(humaCtx.Context(),
-		zap.String("client.username", user.Username),
-		zap.String("client.company", user.Company),
-		zap.String("client.network", user.Network),
-	)
+		map[string]string{"client.username": user.Username,
+			"client.company": user.Company,
+			"client.network": user.Network,
+		})
 	next(huma.WithValue(humaCtx, "user", user))
 }
 
@@ -85,7 +83,7 @@ func (a *Api) Login(ctx context.Context,
 	}
 	authBytes, err := base64.StdEncoding.DecodeString(parts[1])
 	if err != nil {
-		logF(ctx, zap.String("domain.error.message", fmt.Sprintf("base64 decode: %v", err)))
+		logF(ctx, map[string]string{"domain.error.message": fmt.Sprintf("base64 decode: %v", err)})
 		return nil, huma.Error500InternalServerError(
 			"Internal error decoding given base64.")
 	}
@@ -121,8 +119,7 @@ func (a *Api) Login(ctx context.Context,
 	ut, err := a.AuthStore.GetToken(username)
 	if err != nil {
 		if !errors.Is(err, authstore.NotLoggedIn) {
-			logF(ctx, zap.String("authstore.error.message",
-				fmt.Sprintf("getting token: %v", err)))
+			logF(ctx, map[string]string{"authstore.error.message": fmt.Sprintf("getting token: %v", err)})
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking if user is logged in.")
 		}
@@ -132,14 +129,12 @@ func (a *Api) Login(ctx context.Context,
 	}
 	ut, err = a.TokenProvider.GenerateToken(username)
 	if err != nil {
-		logF(ctx, zap.String("tokenprovider.error.message",
-			fmt.Sprintf("generate token: %v", err)))
+		logF(ctx, map[string]string{"tokenprovider.error.message": fmt.Sprintf("generate token: %v", err)})
 		return nil, huma.Error500InternalServerError(
 			"Internal error generating an access token.")
 	}
 	if err = a.AuthStore.StoreToken(ut); err != nil {
-		logF(ctx, zap.String("authstore.error.message",
-			fmt.Sprintf("store token: %v", err)))
+		logF(ctx, map[string]string{"authstore.error.message": fmt.Sprintf("store token: %v", err)})
 		return nil, huma.Error500InternalServerError(
 			"Internal error linking the token to the user.")
 	}
@@ -151,8 +146,8 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 	*deviceinfo.QueryFieldsResponse, error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
-		logF(ctx, zap.String("domain.error.message",
-			"authstore.UserInfo not found in context"))
+		logF(ctx, map[string]string{
+			"domain.error.message": "authstore.UserInfo not found in context"})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
@@ -166,7 +161,7 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 			return nil, huma.Error404NotFound(
 				"Device Not Found.")
 		default:
-			logF(ctx, zap.String("deviceinfo.error.message", err.Error()))
+			logF(ctx, map[string]string{"deviceinfo.error.message": err.Error()})
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking acess to DeviceId.")
 		}
@@ -177,8 +172,8 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 	}
 	queryFields, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
 	if err != nil {
-		logF(ctx, zap.String("deviceinfo.error.message",
-			fmt.Sprintf("get queryfields: %v", err)))
+		logF(ctx, map[string]string{"deviceinfo.error.message": fmt.Sprintf(
+			"get queryfields: %v", err)})
 		return nil, huma.Error500InternalServerError(
 			"Internal error while getting queryfields.")
 	}
@@ -258,8 +253,8 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	*deviceinfo.DeviceIdsResponse, error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
-		logF(ctx, zap.String("domain.error.message",
-			"authstore.UserInfo not found in context"))
+		logF(ctx, map[string]string{
+			"domain.error.message": "authstore.UserInfo not found in context"})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
@@ -275,15 +270,13 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	case authstore.Admin:
 		sr.Scope = deviceinfo.AllDevices
 	default:
-		logF(ctx, zap.String("domain.error.message",
-			fmt.Sprintf("unknown user role: %v", user.Role)))
+		logF(ctx, map[string]string{"domain.error.message": fmt.Sprintf("unknown user role: %v", user.Role)})
 		return nil, huma.Error500InternalServerError(
 			"Internal error determining user role.")
 	}
 	userDevices, err := a.DeviceInfo.GetDevices(sr)
 	if err != nil {
-		logF(ctx, zap.String("deviceinfo.error.message",
-			fmt.Sprintf("get devices: %v", err)))
+		logF(ctx, map[string]string{"deviceinfo.error.message": fmt.Sprintf("get devices: %v", err)})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting DeviceIds.")
 	}
@@ -296,8 +289,8 @@ func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 	*datafetcher.DataBoundaryResponse, error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
-		logF(ctx, zap.String("domain.error.message",
-			"authstore.UserInfo not found in context"))
+		logF(ctx, map[string]string{
+			"domain.error.message": "authstore.UserInfo not found in context"})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
@@ -311,7 +304,7 @@ func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 			return nil, huma.Error404NotFound(
 				"Device Not Found.")
 		default:
-			logF(ctx, zap.String("deviceinfo.error.message", err.Error()))
+			logF(ctx, map[string]string{"deviceinfo.error.message": err.Error()})
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking acess to DeviceId.")
 		}
@@ -327,8 +320,7 @@ func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 	}
 	dataBoundary, err := a.DataFetcher.GetDataBoundary(di)
 	if err != nil {
-		logF(ctx, zap.String("datafetcher.error.message",
-			fmt.Sprintf("getting data boundary: %v", err)))
+		logF(ctx, map[string]string{"datafetcher.error.message": fmt.Sprintf("getting data boundary: %v", err)})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting DataBoundary.")
 	}
