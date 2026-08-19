@@ -353,7 +353,7 @@ DataFarm welcomes external contribution to the API, through Open Source under th
 	return
 }
 
-func SetupApi(humaApi huma.API, a HumaOperator) {
+func SetupApiOperations(humaApi huma.API, a HumaOperator) {
 	if a.Mode() == Production {
 		humaApi.OpenAPI().Servers = append(humaApi.OpenAPI().Servers, &huma.Server{
 			URL: MajorApiVersionRoutePrefix,

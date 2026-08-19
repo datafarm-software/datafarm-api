@@ -19,6 +19,9 @@ import (
 	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
 	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
 	"github.com/datafarm-software/datafarm-api/api/redis"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/metering"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/tracing"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 	"github.com/google/go-cmp/cmp"
 	"github.com/gorilla/mux"
@@ -56,7 +59,6 @@ var OutsideTimeRange = time.Now().UTC().Add(-25 * time.Hour)
 var InsideTimeRange = time.Now().UTC().Add(-2 * time.Hour)
 var AlsoInsideTimeRange = time.Now().UTC().Add(-1 * time.Hour)
 var RegisteredCompanyDevices = []string{RegisteredDeviceId}
-var a = &api.Api{}
 
 var considerTimeZone = cmp.Comparer(func(x, y time.Time) bool {
 	return x.Equal(y) &&
@@ -112,23 +114,12 @@ func TestLogin(t *testing.T) {
 		},
 	}
 
-	db, err := miniredis.Run()
-	require.Nil(t, err)
-	defer db.Close()
-	humaTest := setupHuma(t)
+	var humaTest humatest.TestAPI
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			testingRedis, err := redis.NewTestingRedis(db.Addr())
-			require.Nil(t, err)
-			defer testingRedis.Close()
-			a.DeviceInfo = testingRedis
-			a.AuthStore = testingRedis
-			err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
-			require.Nil(t, err)
-			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
-			require.Nil(t, err)
-			a.TokenProvider = &tokenprovider.MockTokenProvider{}
-			defer a.TokenProvider.Close()
+			a, close := setupApiStruct(t, tc.mockDeviceInfo, tc.mockAuthStore)
+			defer close()
+			humaTest = setupHuma(t, a)
 			encodedDetails := base64.StdEncoding.EncodeToString(
 				[]byte(tc.username + ":" + tc.password))
 			resp := humaTest.Post("/login",
@@ -147,6 +138,30 @@ func TestLogin(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func setupApiStruct(t *testing.T, di deviceinfo.Schema, as authstore.Schema) (
+	*api.Api, CloseFunc) {
+	db, err := miniredis.Run()
+	require.Nil(t, err)
+	testingRedis, err := redis.NewTestingRedis(db.Addr())
+	require.Nil(t, err)
+	a := &api.Api{}
+	a.DeviceInfo = testingRedis
+	a.AuthStore = testingRedis
+	err = testingRedis.PrepareDeviceInfo(di)
+	require.Nil(t, err)
+	err = testingRedis.PrepareAuthStore(as)
+	require.Nil(t, err)
+	a.TokenProvider = &tokenprovider.MockTokenProvider{}
+	a.Logger = &logging.MockLogger{}
+	a.Meter = &metering.MockMeter{}
+	a.Tracer = &tracing.MockTracer{}
+	return a, func() {
+		db.Close()
+		testingRedis.Close()
+		a.TokenProvider.Close()
 	}
 }
 
@@ -1480,11 +1495,11 @@ func TestGetSensorData(t *testing.T) {
 	}
 }
 
-func setupHuma(t *testing.T) humatest.TestAPI {
+func setupHuma(t *testing.T, api *api.Api) humatest.TestAPI {
 	config := localhuma.Config(localhuma.Production)
 	router := mux.NewRouter()
 	humaApi := humamux.New(router, config)
-	localhuma.SetupApi(humaApi, a)
+	localhuma.SetupApiOperations(humaApi, api)
 	return humatest.Wrap(t, humaApi)
 }
 

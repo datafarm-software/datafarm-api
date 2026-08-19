@@ -140,7 +140,7 @@ func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
 	config := localhuma.Config(a.mode)
 	router := mux.NewRouter()
 	humaApi := humamux.New(router, config)
-	localhuma.SetupApi(humaApi, a)
+	localhuma.SetupApiOperations(humaApi, a)
 	return router, &config
 }
 
