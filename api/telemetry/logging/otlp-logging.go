@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/datafarm-software/datafarm-api/api/telemetry"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -14,28 +13,34 @@ import (
 
 type OtlpLogger struct {
 	*zap.Logger
+	*log.LoggerProvider
 }
 
 func NewOtlpLogger(res *resource.Resource, endpoint string) (
-	Logger, telemetry.Shutdown, error) {
+	Logger, error) {
 	if res == nil {
-		return nil, nil, fmt.Errorf("resource nil")
+		return nil, fmt.Errorf("resource nil")
 	}
 	ctx := context.Background()
 	otlpexp, err := otlploghttp.New(ctx, otlploghttp.WithEndpoint(endpoint),
 		otlploghttp.WithInsecure())
 	if err != nil {
-		return nil, nil, fmt.Errorf("newLogExporter: %v", err)
+		return nil, fmt.Errorf("newLogExporter: %v", err)
 	}
 	lp := log.NewLoggerProvider(
 		log.WithProcessor(log.NewBatchProcessor(otlpexp)),
 		log.WithResource(res),
 	)
 	l := &OtlpLogger{
-		zap.New(otelzap.NewCore("datafarm-api",
+		Logger: zap.New(otelzap.NewCore("datafarm-api",
 			otelzap.WithLoggerProvider(lp))),
+		LoggerProvider: lp,
 	}
-	return l, lp.Shutdown, nil
+	return l, nil
+}
+
+func (o *OtlpLogger) Close(ctx context.Context) error {
+	return o.LoggerProvider.Shutdown(ctx)
 }
 
 func makeFields(metadata map[string]string) []zap.Field {

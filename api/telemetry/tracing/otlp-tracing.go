@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/datafarm-software/datafarm-api/api/telemetry"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -16,17 +15,18 @@ import (
 
 type OtlpTracer struct {
 	trace.Tracer
+	*sdktrace.TracerProvider
 }
 
 func NewOtlpTracer(res *resource.Resource, endpoint string) (
-	Tracer, telemetry.Shutdown, error) {
+	Tracer, error) {
 	exporter, err := otlptracehttp.New(
 		context.Background(),
 		otlptracehttp.WithEndpoint(endpoint),
 		otlptracehttp.WithInsecure(),
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("init exporter: %v", err)
+		return nil, fmt.Errorf("init exporter: %v", err)
 	}
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
@@ -36,8 +36,15 @@ func NewOtlpTracer(res *resource.Resource, endpoint string) (
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{}, propagation.Baggage{},
 	))
-	tracer := &OtlpTracer{tp.Tracer("datafarm-api/telemetry/tracing")}
-	return tracer, tp.Shutdown, nil
+	tracer := &OtlpTracer{
+		Tracer:         tp.Tracer("datafarm-api/telemetry/tracing"),
+		TracerProvider: tp,
+	}
+	return tracer, nil
+}
+
+func (o *OtlpTracer) Close(ctx context.Context) error {
+	return o.TracerProvider.Shutdown(ctx)
 }
 
 func (o *OtlpTracer) Start(ctx context.Context, name string, kind SpanKind,

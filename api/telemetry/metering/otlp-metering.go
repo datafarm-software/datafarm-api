@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/datafarm-software/datafarm-api/api/telemetry"
 	otelruntime "go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
@@ -25,12 +24,12 @@ type OtlpRecorder struct {
 
 // NOTE: This uses insecure HTTP
 func NewOtlpMeter(res *resource.Resource, endpoint string) (
-	Meter, telemetry.Shutdown, error) {
+	Meter, error) {
 	exporter, err := otlpmetrichttp.New(
 		context.Background(), otlpmetrichttp.WithEndpoint(endpoint),
 		otlpmetrichttp.WithInsecure())
 	if err != nil {
-		return nil, nil, fmt.Errorf("init exporter: %v", err)
+		return nil, fmt.Errorf("init exporter: %v", err)
 	}
 	reader := sdkmetric.NewPeriodicReader(exporter,
 		sdkmetric.WithProducer(otelruntime.NewProducer()))
@@ -39,9 +38,13 @@ func NewOtlpMeter(res *resource.Resource, endpoint string) (
 	o := &OtlpRecorder{mp: mp}
 	name := "datafarm-api/telemetry/metering"
 	if err = o.setup(name); err != nil {
-		return nil, nil, fmt.Errorf("setup meter: %v", err)
+		return nil, fmt.Errorf("setup meter: %v", err)
 	}
-	return o, mp.Shutdown, nil
+	return o, nil
+}
+
+func (o *OtlpRecorder) Close(ctx context.Context) error {
+	return o.mp.Shutdown(ctx)
 }
 
 func (o *OtlpRecorder) setup(name string) (err error) {

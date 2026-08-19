@@ -9,6 +9,7 @@ import (
 type SpanKind trace.SpanKind
 
 type Tracer interface {
+	Close(context.Context) error
 	Start(context.Context, string, SpanKind, map[string]string) (context.Context, Span)
 }
 

@@ -89,15 +89,15 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("init resource: %v", err)
 	}
-	logger, loggerShutdown, err := logging.NewOtlpLogger(res, opts.TelemetryOpts.CollectorEndpoint)
+	logger, err := logging.NewOtlpLogger(res, opts.TelemetryOpts.CollectorEndpoint)
 	if err != nil {
 		return fmt.Errorf("init logger: %v", err)
 	}
-	tracer, traceShutdown, err := tracing.NewOtlpTracer(res, opts.TelemetryOpts.CollectorEndpoint)
+	tracer, err := tracing.NewOtlpTracer(res, opts.TelemetryOpts.CollectorEndpoint)
 	if err != nil {
 		return fmt.Errorf("init tracer: %v", err)
 	}
-	meter, meterShutdown, err := metering.NewOtlpMeter(res, opts.TelemetryOpts.CollectorEndpoint)
+	meter, err := metering.NewOtlpMeter(res, opts.TelemetryOpts.CollectorEndpoint)
 	if err != nil {
 		return fmt.Errorf("init meter: %v", err)
 	}
@@ -128,9 +128,7 @@ func Start(opts ApiOpts) error {
 			}
 		})
 		hooks.OnStop(func() {
-			api.Close([]telemetry.Shutdown{
-				loggerShutdown, traceShutdown, meterShutdown,
-			}...)
+			api.Close()
 			server.Shutdown(pkgCtx)
 		})
 	})
@@ -146,7 +144,7 @@ func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
 	return router, &config
 }
 
-func (a *Api) Close(shutdownFuncs ...telemetry.Shutdown) {
+func (a *Api) Close() {
 	var err error
 	if err = a.DeviceInfo.Close(); err != nil {
 		log.Printf("error closing metadatafetcher: %v", err)
@@ -160,11 +158,14 @@ func (a *Api) Close(shutdownFuncs ...telemetry.Shutdown) {
 	if err = a.AuthStore.Close(); err != nil {
 		log.Printf("error closing basic auth: %v", err)
 	}
-	for _, s := range shutdownFuncs {
-		err = errors.Join(err, s(pkgCtx))
+	if err = a.Logger.Close(pkgCtx); err != nil {
+		log.Printf("error closing logger: %v", err)
 	}
-	if err != nil {
-		log.Printf("telemetry shutdown funcs: %v", err)
+	if err = a.Tracer.Close(pkgCtx); err != nil {
+		log.Printf("error closing tracer: %v", err)
+	}
+	if err = a.Meter.Close(pkgCtx); err != nil {
+		log.Printf("error closing meter: %v", err)
 	}
 	log.Println("Api shutdown.")
 }
