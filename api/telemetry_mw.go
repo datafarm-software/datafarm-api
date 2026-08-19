@@ -3,7 +3,6 @@ package api
 import (
 	"log"
 	"math"
-	"net/http"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -32,44 +31,30 @@ func (a *Api) RecordLatency(humaCtx huma.Context, next func(huma.Context)) {
 }
 
 func (a *Api) CountApiRequest(humaCtx huma.Context, next func(huma.Context)) {
-	_, r, path := getPath(humaCtx)
-	ctx := r.Context()
-	a.Metric.CountApiRequest(ctx, 1,
+	path := getPath(humaCtx)
+	a.Metric.CountApiRequest(humaCtx.Context(), 1,
 		attribute.String("http.route", path),
-		attribute.String("http.method", r.Method),
+		attribute.String("http.method", humaCtx.Method()),
 	)
 	next(humaCtx)
 }
 
 func (a *Api) TraceRequest(humaCtx huma.Context, next func(huma.Context)) {
-	_, r, path := getPath(humaCtx)
+	path := getPath(humaCtx)
+	headerMap := make(map[string]string)
+	humaCtx.EachHeader(func(name, value string) {
+		headerMap[name] = value
+	})
 	ctx := otel.GetTextMapPropagator().Extract(
-		r.Context(), propagation.HeaderCarrier(r.Header),
+		humaCtx.Context(), propagation.MapCarrier(headerMap),
 	)
 	var span trace.Span
 	ctx, span = a.Tracer.Start(
 		ctx, path, trace.WithSpanKind(trace.SpanKindServer),
-		trace.WithAttributes(attribute.String("http.method", r.Method)),
+		trace.WithAttributes(attribute.String("http.method", humaCtx.Method())),
 	)
 	next(huma.WithContext(humaCtx, ctx))
 	span.End()
-}
-
-type statusWriter struct {
-	http.ResponseWriter
-	status int
-}
-
-func (w *statusWriter) WriteHeader(status int) {
-	w.status = status
-	w.ResponseWriter.WriteHeader(status)
-}
-
-func (w *statusWriter) Write(b []byte) (int, error) {
-	if w.status == 0 {
-		w.status = http.StatusOK
-	}
-	return w.ResponseWriter.Write(b)
 }
 
 type KnownUserRequest struct {
@@ -77,19 +62,14 @@ type KnownUserRequest struct {
 }
 
 func (a *Api) LogRequest(humaCtx huma.Context, next func(huma.Context)) {
-	w, r, path := getPath(humaCtx)
-	sw := &statusWriter{ResponseWriter: w}
-	op := humaCtx.Operation()
-	//NOTE: important to get span before NewContext call
 	span := trace.SpanFromContext(humaCtx.Context())
-	humaCtx = humamux.NewContext(op, r, sw)
 	kur := &KnownUserRequest{}
 	humaCtx = huma.WithValue(humaCtx, "log-known-user", kur)
 	next(humaCtx)
 	fields := []zap.Field{
-		zap.String("http.method", r.Method),
-		zap.String("http.route", path),
-		zap.Int("http.status_code", sw.status),
+		zap.String("http.method", humaCtx.Method()),
+		zap.String("http.route", getPath(humaCtx)),
+		zap.Int("http.status_code", humaCtx.Status()),
 	}
 	if kur.Username != "" {
 		fields = append(fields,
@@ -104,7 +84,7 @@ func (a *Api) LogRequest(humaCtx huma.Context, next func(huma.Context)) {
 			zap.String("span_id", span.SpanContext().SpanID().String()),
 		)
 	}
-	switch getFirstDigit(sw.status) {
+	switch getFirstDigit(humaCtx.Status()) {
 	case 4:
 		a.Logger.Warn("HTTP Client Error", fields...)
 	case 5:
@@ -122,8 +102,8 @@ func getFirstDigit(n int) int {
 	return n
 }
 
-func getPath(humaCtx huma.Context) (w http.ResponseWriter, r *http.Request, path string) {
-	r, w = humamux.Unwrap(humaCtx)
+func getPath(humaCtx huma.Context) (path string) {
+	r, _ := humamux.Unwrap(humaCtx)
 	path = r.URL.Path
 	route := mux.CurrentRoute(r)
 	if route != nil {
