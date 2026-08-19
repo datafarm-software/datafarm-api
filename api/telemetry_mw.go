@@ -7,9 +7,9 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/tracing"
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -49,10 +49,10 @@ func (a *Api) TraceRequest(humaCtx huma.Context, next func(huma.Context)) {
 	ctx := otel.GetTextMapPropagator().Extract(
 		humaCtx.Context(), propagation.MapCarrier(headerMap),
 	)
-	var span trace.Span
+	var span tracing.Span
 	ctx, span = a.Tracer.Start(
-		ctx, path, trace.WithSpanKind(trace.SpanKindServer),
-		trace.WithAttributes(attribute.String("http.method", humaCtx.Method())),
+		ctx, path, tracing.SpanKind(trace.SpanKindServer),
+		map[string]string{"http.method": humaCtx.Method()},
 	)
 	next(huma.WithContext(humaCtx, ctx))
 	span.End()

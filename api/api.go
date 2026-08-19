@@ -23,7 +23,6 @@ import (
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
 	"github.com/datafarm-software/datafarm-api/api/redis"
@@ -60,7 +59,7 @@ type Api struct {
 	TokenProvider tokenprovider.TokenProvider
 	AuthStore     authstore.AuthStore
 	Meter         metering.Meter
-	Tracer        trace.Tracer
+	Tracer        tracing.Tracer
 	Logger        *zap.Logger
 	Port          string
 	mode          localhuma.Mode
