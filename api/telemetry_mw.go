@@ -56,28 +56,31 @@ func (a *Api) TraceRequest(humaCtx huma.Context, next func(huma.Context)) {
 	span.End()
 }
 
+type requestLog struct {
+	fields []zap.Field
+}
+
 func (a *Api) LogRequest(humaCtx huma.Context, next func(huma.Context)) {
-	fields := []zap.Field{
+	rl := &requestLog{[]zap.Field{
 		zap.String("http.method", humaCtx.Method()),
 		zap.String("http.route", getPath(humaCtx)),
-	}
+	}}
 	span := trace.SpanFromContext(humaCtx.Context())
 	if span.SpanContext().IsValid() {
-		fields = append(fields,
+		rl.fields = append(rl.fields,
 			zap.String("trace_id", span.SpanContext().TraceID().String()),
 			zap.String("span_id", span.SpanContext().SpanID().String()),
 		)
 	}
-	reqLogger := a.Logger.With(fields...)
-	next(huma.WithValue(humaCtx, "request-logger", reqLogger))
-	reqLogger = reqLogger.With(zap.Int("http.status_code", humaCtx.Status()))
+	next(huma.WithValue(humaCtx, "request-log", rl))
+	rl.fields = append(rl.fields, zap.Int("http.status_code", humaCtx.Status()))
 	switch getFirstDigit(humaCtx.Status()) {
 	case 4:
-		reqLogger.Warn("HTTP Client Error")
+		a.Logger.Warn("HTTP Client Error", rl.fields...)
 	case 5:
-		reqLogger.Error("HTTP Internal Error")
+		a.Logger.Error("HTTP Internal Error", rl.fields...)
 	default:
-		reqLogger.Info("HTTP Client Request")
+		a.Logger.Info("HTTP Client Request", rl.fields...)
 	}
 }
 

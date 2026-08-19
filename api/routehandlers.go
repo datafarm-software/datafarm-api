@@ -183,8 +183,8 @@ func CheckOlderThanNinetyDays(start string) bool {
 }
 
 func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
-	r, w := humamux.Unwrap(ctx)
-	authHeader := r.Header.Get("Authorization")
+	_, w := humamux.Unwrap(ctx)
+	authHeader := ctx.Header("Authorization")
 	if authHeader == "" {
 		http.Error(w, "No Authorization Header Provided.", http.StatusBadRequest)
 		return
@@ -214,16 +214,15 @@ func (a *Api) VerifyToken(ctx huma.Context, next func(huma.Context)) {
 			http.StatusInternalServerError)
 		return
 	}
-	reqLogger, _ := ctx.Context().Value("request-logger").(*zap.Logger)
-	if reqLogger != nil {
-		reqLogger = reqLogger.With(
+	rl, _ := ctx.Context().Value("request-log").(*requestLog)
+	if rl != nil {
+		rl.fields = append(rl.fields,
 			zap.String("client.username", user.Username),
 			zap.String("client.company", user.Company),
 			zap.String("client.network", user.Network),
 		)
 	}
-	ctx = huma.WithValue(ctx, "user", user)
-	next(ctx)
+	next(huma.WithValue(ctx, "user", user))
 }
 
 func (a *Api) checkAccessToDevice(deviceId string, user authstore.UserInfo) (
