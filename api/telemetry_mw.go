@@ -21,7 +21,7 @@ func (a *Api) RecordLatency(humaCtx huma.Context, next func(huma.Context)) {
 	start := time.Now()
 	defer func() {
 		duration := time.Since(start)
-		if err := a.Metric.RecordLatency(ctx, duration); err != nil {
+		if err := a.Meter.RecordLatency(ctx, duration); err != nil {
 			w.Write([]byte("Internal error while recording latency of the request. Please notify a system administrator."))
 			log.Printf("recordLatency: %v", err)
 		}
@@ -31,9 +31,11 @@ func (a *Api) RecordLatency(humaCtx huma.Context, next func(huma.Context)) {
 
 func (a *Api) CountApiRequest(humaCtx huma.Context, next func(huma.Context)) {
 	path := getPath(humaCtx)
-	a.Metric.CountApiRequest(humaCtx.Context(), 1,
-		attribute.String("http.route", path),
-		attribute.String("http.method", humaCtx.Method()),
+	a.Meter.CountApiRequest(humaCtx.Context(), 1,
+		map[string]string{
+			"http.route":  path,
+			"http.method": humaCtx.Method(),
+		},
 	)
 	next(humaCtx)
 }

@@ -25,7 +25,7 @@ type OtlpRecorder struct {
 
 // NOTE: This uses insecure HTTP
 func NewOtlpMeter(res *resource.Resource, endpoint string) (
-	*OtlpRecorder, telemetry.Shutdown, error) {
+	Meter, telemetry.Shutdown, error) {
 	exporter, err := otlpmetrichttp.New(
 		context.Background(), otlpmetrichttp.WithEndpoint(endpoint),
 		otlpmetrichttp.WithInsecure())
@@ -156,6 +156,10 @@ func (o *OtlpRecorder) ActiveUsersCountAdd(i int) {
 	o.activeUsersCount.Add(int64(i))
 }
 
-func (o *OtlpRecorder) CountApiRequest(ctx context.Context, i int, attr ...attribute.KeyValue) {
-	o.apiCounter.Add(ctx, int64(i), metric.WithAttributes(attr...))
+func (o *OtlpRecorder) CountApiRequest(ctx context.Context, i int, attrMap map[string]string) {
+	attrs := make([]attribute.KeyValue, len(attrMap))
+	for k, v := range attrMap {
+		attrs = append(attrs, attribute.String(k, v))
+	}
+	o.apiCounter.Add(ctx, int64(i), metric.WithAttributes(attrs...))
 }

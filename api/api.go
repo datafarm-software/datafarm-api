@@ -59,7 +59,7 @@ type Api struct {
 	DataFetcher   datafetcher.DataFetcher
 	TokenProvider tokenprovider.TokenProvider
 	AuthStore     authstore.AuthStore
-	Metric        *metering.OtlpRecorder
+	Meter         metering.Meter
 	Tracer        trace.Tracer
 	Logger        *zap.Logger
 	Port          string
@@ -112,7 +112,7 @@ func Start(opts ApiOpts) error {
 		mode:          opts.Mode,
 		Logger:        logger,
 		Tracer:        tracer,
-		Metric:        meter,
+		Meter:         meter,
 	}
 	authstore.InitRoles()
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
