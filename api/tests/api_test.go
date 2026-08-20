@@ -68,11 +68,11 @@ var cmpOpts = []cmp.Option{considerTimeZone}
 
 func TestLogin(t *testing.T) {
 	tests := map[string]struct {
-		wantErr            bool
-		wantStatus         int
+		MockApi
 		wantToken          string
 		username, password string
-		MockApi
+		wantStatus         int
+		wantErr            bool
 	}{
 
 		"successfully login": {
@@ -146,8 +146,8 @@ func TestLogin(t *testing.T) {
 
 func TestGetSensorData(t *testing.T) {
 	tests := map[string]struct {
-		want []datafetcher.SensorData
 		GetSensorDataTest
+		want []datafetcher.SensorData
 	}{
 
 		"successfully get deviceid data": {
@@ -2640,10 +2640,10 @@ func (m MockApi) Setup(t *testing.T) (*api.Api, CloseFunc) {
 
 type GetSensorDataTest struct {
 	MockApi
+	token    string
+	deviceId string
 	*datafetcher.SensorDataRequest
 	*datafetcher.BatchSensorDataRequest
-	token      string
-	deviceId   string
 	wantStatus int
 	wantErr    bool
 }
