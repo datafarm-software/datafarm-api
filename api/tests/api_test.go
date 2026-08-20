@@ -2615,7 +2615,7 @@ func (m MockApi) Setup(t *testing.T) (*api.Api, CloseFunc) {
 	require.Nil(t, err)
 	a.DeviceInfo = testingRedis
 	a.AuthStore = testingRedis
-	a.DataFetcher, err = datafetcher.NewTestingInflux("../config.yml")
+	a.DataFetcher, err = datafetcher.NewTestingInflux("../../config.yml")
 	require.Nil(t, err)
 	err = a.DataFetcher.PrepareDb(&m.mockDeviceInfo, m.mockDataFetcher)
 	require.Nil(t, err)

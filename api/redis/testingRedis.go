@@ -22,7 +22,7 @@ type TestingRedis struct {
 func NewTestingRedis(addr string) (*TestingRedis, error) {
 	var topErr error
 	once.Do(func() {
-		config, err := os.ReadFile("../config.yml")
+		config, err := os.ReadFile("../../config.yml")
 		if err != nil {
 			topErr = err
 			return
