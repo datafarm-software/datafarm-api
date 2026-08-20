@@ -190,6 +190,7 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 	var dataResp *datafetcher.SensorDataResponse
 	var deviceErr datafetcher.SensorDataError
 	var err error
+	span, _ := a.Tracer.SpanFromContext(ctx)
 	errSlice := make([]datafetcher.SensorDataError, 0, len(in.Body.Hardware))
 	resultSlice := make(datafetcher.SensorDataSlice, 0, len(in.Body.Hardware))
 	for _, hw := range in.Body.Hardware {

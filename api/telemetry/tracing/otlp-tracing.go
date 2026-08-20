@@ -60,6 +60,16 @@ func (o *OtlpTracer) Start(ctx context.Context, name string, kind SpanKind,
 	return retCtx, os
 }
 
+func (o *OtlpTracer) SpanFromContext(ctx context.Context) (Span, error) {
+	span := trace.SpanFromContext(ctx)
+	var err error
+	if !span.SpanContext().IsValid() {
+		err = SpanNotFound
+	}
+	//NOTE: always able to return span because it is a no op if not found
+	return &OtlpSpan{span}, err
+}
+
 type OtlpSpan struct {
 	trace.Span
 }
