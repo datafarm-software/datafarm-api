@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alicebob/miniredis/v2"
 	"github.com/datafarm-software/datafarm-api/api/authstore"
 	"github.com/datafarm-software/datafarm-api/api/datafetcher"
 	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
@@ -2178,8 +2177,9 @@ func TestBatchGetDataBoundary(t *testing.T) {
 
 func TestBatchCsvGetSensorData(t *testing.T) {
 	tests := map[string]struct {
+		MockApi
+		GetSensorDataTest
 		want string
-		gsdt GetSensorDataTest
 	}{
 
 		"multiple deviceid, single queryfield": {
@@ -2188,8 +2188,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				InsideTimeRange.Format(time.RFC3339), "23.000",
 				AnotherRegisteredDeviceId, InsideTimeRange.Format(time.RFC3339),
 				"25.000"),
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -2243,8 +2242,11 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token: ValidToken,
-				batchRequests: datafetcher.BatchSensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{wantErr: false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId:    RegisteredDeviceId,
@@ -2268,8 +2270,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				InsideTimeRange.Local().Format(time.RFC3339), "23.000",
 				AnotherRegisteredDeviceId, InsideTimeRange.Local().Format(time.RFC3339),
 				"25.000"),
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -2323,8 +2324,11 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token: ValidToken,
-				batchRequests: datafetcher.BatchSensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{wantErr: false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId:    RegisteredDeviceId,
@@ -2349,8 +2353,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				InsideTimeRange.Format(time.RFC3339), "80.000", "23.000",
 				AnotherRegisteredDeviceId, InsideTimeRange.Format(time.RFC3339),
 				"81.000", "25.000"),
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -2406,8 +2409,11 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token: ValidToken,
-				batchRequests: datafetcher.BatchSensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{wantErr: false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId: RegisteredDeviceId,
@@ -2433,8 +2439,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				InsideTimeRange.Format(time.RFC3339), "23.000",
 				AnotherRegisteredDeviceId, AlsoInsideTimeRange.Format(time.RFC3339),
 				"81.000"),
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -2488,8 +2493,11 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token: ValidToken,
-				batchRequests: datafetcher.BatchSensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{wantErr: false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId: RegisteredDeviceId,
@@ -2512,8 +2520,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 		"multiple deviceid, all errors": {
 			want: fmt.Sprintf("%s,%s\n%s,%s\n", RegisteredDeviceId,
 				"Unauthorized access to this device.", AnotherRegisteredDeviceId, "Unauthorized access to this device."),
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -2567,8 +2574,11 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token: ValidToken,
-				batchRequests: datafetcher.BatchSensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{wantErr: false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId:    RegisteredDeviceId,
@@ -2591,8 +2601,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				RegisteredQueryField, RegisteredDeviceId,
 				InsideTimeRange.Format(time.RFC3339), "23.000",
 				AnotherRegisteredDeviceId, "Unauthorized access to this device."),
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -2646,8 +2655,11 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token: ValidToken,
-				batchRequests: datafetcher.BatchSensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{wantErr: false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId:    RegisteredDeviceId,
@@ -2670,8 +2682,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				AnotherRegisteredQueryField, RegisteredQueryField, RegisteredDeviceId,
 				InsideTimeRange.Format(time.RFC3339), "80.000", "23.000",
 				AnotherRegisteredDeviceId, "Unauthorized access to this device."),
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -2726,8 +2737,11 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token: ValidToken,
-				batchRequests: datafetcher.BatchSensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{wantErr: false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId: RegisteredDeviceId,
@@ -2751,8 +2765,7 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				InsideTimeRange.Format(time.RFC3339), "80.000",
 				AlsoInsideTimeRange.Format(time.RFC3339), "23.000",
 				AnotherRegisteredDeviceId, "Unauthorized access to this device."),
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -2806,8 +2819,11 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token: ValidToken,
-				batchRequests: datafetcher.BatchSensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{wantErr: false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
 							DeviceId: RegisteredDeviceId,
@@ -2827,30 +2843,26 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 		},
 	}
 
-	db, err := miniredis.Run()
-	require.Nil(t, err)
-	defer db.Close()
-	humaTest := setupHuma(t)
-	var close CloseFunc
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			close = setupGetSensorDataTest(t, tc.gsdt, db)
-			defer close()
+			api, closeFunc := tc.MockApi.Setup(t)
+			defer closeFunc()
+			humaTest := setupHuma(t, api)
 			route := "/batch/device/sensordata"
 			resp := humaTest.Post(route,
-				fmt.Sprintf(`Authorization: Bearer %s`, tc.gsdt.token),
+				fmt.Sprintf(`Authorization: Bearer %s`, tc.token),
 				`Accept: text/csv`,
-				tc.gsdt.batchRequests,
+				tc.BatchSensorDataRequest,
 			)
-			if resp.Code != tc.gsdt.wantStatus {
-				t.Fatalf("wantStatus: %d, response status: %d", tc.gsdt.wantStatus, resp.Code)
+			if resp.Code != tc.wantStatus {
+				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
 			}
 			contentType := resp.Header().Get("Content-Type")
 			if contentType != "text/csv" {
 				t.Fatalf("response content-type not csv: %s", contentType)
 			}
 			defer resp.Result().Body.Close()
-			if !tc.gsdt.wantErr {
+			if !tc.wantErr {
 				body := resp.Body.String()
 				if diff := cmp.Diff(tc.want, body, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)

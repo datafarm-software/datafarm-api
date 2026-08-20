@@ -2639,7 +2639,6 @@ func (m MockApi) Setup(t *testing.T) (*api.Api, CloseFunc) {
 }
 
 type GetSensorDataTest struct {
-	MockApi
 	token    string
 	deviceId string
 	*datafetcher.SensorDataRequest
