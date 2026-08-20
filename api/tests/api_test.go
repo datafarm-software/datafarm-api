@@ -1730,167 +1730,156 @@ func TestGetQueryFields(t *testing.T) {
 
 func TestGetDeviceIds(t *testing.T) {
 	tests := map[string]struct {
-		wantErr        bool
-		wantStatus     int
-		want           []string
-		mockAuthStore  authstore.Schema
-		mockDeviceInfo deviceinfo.Schema
-		mockTokens     map[string]bool
-		token          string
+		MockApi
+		want       []string
+		token      string
+		wantStatus int
+		wantErr    bool
 	}{
 
 		"user gets deviceIds only in company, in network": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want:       []string{RegisteredDeviceId},
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  RegisteredCompany,
-						Role:     int(authstore.User),
-						Password: RegisteredPassword,
-						Network:  RegisteredNetwork,
+			token:      ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				UserTokens: []authstore.UserToken{
-					{Username: RegisteredUsername, Token: ValidToken},
-				},
-			},
-			mockDeviceInfo: deviceinfo.Schema{
-				DeviceCompanies: []deviceinfo.DeviceToCompany{
-					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
-					{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
-				},
-				DeviceNetworks: []deviceinfo.DeviceToNetwork{
-					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
-					{DeviceId: AnotherRegisteredDeviceId, Network: AnotherRegisteredNetwork},
-				},
-				DeviceToQF: []deviceinfo.DeviceToQueryFields{
-					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
 					},
-					{
-						DeviceId:    AnotherRegisteredDeviceId,
-						QueryFields: []string{AnotherRegisteredQueryField},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: AnotherRegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{AnotherRegisteredQueryField},
+						},
 					},
 				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
 			},
-			mockTokens: map[string]bool{
-				ValidToken: true,
-			},
-			token: ValidToken,
 		},
 
 		"network user gets deviceIds in network": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want:       []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  RegisteredCompany,
-						Role:     int(authstore.NetworkUser),
-						Password: RegisteredPassword,
-						Network:  RegisteredNetwork,
+			token:      ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.NetworkUser),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				UserTokens: []authstore.UserToken{
-					{Username: RegisteredUsername, Token: ValidToken},
-				},
-			},
-			mockDeviceInfo: deviceinfo.Schema{
-				DeviceCompanies: []deviceinfo.DeviceToCompany{
-					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
-					{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
-				},
-				DeviceNetworks: []deviceinfo.DeviceToNetwork{
-					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
-					{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
-				},
-				DeviceToQF: []deviceinfo.DeviceToQueryFields{
-					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
 					},
-					{
-						DeviceId:    AnotherRegisteredDeviceId,
-						QueryFields: []string{AnotherRegisteredQueryField},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{AnotherRegisteredQueryField},
+						},
 					},
 				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
 			},
-			mockTokens: map[string]bool{
-				ValidToken: true,
-			},
-			token: ValidToken,
 		},
 
 		"admin gets all deviceIds": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want:       []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  RegisteredCompany,
-						Role:     int(authstore.Admin),
-						Password: RegisteredPassword,
-						Network:  RegisteredNetwork,
+			token:      ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.Admin),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				UserTokens: []authstore.UserToken{
-					{Username: RegisteredUsername, Token: ValidToken},
-				},
-			},
-			mockDeviceInfo: deviceinfo.Schema{
-				DeviceCompanies: []deviceinfo.DeviceToCompany{
-					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
-					{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
-				},
-				DeviceNetworks: []deviceinfo.DeviceToNetwork{
-					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
-					{DeviceId: AnotherRegisteredDeviceId, Network: AnotherRegisteredNetwork},
-				},
-				DeviceToQF: []deviceinfo.DeviceToQueryFields{
-					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
 					},
-					{
-						DeviceId:    AnotherRegisteredDeviceId,
-						QueryFields: []string{AnotherRegisteredQueryField},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: AnotherRegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{AnotherRegisteredQueryField},
+						},
 					},
 				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
 			},
-			mockTokens: map[string]bool{
-				ValidToken: true,
-			},
-			token: ValidToken,
 		},
 	}
-	db, err := miniredis.Run()
-	require.Nil(t, err)
-	defer db.Close()
-	humaTest := setupHuma(t)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			a.TokenProvider = &tokenprovider.MockTokenProvider{
-				Tokens:    tc.mockTokens,
-				Increment: len(tc.mockTokens),
-			}
-			defer a.TokenProvider.Close()
-			testingRedis, err := redis.NewTestingRedis(db.Addr())
-			require.Nil(t, err)
-			defer testingRedis.Close()
-			a.DeviceInfo = testingRedis
-			a.AuthStore = testingRedis
-			err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
-			require.Nil(t, err)
-			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
-			require.Nil(t, err)
+			api, closeFunc := tc.MockApi.Setup(t)
+			defer closeFunc()
+			humaTest := setupHuma(t, api)
 			route := "/device/ids"
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
@@ -1901,7 +1890,7 @@ func TestGetDeviceIds(t *testing.T) {
 			if !tc.wantErr {
 				var dr []string
 				body := resp.Body.Bytes()
-				err = json.Unmarshal(body, &dr)
+				err := json.Unmarshal(body, &dr)
 				require.Nil(t, err)
 				if diff := cmp.Diff(tc.want, dr, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
