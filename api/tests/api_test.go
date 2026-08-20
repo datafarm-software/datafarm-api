@@ -117,7 +117,7 @@ func TestLogin(t *testing.T) {
 	var humaTest humatest.TestAPI
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, close := setupApiStruct(t, tc.mockDeviceInfo, tc.mockAuthStore)
+			a, close := tc.MockApi.Setup(t)
 			defer close()
 			humaTest = setupHuma(t, a)
 			encodedDetails := base64.StdEncoding.EncodeToString(
@@ -138,30 +138,6 @@ func TestLogin(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func setupApiStruct(t *testing.T, di deviceinfo.Schema, as authstore.Schema) (
-	*api.Api, CloseFunc) {
-	db, err := miniredis.Run()
-	require.Nil(t, err)
-	testingRedis, err := redis.NewTestingRedis(db.Addr())
-	require.Nil(t, err)
-	a := &api.Api{}
-	a.DeviceInfo = testingRedis
-	a.AuthStore = testingRedis
-	err = testingRedis.PrepareDeviceInfo(di)
-	require.Nil(t, err)
-	err = testingRedis.PrepareAuthStore(as)
-	require.Nil(t, err)
-	a.TokenProvider = &tokenprovider.MockTokenProvider{}
-	a.Logger = &logging.MockLogger{}
-	a.Meter = &metering.MockMeter{}
-	a.Tracer = &tracing.MockTracer{}
-	return a, func() {
-		db.Close()
-		testingRedis.Close()
-		a.TokenProvider.Close()
 	}
 }
 
@@ -2237,19 +2213,6 @@ func TestGetDataBoundary(t *testing.T) {
 	}
 }
 
-type GetSensorDataTest struct {
-	wantErr         bool
-	wantStatus      int
-	mockDataFetcher []datafetcher.SensorData
-	mockAuthStore   authstore.Schema
-	mockDeviceInfo  deviceinfo.Schema
-	mockTokens      map[string]bool
-	token           string
-	deviceId        string
-	deviceRequest   datafetcher.SensorDataRequest
-	batchRequests   datafetcher.BatchSensorDataRequest
-}
-
 func TestCsvGetSensorData(t *testing.T) {
 	tests := map[string]struct {
 		want string
@@ -2596,27 +2559,38 @@ func TestCsvGetSensorData(t *testing.T) {
 	}
 }
 
-type CloseFunc func()
+type MockApi struct {
+	mockDataFetcher []datafetcher.SensorData
+	mockAuthStore   authstore.Schema
+	mockDeviceInfo  deviceinfo.Schema
+	mockTokens      map[string]bool
+}
 
-func setupGetSensorDataTest(
-	t *testing.T, tc GetSensorDataTest, db *miniredis.Miniredis) CloseFunc {
+func (m MockApi) Setup(t *testing.T) (*api.Api, CloseFunc) {
+	a := &api.Api{}
 	a.TokenProvider = &tokenprovider.MockTokenProvider{
-		Tokens:    tc.mockTokens,
-		Increment: len(tc.mockTokens),
+		Tokens:    m.mockTokens,
+		Increment: len(m.mockTokens),
 	}
+	a.Logger = &logging.MockLogger{}
+	a.Meter = &metering.MockMeter{}
+	a.Tracer = &tracing.MockTracer{}
+	db, err := miniredis.Run()
+	require.Nil(t, err)
 	testingRedis, err := redis.NewTestingRedis(db.Addr())
 	require.Nil(t, err)
 	a.DeviceInfo = testingRedis
 	a.AuthStore = testingRedis
 	a.DataFetcher, err = datafetcher.NewTestingInflux("../config.yml")
 	require.Nil(t, err)
-	err = a.DataFetcher.PrepareDb(&tc.mockDeviceInfo, tc.mockDataFetcher)
+	err = a.DataFetcher.PrepareDb(&m.mockDeviceInfo, m.mockDataFetcher)
 	require.Nil(t, err)
-	err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
+	err = testingRedis.PrepareDeviceInfo(m.mockDeviceInfo)
 	require.Nil(t, err)
-	err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
+	err = testingRedis.PrepareAuthStore(m.mockAuthStore)
 	require.Nil(t, err)
-	return func() {
+	return a, func() {
+		db.Close()
 		err = a.TokenProvider.Close()
 		if err != nil {
 			t.Logf("tokenprovider close: %v", err)
@@ -2631,3 +2605,15 @@ func setupGetSensorDataTest(
 		}
 	}
 }
+
+type GetSensorDataTest struct {
+	MockApi
+	*datafetcher.SensorDataRequest
+	*datafetcher.BatchSensorDataRequest
+	token      string
+	deviceId   string
+	wantStatus int
+	wantErr    bool
+}
+
+type CloseFunc func()

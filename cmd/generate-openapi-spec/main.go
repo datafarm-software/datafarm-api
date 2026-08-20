@@ -30,7 +30,7 @@ func main() {
 	config := localhuma.Config(localhuma.Production)
 	humaApi := humamux.New(router, config)
 	a := new(api.Api)
-	localhuma.SetupApi(humaApi, a)
+	localhuma.SetupApiOperations(humaApi, a)
 	doc := humaApi.OpenAPI()
 	out, err := yaml.Marshal(doc)
 	if err != nil {

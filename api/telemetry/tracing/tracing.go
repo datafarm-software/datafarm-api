@@ -28,5 +28,5 @@ type Span interface {
 
 type MockSpan struct{}
 
-func (s *MockSpan) End()
-func (s *MockSpan) SetAttributes(map[string]string)
+func (s *MockSpan) End()                            {}
+func (s *MockSpan) SetAttributes(map[string]string) {}

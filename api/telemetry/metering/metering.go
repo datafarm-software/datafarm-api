@@ -14,7 +14,7 @@ type Meter interface {
 
 type MockMeter struct{}
 
-func (m *MockMeter) Close(context.Context) error                                { return nil }
-func (m *MockMeter) RecordLatency(ctx context.Context, dur time.Duration) error { return nil }
-func (m *MockMeter) ActiveUsersCountAdd(i int)
-func (m *MockMeter) CountApiRequest(ctx context.Context, i int, attr map[string]string)
+func (m *MockMeter) Close(context.Context) error                                        { return nil }
+func (m *MockMeter) RecordLatency(ctx context.Context, dur time.Duration) error         { return nil }
+func (m *MockMeter) ActiveUsersCountAdd(i int)                                          {}
+func (m *MockMeter) CountApiRequest(ctx context.Context, i int, attr map[string]string) {}
