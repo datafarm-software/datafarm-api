@@ -53,8 +53,13 @@ type SensorDataRequest struct {
 
 func (s *SensorDataRequest) Metadata() (m logging.Metadata) {
 	baseAttr := "sensordatarequest"
-	m = make(logging.Metadata)
-	m[baseAttr+".deviceid"] = s.DeviceId
+	m.KeyValue = make(map[string]string, 4)
+	m.KeyValue[baseAttr+".deviceid"] = s.DeviceId
+	m.KeyValue[baseAttr+".timezone"] = s.Timezone.Timezone
+	m.KeyValue[baseAttr+".start"] = s.Start
+	m.KeyValue[baseAttr+".stop"] = s.Stop
+	m.KeySlice = make(map[string][]string, 1)
+	m.KeySlice[baseAttr+".queryfields"] = s.QueryFields
 	return
 }
 
