@@ -45,8 +45,19 @@ func (o *OtlpLogger) Close(ctx context.Context) error {
 
 func makeFields(metadata Metadata) []zap.Field {
 	attrs := make([]zap.Field, 0, len(metadata.KeyValue))
+	var field zap.Field
+	var le int
 	for k, strSlice := range metadata.KeyValue {
-		attrs = append(attrs, zap.Strings(k, strSlice))
+		le = len(strSlice)
+		switch {
+		case le == 1:
+			field = zap.String(k, strSlice[0])
+		case le > 1:
+			field = zap.Strings(k, strSlice)
+		default:
+			continue
+		}
+		attrs = append(attrs, field)
 	}
 	return attrs
 }
