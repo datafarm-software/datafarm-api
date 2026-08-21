@@ -14,15 +14,22 @@ import (
 	"github.com/datafarm-software/datafarm-api/api/authstore"
 	"github.com/datafarm-software/datafarm-api/api/datafetcher"
 	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
 )
 
-func logF(ctx context.Context, fields map[string]string) {
+func logMetadata(ctx context.Context, fields map[string]string) {
+	//NOTE: requestLog added to context via telemetry middleware
 	rl, _ := ctx.Value("request-log").(*requestLog)
 	if rl != nil {
 		for k, v := range fields {
 			rl.metadata[k] = v
 		}
 	}
+}
+
+func logRequest(ctx context.Context, m logging.RequestMetadataProvider) {
+	md := m.Metadata()
+	logMetadata(ctx, md)
 }
 
 const MaxDays = 90

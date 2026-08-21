@@ -9,6 +9,10 @@ type Logger interface {
 	Info(msg string, metadata map[string]string)
 }
 
+type RequestMetadataProvider interface {
+	Metadata() map[string]string
+}
+
 type MockLogger struct{}
 
 func (l *MockLogger) Close(context.Context) error                  { return nil }
