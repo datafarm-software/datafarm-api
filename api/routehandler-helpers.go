@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,13 +18,23 @@ import (
 	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
 )
 
+func (a *Api) httpErr(humaCtx huma.Context, w http.ResponseWriter, msg string, code int) {
+	span, _ := a.Tracer.SpanFromContext(humaCtx.Context())
+	if span.IsValid() {
+		traceId := span.TraceID()
+		if traceId != "" {
+			msg += fmt.Sprintf(" Request TraceID: %s", traceId)
+		}
+	}
+	humaCtx.SetStatus(code)
+	w.Write([]byte(msg))
+}
+
 func logMetadata(ctx context.Context, m logging.Metadata) {
 	//NOTE: requestLog added to context via telemetry middleware
 	rl, _ := ctx.Value("request-log").(*requestLog)
 	if rl != nil {
-		for k, v := range m.KeyValue {
-			rl.KeyValue[k] = v
-		}
+		maps.Copy(rl.KeyValue, m.KeyValue)
 	}
 }
 

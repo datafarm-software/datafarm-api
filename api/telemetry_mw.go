@@ -66,16 +66,17 @@ type requestLog struct {
 func (a *Api) LogRequest(humaCtx huma.Context, next func(huma.Context)) {
 	rl := &requestLog{logging.Metadata{
 		KeyValue: map[string][]string{
-			"http.method": []string{humaCtx.Method()},
-			"http.route":  []string{getPath(humaCtx)},
+			"http.method": {humaCtx.Method()},
+			"http.route":  {getPath(humaCtx)},
 		},
 	}}
-	span := trace.SpanFromContext(humaCtx.Context())
-	if span.SpanContext().IsValid() {
-		rl.KeyValue["trace_id"] = []string{span.SpanContext().TraceID().String()}
-		rl.KeyValue["span_id"] = []string{span.SpanContext().SpanID().String()}
+	span, _ := a.Tracer.SpanFromContext(humaCtx.Context())
+	if span.IsValid() {
+		rl.KeyValue["trace_id"] = []string{span.TraceID()}
+		rl.KeyValue["span_id"] = []string{span.SpanID()}
 	}
-	next(huma.WithValue(humaCtx, "request-log", rl))
+	humaCtx = huma.WithValue(humaCtx, "request-log", rl)
+	next(humaCtx)
 	rl.KeyValue["http.status_code"] = []string{fmt.Sprintf("%d", humaCtx.Status())}
 	switch getFirstDigit(humaCtx.Status()) {
 	case 4:

@@ -33,9 +33,15 @@ func (t *MockTracer) SpanFromContext(ctx context.Context) (Span, error) {
 type Span interface {
 	End()
 	SetAttributes(map[string]string)
+	IsValid() bool
+	TraceID() string
+	SpanID() string
 }
 
 type MockSpan struct{}
 
 func (s *MockSpan) End()                            {}
 func (s *MockSpan) SetAttributes(map[string]string) {}
+func (s *MockSpan) IsValid() bool                   { return false }
+func (s *MockSpan) TraceID() string                 { return "" }
+func (s *MockSpan) SpanID() string                  { return "" }

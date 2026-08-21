@@ -75,12 +75,12 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 	_, w := humamux.Unwrap(humaCtx)
 	authHeader := humaCtx.Header("Authorization")
 	if authHeader == "" {
-		http.Error(w, "No Authorization Header Provided.", http.StatusBadRequest)
+		httpErr(humaCtx, w, "No Authorization Header Provided.", http.StatusBadRequest)
 		return
 	}
 	parts := strings.Split(authHeader, "Bearer")
 	if len(parts) != 2 {
-		http.Error(w, "Invalid Authorization Header Format.", http.StatusBadRequest)
+		httpErr(humaCtx, w, "Invalid Authorization Header Format.", http.StatusBadRequest)
 		return
 	}
 	var lr tokenprovider.LoginResponse
@@ -91,13 +91,13 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 			logMetadata(humaCtx.Context(), logging.Metadata{
 				KeyValue: map[string][]string{
 					"authstore.error.message": {err.Error()}}})
-			http.Error(w,
+			httpErr(humaCtx, w,
 				`Your token is invalid. Please login again. 
 				There was an internal error while deleting the invalid token.`,
 				http.StatusInternalServerError)
 			return
 		}
-		http.Error(w, "Your token is invalid. Please login again.", http.StatusUnauthorized)
+		httpErr(humaCtx, w, "Your token is invalid. Please login again.", http.StatusUnauthorized)
 		return
 	}
 	user, err := a.AuthStore.GetUser(lr.Body)
@@ -105,7 +105,7 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 		logMetadata(humaCtx.Context(), logging.Metadata{
 			KeyValue: map[string][]string{
 				"authstore.error.message": {fmt.Sprintf("getting user: %v", err)}}})
-		http.Error(w, "Internal error while getting user information.",
+		httpErr(humaCtx, w, "Internal error while getting user information.",
 			http.StatusInternalServerError)
 		return
 	}
