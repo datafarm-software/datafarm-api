@@ -85,6 +85,7 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 func (a *Api) Login(ctx context.Context,
 	ar *tokenprovider.LoginRequest) (*tokenprovider.LoginResponse, error) {
 	parts := strings.Split(ar.Auth, " ")
+	logRequest(ctx, ar)
 	if len(parts) != 2 || parts[0] != "Basic" {
 		return nil, huma.Error400BadRequest(
 			"Authorization header must follow the basic format: 'Basic base64(username:password)'")
