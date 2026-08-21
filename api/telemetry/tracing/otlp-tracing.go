@@ -82,3 +82,15 @@ func (o *OtlpSpan) SetAttributes(mapAttrs map[string]string) {
 	}
 	o.Span.SetAttributes(attrs...)
 }
+
+func (o *OtlpSpan) IsValid() bool {
+	return o.SpanContext().IsValid()
+}
+
+func (o *OtlpSpan) TraceId() string {
+	return o.Span.SpanContext().TraceID().String()
+}
+
+func (o *OtlpSpan) SpanId() string {
+	return o.Span.SpanContext().SpanID().String()
+}

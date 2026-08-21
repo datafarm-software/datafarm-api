@@ -72,8 +72,8 @@ func (a *Api) LogRequest(humaCtx huma.Context, next func(huma.Context)) {
 	}}
 	span, _ := a.Tracer.SpanFromContext(humaCtx.Context())
 	if span.IsValid() {
-		rl.KeyValue["trace_id"] = []string{span.TraceID()}
-		rl.KeyValue["span_id"] = []string{span.SpanID()}
+		rl.KeyValue["trace_id"] = []string{span.TraceId()}
+		rl.KeyValue["span_id"] = []string{span.SpanId()}
 	}
 	humaCtx = huma.WithValue(humaCtx, "request-log", rl)
 	next(humaCtx)

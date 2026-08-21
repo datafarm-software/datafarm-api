@@ -21,7 +21,7 @@ import (
 func (a *Api) httpErr(humaCtx huma.Context, w http.ResponseWriter, msg string, code int) {
 	span, _ := a.Tracer.SpanFromContext(humaCtx.Context())
 	if span.IsValid() {
-		traceId := span.TraceID()
+		traceId := span.TraceId()
 		if traceId != "" {
 			msg += fmt.Sprintf(" Request TraceID: %s", traceId)
 		}
