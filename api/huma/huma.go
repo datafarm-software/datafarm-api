@@ -271,13 +271,12 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 
 func Config(mode Mode) (config huma.Config) {
 	var cmd *exec.Cmd
-	switch mode {
-	case Development:
-		cmd = exec.Command("git", "describe", "--tags", "--abbrev=0")
-	default:
-		cmd = exec.Command("cat", "/app/.git-version")
-	}
+	cmd = exec.Command("git", "describe", "--tags", "--abbrev=0")
 	version, _ := cmd.Output()
+	if version == nil {
+		cmd = exec.Command("cat", "/app/.git-version")
+		version, _ = cmd.Output()
+	}
 	config = huma.DefaultConfig("DataFarm SensorData API", string(version))
 	config.Info.Description = `
 ## Welcome
