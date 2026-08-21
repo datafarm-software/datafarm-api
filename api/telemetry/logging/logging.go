@@ -21,8 +21,9 @@ type Metadata struct {
 
 type metadataWalker struct {
 	metadata Metadata
-	tags     []string
 }
+
+func (w *metadataWalker) Struct(reflect.Value) error { return nil }
 
 func (w *metadataWalker) StructField(
 	field reflect.StructField,
@@ -34,30 +35,23 @@ func (w *metadataWalker) StructField(
 	}
 	tag, err := tags.Get("log")
 	if err != nil {
-		w.tags = append(w.tags, "")
 		return nil
 	}
-	w.tags = append(w.tags, tag.Name)
-	return nil
-}
-
-func (w *metadataWalker) Exit(loc reflectwalk.Location) error {
-	if loc == reflectwalk.StructField {
-		w.tags = w.tags[:len(w.tags)-1]
+	value = reflect.Indirect(value)
+	switch value.Kind() {
+	case reflect.String:
+		w.metadata.KeyValue[tag.Name] =
+			append(w.metadata.KeyValue[tag.Name], value.String())
+	case reflect.Slice:
+		for i := range value.Len() {
+			elem := value.Index(i)
+			if elem.Kind() != reflect.String {
+				continue
+			}
+			w.metadata.KeyValue[tag.Name] =
+				append(w.metadata.KeyValue[tag.Name], elem.String())
+		}
 	}
-	return nil
-}
-
-func (w *metadataWalker) Primitive(v reflect.Value) error {
-	if len(w.tags) == 0 {
-		return nil
-	}
-	tag := w.tags[len(w.tags)-1]
-	if tag == "" || v.Kind() != reflect.String {
-		return nil
-	}
-	w.metadata.KeyValue[tag] =
-		append(w.metadata.KeyValue[tag], v.String())
 	return nil
 }
 

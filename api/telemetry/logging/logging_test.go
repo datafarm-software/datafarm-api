@@ -28,11 +28,11 @@ func TestFromTagMetadata(t *testing.T) {
 			},
 			want: Metadata{
 				KeyValue: map[string][]string{
-					"deviceid":   {"123"},
-					"queryfield": {"1", "2", "3"},
-					"timezone":   {"Africa/Johannesburg"},
-					"start":      {"-2d"},
-					"stop":       {"now"},
+					"deviceid":    {"123"},
+					"queryfields": {"1", "2", "3"},
+					"timezone":    {"Africa/Johannesburg"},
+					"start":       {"-2d"},
+					"stop":        {"now"},
 				},
 			},
 		},
@@ -49,9 +49,9 @@ func TestFromTagMetadata(t *testing.T) {
 			},
 			want: Metadata{
 				KeyValue: map[string][]string{
-					"deviceid":   {"123"},
-					"queryfield": {"1", "2", "3"},
-					"start":      {"-2d"},
+					"deviceid":    {"123"},
+					"queryfields": {"1", "2", "3"},
+					"start":       {"-2d"},
 				},
 			},
 		},
