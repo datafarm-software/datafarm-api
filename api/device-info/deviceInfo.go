@@ -37,7 +37,7 @@ type QueryFieldsResponse struct {
 }
 
 type QueryFieldsRequest struct {
-	DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+	DeviceId string `log:"deviceid" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
 }
 
 type BatchQueryFieldsRequest struct{ Body DeviceBatch }

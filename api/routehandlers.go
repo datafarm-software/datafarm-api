@@ -85,7 +85,7 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 func (a *Api) Login(ctx context.Context,
 	ar *tokenprovider.LoginRequest) (*tokenprovider.LoginResponse, error) {
 	parts := strings.Split(ar.Auth, " ")
-	logRequest(ctx, ar)
+	logFromTag(ctx, ar)
 	if len(parts) != 2 || parts[0] != "Basic" {
 		return nil, huma.Error400BadRequest(
 			"Authorization header must follow the basic format: 'Basic base64(username:password)'")
@@ -161,7 +161,7 @@ func (a *Api) Login(ctx context.Context,
 
 func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (
 	*deviceinfo.QueryFieldsResponse, error) {
-	logRequest(ctx, in)
+	logFromTag(ctx, in)
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
 		logMetadata(ctx, logging.Metadata{
@@ -209,7 +209,7 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 	}) (*struct {
 	Body *datafetcher.BatchSensorDataResponse
 }, error) {
-	logRequest(ctx, in.Body)
+	logFromTag(ctx, in.Body)
 	var dataReq *datafetcher.SensorDataRequest
 	var deviceErr datafetcher.SensorDataError
 	var sds datafetcher.SensorDataSlice

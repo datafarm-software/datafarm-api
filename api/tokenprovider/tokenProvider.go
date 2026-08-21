@@ -6,7 +6,7 @@ import (
 )
 
 type LoginRequest struct {
-	Auth string `header:"Authorization" required:"true" hidden:"true"`
+	Auth string `log:"auth_header" header:"Authorization" required:"true" hidden:"true"`
 }
 
 func (l *LoginRequest) Metadata() (m logging.Metadata) {
