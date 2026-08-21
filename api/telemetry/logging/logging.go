@@ -40,12 +40,14 @@ func (w *metadataWalker) StructField(
 	value = reflect.Indirect(value)
 	switch value.Kind() {
 	case reflect.String:
-		w.metadata.KeyValue[tag.Name] =
-			append(w.metadata.KeyValue[tag.Name], value.String())
+		if value.String() != "" {
+			w.metadata.KeyValue[tag.Name] =
+				append(w.metadata.KeyValue[tag.Name], value.String())
+		}
 	case reflect.Slice:
 		for i := range value.Len() {
 			elem := value.Index(i)
-			if elem.Kind() != reflect.String {
+			if elem.Kind() != reflect.String || elem.String() == "" {
 				continue
 			}
 			w.metadata.KeyValue[tag.Name] =
