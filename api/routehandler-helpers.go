@@ -17,7 +17,7 @@ import (
 	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
 )
 
-func logMetadata(ctx context.Context, fields map[string]string) {
+func logMetadata(ctx context.Context, fields logging.Metadata) {
 	//NOTE: requestLog added to context via telemetry middleware
 	rl, _ := ctx.Value("request-log").(*requestLog)
 	if rl != nil {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
 )
 
 var EmptySensorData = errors.New("empty sensor data")
@@ -48,6 +49,13 @@ type TimeFrame struct {
 type SensorDataRequest struct {
 	Hardware
 	TimeFrame
+}
+
+func (s *SensorDataRequest) Metadata() (m logging.Metadata) {
+	baseAttr := "sensordatarequest"
+	m = make(logging.Metadata)
+	m[baseAttr+".deviceid"] = s.DeviceId
+	return
 }
 
 type BatchSensorDataRequest struct {

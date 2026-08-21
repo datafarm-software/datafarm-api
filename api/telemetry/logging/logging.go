@@ -1,16 +1,23 @@
 package logging
 
-import "context"
+import (
+	"context"
+)
 
 type Logger interface {
 	Close(context.Context) error
-	Warn(msg string, metadata map[string]string)
-	Error(msg string, metadata map[string]string)
-	Info(msg string, metadata map[string]string)
+	Warn(msg string, metadata Metadata)
+	Error(msg string, metadata Metadata)
+	Info(msg string, metadata Metadata)
+}
+
+type Metadata struct {
+	KeyValue map[string]string
+	KeySlice map[string][]string
 }
 
 type RequestMetadataProvider interface {
-	Metadata() map[string]string
+	Metadata() Metadata
 }
 
 type MockLogger struct{}

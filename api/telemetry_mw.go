@@ -8,6 +8,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
 	"github.com/datafarm-software/datafarm-api/api/telemetry/tracing"
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/otel"
@@ -59,28 +60,30 @@ func (a *Api) TraceRequest(humaCtx huma.Context, next func(huma.Context)) {
 }
 
 type requestLog struct {
-	metadata map[string]string
+	logging.Metadata
 }
 
 func (a *Api) LogRequest(humaCtx huma.Context, next func(huma.Context)) {
-	rl := &requestLog{map[string]string{
-		"http.method": humaCtx.Method(),
-		"http.route":  getPath(humaCtx),
+	rl := &requestLog{logging.Metadata{
+		KeyValue: map[string]string{
+			"http.method": humaCtx.Method(),
+			"http.route":  getPath(humaCtx),
+		},
 	}}
 	span := trace.SpanFromContext(humaCtx.Context())
 	if span.SpanContext().IsValid() {
-		rl.metadata["trace_id"] = span.SpanContext().TraceID().String()
-		rl.metadata["span_id"] = span.SpanContext().SpanID().String()
+		rl.KeyValue["trace_id"] = span.SpanContext().TraceID().String()
+		rl.KeyValue["span_id"] = span.SpanContext().SpanID().String()
 	}
 	next(huma.WithValue(humaCtx, "request-log", rl))
-	rl.metadata["http.status_code"] = fmt.Sprintf("%d", humaCtx.Status())
+	rl.KeyValue["http.status_code"] = fmt.Sprintf("%d", humaCtx.Status())
 	switch getFirstDigit(humaCtx.Status()) {
 	case 4:
-		a.Logger.Warn("HTTP Client Error", rl.metadata)
+		a.Logger.Warn("HTTP Client Error", rl.Metadata)
 	case 5:
-		a.Logger.Error("HTTP Internal Error", rl.metadata)
+		a.Logger.Error("HTTP Internal Error", rl.Metadata)
 	default:
-		a.Logger.Info("HTTP Client Request", rl.metadata)
+		a.Logger.Info("HTTP Client Request", rl.Metadata)
 	}
 }
 
