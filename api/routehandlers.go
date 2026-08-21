@@ -298,8 +298,9 @@ func (a *Api) BatchGetSensorDataBoundary(ctx context.Context,
 	*struct {
 		Body datafetcher.BatchDataBoundaryResponse
 	}, error) {
+	logFromTag(ctx, in.Body)
 	var qr datafetcher.DataBoundaryRequest
-	var dataResp *datafetcher.DataBoundaryResponse
+	var dataResp datafetcher.DataBoundary
 	var deviceErr datafetcher.DataBoundaryError
 	var err error
 	errSlice := make([]datafetcher.DataBoundaryError, 0, len(in.Body.DeviceIds))
@@ -309,9 +310,9 @@ func (a *Api) BatchGetSensorDataBoundary(ctx context.Context,
 			DeviceId: deviceId,
 			Timezone: in.Body.Timezone,
 		}
-		dataResp, err = a.GetSensorDataBoundary(ctx, &qr)
+		dataResp, err = a.getSensorDataBoundary(ctx, &qr)
 		if err == nil {
-			resultSlice = append(resultSlice, dataResp.Body)
+			resultSlice = append(resultSlice, dataResp)
 		} else {
 			deviceErr.DeviceId = deviceId
 			deviceErr.Error = err.Error()
