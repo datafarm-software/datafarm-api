@@ -43,22 +43,25 @@ func (o *OtlpLogger) Close(ctx context.Context) error {
 	return o.LoggerProvider.Shutdown(ctx)
 }
 
-func makeFields(metadata map[string]string) []zap.Field {
-	attrs := make([]zap.Field, len(metadata))
-	for k, v := range metadata {
+func makeFields(metadata Metadata) []zap.Field {
+	attrs := make([]zap.Field, 0, len(metadata.KeyValue)+len(metadata.KeySlice))
+	for k, v := range metadata.KeyValue {
 		attrs = append(attrs, zap.String(k, v))
+	}
+	for k, strSlice := range metadata.KeySlice {
+		attrs = append(attrs, zap.Strings(k, strSlice))
 	}
 	return attrs
 }
 
-func (o *OtlpLogger) Info(msg string, metadata map[string]string) {
+func (o *OtlpLogger) Info(msg string, metadata Metadata) {
 	o.Logger.Info(msg, makeFields(metadata)...)
 }
 
-func (o *OtlpLogger) Warn(msg string, metadata map[string]string) {
+func (o *OtlpLogger) Warn(msg string, metadata Metadata) {
 	o.Logger.Warn(msg, makeFields(metadata)...)
 }
 
-func (o *OtlpLogger) Error(msg string, metadata map[string]string) {
+func (o *OtlpLogger) Error(msg string, metadata Metadata) {
 	o.Logger.Error(msg, makeFields(metadata)...)
 }

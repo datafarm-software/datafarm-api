@@ -22,7 +22,7 @@ type RequestMetadataProvider interface {
 
 type MockLogger struct{}
 
-func (l *MockLogger) Close(context.Context) error                  { return nil }
-func (l *MockLogger) Warn(msg string, metadata map[string]string)  {}
-func (l *MockLogger) Error(msg string, metadata map[string]string) {}
-func (l *MockLogger) Info(msg string, metadata map[string]string)  {}
+func (l *MockLogger) Close(context.Context) error         { return nil }
+func (l *MockLogger) Warn(msg string, metadata Metadata)  {}
+func (l *MockLogger) Error(msg string, metadata Metadata) {}
+func (l *MockLogger) Info(msg string, metadata Metadata)  {}

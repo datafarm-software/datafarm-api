@@ -17,12 +17,15 @@ import (
 	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
 )
 
-func logMetadata(ctx context.Context, fields logging.Metadata) {
+func logMetadata(ctx context.Context, m logging.Metadata) {
 	//NOTE: requestLog added to context via telemetry middleware
 	rl, _ := ctx.Value("request-log").(*requestLog)
 	if rl != nil {
-		for k, v := range fields {
-			rl.metadata[k] = v
+		for k, v := range m.KeyValue {
+			rl.KeyValue[k] = v
+		}
+		for k, strSlice := range m.KeySlice {
+			rl.KeySlice[k] = append(rl.KeySlice[k], strSlice...)
 		}
 	}
 }
