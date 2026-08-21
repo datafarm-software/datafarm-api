@@ -224,3 +224,46 @@ func (a *Api) getSensorData(
 	}
 	return sensorData, nil
 }
+
+func (a *Api) getQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (
+	qf deviceinfo.QueryFields, err error) {
+	user, ok := ctx.Value("user").(authstore.UserInfo)
+	if !ok {
+		logMetadata(ctx, logging.Metadata{
+			KeyValue: map[string][]string{
+				"domain.error.message": {"authstore.UserInfo not found in context"}}})
+		return qf, huma.Error500InternalServerError(
+			"Internal error getting user.")
+	}
+	_, code, err := a.checkAccessToDevice(in.DeviceId, user)
+	if err != nil {
+		switch code {
+		case http.StatusUnauthorized:
+			return qf, huma.Error401Unauthorized(
+				"Unauthorized access to this device.")
+		case http.StatusNotFound:
+			return qf, huma.Error404NotFound(
+				"Device Not Found.")
+		default:
+			logMetadata(ctx, logging.Metadata{
+				KeyValue: map[string][]string{
+					"deviceinfo.error.message": {err.Error()}}})
+			return qf, huma.Error500InternalServerError(
+				"Internal error checking acess to DeviceId.")
+		}
+	}
+	if !authstore.HasPermission(authstore.Role(user.Role),
+		authstore.GetAllQueryFields) {
+		return qf, huma.Error401Unauthorized("Access denied to QueryFields.")
+	}
+	qf, err = a.DeviceInfo.GetQueryFields(in.DeviceId)
+	if err != nil {
+		logMetadata(ctx, logging.Metadata{
+			KeyValue: map[string][]string{
+				"deviceinfo.error.message": {fmt.Sprintf(
+					"get queryfields: %v", err)}}})
+		return qf, huma.Error500InternalServerError(
+			"Internal error while getting queryfields.")
+	}
+	return qf, nil
+}

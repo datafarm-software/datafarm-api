@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/datafarm-software/datafarm-api/api/datafetcher"
+	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -139,6 +140,19 @@ func TestFromTagMetadata(t *testing.T) {
 					"deviceid":    {"1", "2"},
 					"queryfields": {"1", "2", "3", "1"},
 					"start":       {"-2d"},
+				},
+			},
+		},
+
+		"parse batch queryfieldsrequest": {
+			input: deviceinfo.BatchQueryFieldsRequest{
+				Body: deviceinfo.DeviceBatch{
+					DeviceIds: []string{"1", "2"},
+				},
+			},
+			want: Metadata{
+				KeyValue: map[string][]string{
+					"deviceids": {"1", "2"},
 				},
 			},
 		},

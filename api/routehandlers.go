@@ -34,6 +34,43 @@ func (a *Api) GetSensorData(ctx context.Context,
 	}, nil
 }
 
+func (a *Api) BatchGetSensorData(ctx context.Context,
+	in *struct {
+		Body datafetcher.BatchSensorDataRequest
+	}) (*struct {
+	Body *datafetcher.BatchSensorDataResponse
+}, error) {
+	logFromTag(ctx, in.Body)
+	var dataReq *datafetcher.SensorDataRequest
+	var deviceErr datafetcher.SensorDataError
+	var sds datafetcher.SensorDataSlice
+	var err error
+	errSlice := make([]datafetcher.SensorDataError, 0, len(in.Body.Hardware))
+	resultSlice := make(datafetcher.SensorDataSlice, 0, len(in.Body.Hardware))
+	for _, hw := range in.Body.Hardware {
+		dataReq = &datafetcher.SensorDataRequest{
+			Hardware:  hw,
+			TimeFrame: in.Body.TimeFrame,
+		}
+		sds, err = a.getSensorData(ctx, dataReq)
+		if err == nil {
+			resultSlice = append(resultSlice, sds...)
+		} else {
+			deviceErr.DeviceId = hw.DeviceId
+			deviceErr.Error = err.Error()
+			errSlice = append(errSlice, deviceErr)
+		}
+	}
+	return &struct {
+		Body *datafetcher.BatchSensorDataResponse
+	}{
+		Body: &datafetcher.BatchSensorDataResponse{
+			Results: resultSlice,
+			Errors:  errSlice,
+		},
+	}, nil
+}
+
 func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 	_, w := humamux.Unwrap(humaCtx)
 	authHeader := humaCtx.Header("Authorization")
@@ -162,90 +199,20 @@ func (a *Api) Login(ctx context.Context,
 func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (
 	*deviceinfo.QueryFieldsResponse, error) {
 	logFromTag(ctx, in)
-	user, ok := ctx.Value("user").(authstore.UserInfo)
-	if !ok {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"domain.error.message": {"authstore.UserInfo not found in context"}}})
-		return nil, huma.Error500InternalServerError(
-			"Internal error getting user.")
-	}
-	_, code, err := a.checkAccessToDevice(in.DeviceId, user)
+	queryFields, err := a.getQueryFields(ctx, in)
 	if err != nil {
-		switch code {
-		case http.StatusUnauthorized:
-			return nil, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		case http.StatusNotFound:
-			return nil, huma.Error404NotFound(
-				"Device Not Found.")
-		default:
-			logMetadata(ctx, logging.Metadata{
-				KeyValue: map[string][]string{
-					"deviceinfo.error.message": {err.Error()}}})
-			return nil, huma.Error500InternalServerError(
-				"Internal error checking acess to DeviceId.")
-		}
-	}
-	if !authstore.HasPermission(authstore.Role(user.Role),
-		authstore.GetAllQueryFields) {
-		return nil, huma.Error401Unauthorized("Access denied to QueryFields.")
-	}
-	queryFields, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
-	if err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"deviceinfo.error.message": {fmt.Sprintf(
-					"get queryfields: %v", err)}}})
-		return nil, huma.Error500InternalServerError(
-			"Internal error while getting queryfields.")
+		return nil, err
 	}
 	return &deviceinfo.QueryFieldsResponse{Body: queryFields}, nil
-}
-
-func (a *Api) BatchGetSensorData(ctx context.Context,
-	in *struct {
-		Body datafetcher.BatchSensorDataRequest
-	}) (*struct {
-	Body *datafetcher.BatchSensorDataResponse
-}, error) {
-	logFromTag(ctx, in.Body)
-	var dataReq *datafetcher.SensorDataRequest
-	var deviceErr datafetcher.SensorDataError
-	var sds datafetcher.SensorDataSlice
-	var err error
-	errSlice := make([]datafetcher.SensorDataError, 0, len(in.Body.Hardware))
-	resultSlice := make(datafetcher.SensorDataSlice, 0, len(in.Body.Hardware))
-	for _, hw := range in.Body.Hardware {
-		dataReq = &datafetcher.SensorDataRequest{
-			Hardware:  hw,
-			TimeFrame: in.Body.TimeFrame,
-		}
-		sds, err = a.getSensorData(ctx, dataReq)
-		if err == nil {
-			resultSlice = append(resultSlice, sds...)
-		} else {
-			deviceErr.DeviceId = hw.DeviceId
-			deviceErr.Error = err.Error()
-			errSlice = append(errSlice, deviceErr)
-		}
-	}
-	return &struct {
-		Body *datafetcher.BatchSensorDataResponse
-	}{
-		Body: &datafetcher.BatchSensorDataResponse{
-			Results: resultSlice,
-			Errors:  errSlice,
-		},
-	}, nil
 }
 
 func (a *Api) BatchGetQueryFields(ctx context.Context,
 	in *deviceinfo.BatchQueryFieldsRequest) (*struct {
 	Body deviceinfo.BatchQueryFieldsResponse
 }, error) {
+	logFromTag(ctx, in)
 	var qr deviceinfo.QueryFieldsRequest
-	var dataResp *deviceinfo.QueryFieldsResponse
+	var dataResp deviceinfo.QueryFields
 	var deviceErr deviceinfo.QueryFieldsError
 	var err error
 	errSlice := make([]deviceinfo.QueryFieldsError, 0, len(in.Body.DeviceIds))
@@ -254,9 +221,9 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 		qr = deviceinfo.QueryFieldsRequest{
 			DeviceId: deviceId,
 		}
-		dataResp, err = a.GetQueryFields(ctx, &qr)
+		dataResp, err = a.getQueryFields(ctx, &qr)
 		if err == nil {
-			resultSlice = append(resultSlice, dataResp.Body)
+			resultSlice = append(resultSlice, dataResp)
 		} else {
 			deviceErr.DeviceId = deviceId
 			deviceErr.Error = err.Error()

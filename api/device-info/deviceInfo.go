@@ -43,7 +43,7 @@ type QueryFieldsRequest struct {
 type BatchQueryFieldsRequest struct{ Body DeviceBatch }
 
 type DeviceBatch struct {
-	DeviceIds []string `json:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$" minItems:"2" maxItems:"5"`
+	DeviceIds []string `log:"deviceids" json:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$" minItems:"2" maxItems:"5"`
 }
 
 type QueryFieldsError struct {
