@@ -20,7 +20,7 @@ import (
 
 func (a *Api) GetSensorData(ctx context.Context,
 	in *datafetcher.SensorDataRequest) (out *datafetcher.SensorDataResponse, err error) {
-	logRequest(ctx, in)
+	logFromTag(ctx, in)
 	sensorData, err := a.getSensorData(ctx, in)
 	if err != nil {
 		return nil, err
@@ -161,6 +161,7 @@ func (a *Api) Login(ctx context.Context,
 
 func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (
 	*deviceinfo.QueryFieldsResponse, error) {
+	logRequest(ctx, in)
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
 		logMetadata(ctx, logging.Metadata{

@@ -30,9 +30,9 @@ func logMetadata(ctx context.Context, m logging.Metadata) {
 	}
 }
 
-func logRequest(ctx context.Context, m logging.RequestMetadataProvider) {
-	md := m.Metadata()
-	logMetadata(ctx, md)
+func logFromTag(ctx context.Context, a any) {
+	m := logging.FromTagMetadata(a)
+	logMetadata(ctx, m)
 }
 
 const MaxDays = 90
