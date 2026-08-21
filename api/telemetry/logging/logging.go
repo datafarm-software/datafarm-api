@@ -3,6 +3,9 @@ package logging
 import (
 	"context"
 	"reflect"
+
+	"github.com/fatih/structtag"
+	"github.com/mitchellh/reflectwalk"
 )
 
 type Logger interface {
@@ -16,49 +19,56 @@ type Metadata struct {
 	KeyValue map[string][]string
 }
 
-func FromTagMetadata(a any) (m Metadata) {
-	m.KeyValue = make(map[string]string)
-	t := reflect.TypeOf(a)
-	v := reflect.ValueOf(a)
-	if !v.IsValid() {
-		return
+type metadataWalker struct {
+	metadata Metadata
+	tags     []string
+}
+
+func (w *metadataWalker) StructField(
+	field reflect.StructField,
+	value reflect.Value,
+) error {
+	tags, err := structtag.Parse(string(field.Tag))
+	if err != nil {
+		return err
 	}
-	if v.Kind() == reflect.Pointer {
-		if v.IsNil() {
-			return
-		}
-		v = v.Elem()
+	tag, err := tags.Get("log")
+	if err != nil {
+		w.tags = append(w.tags, "")
+		return nil
 	}
-	if v.Kind() != reflect.Struct {
-		return
+	w.tags = append(w.tags, tag.Name)
+	return nil
+}
+
+func (w *metadataWalker) Exit(loc reflectwalk.Location) error {
+	if loc == reflectwalk.StructField {
+		w.tags = w.tags[:len(w.tags)-1]
 	}
-	var field reflect.StructField
-	var val reflect.Value
-	var key string
-	var strSlice []string
-	var ok bool
-	for i := 0; i < t.NumField(); i++ {
-		key = ""
-		field = t.Field(i)
-		key = field.Tag.Get("log")
-		if key == "" {
-			continue
-		}
-		val = v.Field(i)
-		switch val.Kind() {
-		case reflect.String:
-			m.KeyValue[key] = val.String()
-		case reflect.Slice:
-			strSlice, ok = val.Interface().([]string)
-			if !ok {
-				continue
-			}
-			m.KeySlice[key] = strSlice
-		default:
-			continue
-		}
+	return nil
+}
+
+func (w *metadataWalker) Primitive(v reflect.Value) error {
+	if len(w.tags) == 0 {
+		return nil
 	}
-	return
+	tag := w.tags[len(w.tags)-1]
+	if tag == "" || v.Kind() != reflect.String {
+		return nil
+	}
+	w.metadata.KeyValue[tag] =
+		append(w.metadata.KeyValue[tag], v.String())
+	return nil
+}
+
+func FromTagMetadata(a any) (m Metadata, err error) {
+	w := &metadataWalker{
+		metadata: Metadata{
+			KeyValue: make(map[string][]string),
+		},
+	}
+	err = reflectwalk.Walk(a, w)
+	return w.metadata, err
 }
 
 type MockLogger struct{}

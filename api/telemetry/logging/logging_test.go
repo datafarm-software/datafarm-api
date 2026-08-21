@@ -9,8 +9,9 @@ import (
 
 func TestFromTagMetadata(t *testing.T) {
 	tests := map[string]struct {
-		input any
-		want  Metadata
+		input   any
+		want    Metadata
+		wantErr bool
 	}{
 
 		"parse sensordatarequest": {
@@ -27,11 +28,11 @@ func TestFromTagMetadata(t *testing.T) {
 			},
 			want: Metadata{
 				KeyValue: map[string][]string{
-					"deviceid":   []string{"123"},
-					"queryfield": []string{"1", "2", "3"},
-					"timezone":   []string{"Africa/Johannesburg"},
-					"start":      []string{"-2d"},
-					"stop":       []string{"now"},
+					"deviceid":   {"123"},
+					"queryfield": {"1", "2", "3"},
+					"timezone":   {"Africa/Johannesburg"},
+					"start":      {"-2d"},
+					"stop":       {"now"},
 				},
 			},
 		},
@@ -48,9 +49,9 @@ func TestFromTagMetadata(t *testing.T) {
 			},
 			want: Metadata{
 				KeyValue: map[string][]string{
-					"deviceid":   []string{"123"},
-					"queryfield": []string{"1", "2", "3"},
-					"start":      []string{"-2d"},
+					"deviceid":   {"123"},
+					"queryfield": {"1", "2", "3"},
+					"start":      {"-2d"},
 				},
 			},
 		},
@@ -58,7 +59,10 @@ func TestFromTagMetadata(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := FromTagMetadata(tc.input)
+			got, err := FromTagMetadata(tc.input)
+			if tc.wantErr != (err != nil) {
+				t.Fatalf("wantErr: %v, err: %v\n", tc.wantErr, err)
+			}
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Fatalf("mismatch: (-want +got): %s\n", diff)
 			}
