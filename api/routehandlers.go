@@ -244,8 +244,9 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	*deviceinfo.DeviceIdsResponse, error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
-		logMetadata(ctx, map[string]string{
-			"domain.error.message": "authstore.UserInfo not found in context"})
+		logMetadata(ctx, logging.Metadata{
+			KeyValue: map[string][]string{
+				"domain.error.message": {"authstore.UserInfo not found in context"}}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
@@ -261,13 +262,17 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	case authstore.Admin:
 		sr.Scope = deviceinfo.AllDevices
 	default:
-		logMetadata(ctx, map[string]string{"domain.error.message": fmt.Sprintf("unknown user role: %v", user.Role)})
+		logMetadata(ctx, logging.Metadata{
+			KeyValue: map[string][]string{
+				"domain.error.message": {fmt.Sprintf("unknown user role: %v", user.Role)}}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error determining user role.")
 	}
 	userDevices, err := a.DeviceInfo.GetDevices(sr)
 	if err != nil {
-		logMetadata(ctx, map[string]string{"deviceinfo.error.message": fmt.Sprintf("get devices: %v", err)})
+		logMetadata(ctx, logging.Metadata{
+			KeyValue: map[string][]string{
+				"deviceinfo.error.message": {fmt.Sprintf("get devices: %v", err)}}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting DeviceIds.")
 	}
@@ -278,10 +283,12 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 
 func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
 	*datafetcher.DataBoundaryResponse, error) {
+	logFromTag(ctx, in)
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
-		logMetadata(ctx, map[string]string{
-			"domain.error.message": "authstore.UserInfo not found in context"})
+		logMetadata(ctx, logging.Metadata{
+			KeyValue: map[string][]string{
+				"domain.error.message": {"authstore.UserInfo not found in context"}}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
@@ -295,7 +302,9 @@ func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 			return nil, huma.Error404NotFound(
 				"Device Not Found.")
 		default:
-			logMetadata(ctx, map[string]string{"deviceinfo.error.message": err.Error()})
+			logMetadata(ctx, logging.Metadata{
+				KeyValue: map[string][]string{
+					"deviceinfo.error.message": {err.Error()}}})
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking acess to DeviceId.")
 		}
@@ -311,7 +320,9 @@ func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 	}
 	dataBoundary, err := a.DataFetcher.GetDataBoundary(di)
 	if err != nil {
-		logMetadata(ctx, map[string]string{"datafetcher.error.message": fmt.Sprintf("getting data boundary: %v", err)})
+		logMetadata(ctx, logging.Metadata{
+			KeyValue: map[string][]string{
+				"datafetcher.error.message": {fmt.Sprintf("getting data boundary: %v", err)}}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting DataBoundary.")
 	}
