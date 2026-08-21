@@ -169,8 +169,9 @@ func (a *Api) getSensorData(
 	}
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
-		logF(ctx, map[string]string{
-			"domain.error.message": "authstore.UserInfo not found in context"})
+		logMetadata(ctx, logging.Metadata{
+			KeyValue: map[string][]string{
+				"domain.error.message": {"authstore.UserInfo not found in context"}}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
@@ -184,7 +185,9 @@ func (a *Api) getSensorData(
 			return nil, huma.Error404NotFound(
 				"Device Not Found.")
 		default:
-			logF(ctx, map[string]string{"deviceinfo.error.message": err.Error()})
+			logMetadata(ctx, logging.Metadata{
+				KeyValue: map[string][]string{
+					"deviceinfo.error.message": {err.Error()}}})
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking acess to DeviceId.")
 		}
@@ -200,10 +203,11 @@ func (a *Api) getSensorData(
 		}
 		qf, err := a.DeviceInfo.GetQueryFields(in.Hardware.DeviceId)
 		if err != nil {
-			logF(ctx,
-				map[string]string{"deviceinof.error.message": fmt.Sprintf(
-					"error getting query fields for: %s: %v",
-					in.Hardware.DeviceId, err)},
+			logMetadata(ctx, logging.Metadata{
+				KeyValue: map[string][]string{
+					"deviceinof.error.message": {fmt.Sprintf(
+						"error getting query fields for: %s: %v",
+						in.Hardware.DeviceId, err)}}},
 			)
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting QueryFields for Device.")
@@ -217,8 +221,10 @@ func (a *Api) getSensorData(
 	}
 	sensorData, err = a.DataFetcher.GetData(di)
 	if err != nil {
-		logF(ctx, map[string]string{"datafetcher.error.message": fmt.Sprintf(
-			"error getting data: %v", err)})
+		logMetadata(ctx, logging.Metadata{
+			KeyValue: map[string][]string{
+				"datafetcher.error.message": {fmt.Sprintf(
+					"error getting data: %v", err)}}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error fetching data.")
 	}
