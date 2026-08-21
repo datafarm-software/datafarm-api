@@ -4,7 +4,6 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/fatih/structtag"
 	"github.com/mitchellh/reflectwalk"
 )
 
@@ -29,20 +28,16 @@ func (w *metadataWalker) StructField(
 	field reflect.StructField,
 	value reflect.Value,
 ) error {
-	tags, err := structtag.Parse(string(field.Tag))
-	if err != nil {
-		return err
-	}
-	tag, err := tags.Get("log")
-	if err != nil {
+	tag := field.Tag.Get("log")
+	if tag == "" {
 		return nil
 	}
 	value = reflect.Indirect(value)
 	switch value.Kind() {
 	case reflect.String:
 		if value.String() != "" {
-			w.metadata.KeyValue[tag.Name] =
-				append(w.metadata.KeyValue[tag.Name], value.String())
+			w.metadata.KeyValue[tag] =
+				append(w.metadata.KeyValue[tag], value.String())
 		}
 	case reflect.Slice:
 		for i := range value.Len() {
@@ -50,8 +45,8 @@ func (w *metadataWalker) StructField(
 			if elem.Kind() != reflect.String || elem.String() == "" {
 				continue
 			}
-			w.metadata.KeyValue[tag.Name] =
-				append(w.metadata.KeyValue[tag.Name], elem.String())
+			w.metadata.KeyValue[tag] =
+				append(w.metadata.KeyValue[tag], elem.String())
 		}
 	}
 	return nil

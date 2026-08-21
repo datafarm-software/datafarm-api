@@ -52,8 +52,8 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 	if !a.TokenProvider.ValidToken(lr) {
 		if err := a.AuthStore.DeleteToken(authstore.UserToken{Token: lr.Body}); err != nil {
 			logMetadata(humaCtx.Context(), logging.Metadata{
-				KeyValue: map[string]string{
-					"authstore.error.message": err.Error()}})
+				KeyValue: map[string][]string{
+					"authstore.error.message": {err.Error()}}})
 			http.Error(w,
 				`Your token is invalid. Please login again. 
 				There was an internal error while deleting the invalid token.`,
@@ -66,17 +66,17 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 	user, err := a.AuthStore.GetUser(lr.Body)
 	if err != nil {
 		logMetadata(humaCtx.Context(), logging.Metadata{
-			KeyValue: map[string]string{
-				"authstore.error.message": fmt.Sprintf("getting user: %v", err)}})
+			KeyValue: map[string][]string{
+				"authstore.error.message": {fmt.Sprintf("getting user: %v", err)}}})
 		http.Error(w, "Internal error while getting user information.",
 			http.StatusInternalServerError)
 		return
 	}
 	logMetadata(humaCtx.Context(),
-		logging.Metadata{KeyValue: map[string]string{
-			"client.username": user.Username,
-			"client.company":  user.Company,
-			"client.network":  user.Network,
+		logging.Metadata{KeyValue: map[string][]string{
+			"client.username": {user.Username},
+			"client.company":  {user.Company},
+			"client.network":  {user.Network},
 		}},
 	)
 	next(huma.WithValue(humaCtx, "user", user))
@@ -93,8 +93,8 @@ func (a *Api) Login(ctx context.Context,
 	authBytes, err := base64.StdEncoding.DecodeString(parts[1])
 	if err != nil {
 		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string]string{
-				"domain.error.message": fmt.Sprintf("base64 decode: %v", err)}})
+			KeyValue: map[string][]string{
+				"domain.error.message": {fmt.Sprintf("base64 decode: %v", err)}}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error decoding given base64.")
 	}
@@ -131,8 +131,8 @@ func (a *Api) Login(ctx context.Context,
 	if err != nil {
 		if !errors.Is(err, authstore.NotLoggedIn) {
 			logMetadata(ctx, logging.Metadata{
-				KeyValue: map[string]string{
-					"authstore.error.message": fmt.Sprintf("getting token: %v", err)}})
+				KeyValue: map[string][]string{
+					"authstore.error.message": {fmt.Sprintf("getting token: %v", err)}}})
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking if user is logged in.")
 		}
@@ -143,15 +143,15 @@ func (a *Api) Login(ctx context.Context,
 	ut, err = a.TokenProvider.GenerateToken(username)
 	if err != nil {
 		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string]string{
-				"tokenprovider.error.message": fmt.Sprintf("generate token: %v", err)}})
+			KeyValue: map[string][]string{
+				"tokenprovider.error.message": {fmt.Sprintf("generate token: %v", err)}}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error generating an access token.")
 	}
 	if err = a.AuthStore.StoreToken(ut); err != nil {
 		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string]string{
-				"authstore.error.message": fmt.Sprintf("store token: %v", err)}})
+			KeyValue: map[string][]string{
+				"authstore.error.message": {fmt.Sprintf("store token: %v", err)}}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error linking the token to the user.")
 	}
@@ -165,8 +165,8 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
 		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string]string{
-				"domain.error.message": "authstore.UserInfo not found in context"}})
+			KeyValue: map[string][]string{
+				"domain.error.message": {"authstore.UserInfo not found in context"}}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
@@ -181,8 +181,8 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 				"Device Not Found.")
 		default:
 			logMetadata(ctx, logging.Metadata{
-				KeyValue: map[string]string{
-					"deviceinfo.error.message": err.Error()}})
+				KeyValue: map[string][]string{
+					"deviceinfo.error.message": {err.Error()}}})
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking acess to DeviceId.")
 		}
@@ -194,9 +194,9 @@ func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 	queryFields, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
 	if err != nil {
 		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string]string{
-				"deviceinfo.error.message": fmt.Sprintf(
-					"get queryfields: %v", err)}})
+			KeyValue: map[string][]string{
+				"deviceinfo.error.message": {fmt.Sprintf(
+					"get queryfields: %v", err)}}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error while getting queryfields.")
 	}

@@ -24,15 +24,16 @@ func logMetadata(ctx context.Context, m logging.Metadata) {
 		for k, v := range m.KeyValue {
 			rl.KeyValue[k] = v
 		}
-		for k, strSlice := range m.KeySlice {
-			rl.KeySlice[k] = append(rl.KeySlice[k], strSlice...)
-		}
 	}
 }
 
-func logFromTag(ctx context.Context, a any) {
-	m := logging.FromTagMetadata(a)
+func logFromTag(ctx context.Context, a any) error {
+	m, err := logging.FromTagMetadata(a)
+	if err != nil {
+		return err
+	}
 	logMetadata(ctx, m)
+	return nil
 }
 
 const MaxDays = 90
