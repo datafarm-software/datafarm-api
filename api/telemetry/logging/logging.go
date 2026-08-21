@@ -13,15 +13,25 @@ type Logger interface {
 }
 
 type Metadata struct {
-	KeyValue map[string]string
-	KeySlice map[string][]string
+	KeyValue map[string][]string
 }
 
 func FromTagMetadata(a any) (m Metadata) {
 	m.KeyValue = make(map[string]string)
-	m.KeySlice = make(map[string][]string)
 	t := reflect.TypeOf(a)
 	v := reflect.ValueOf(a)
+	if !v.IsValid() {
+		return
+	}
+	if v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return
+		}
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Struct {
+		return
+	}
 	var field reflect.StructField
 	var val reflect.Value
 	var key string
@@ -44,6 +54,8 @@ func FromTagMetadata(a any) (m Metadata) {
 				continue
 			}
 			m.KeySlice[key] = strSlice
+		default:
+			continue
 		}
 	}
 	return

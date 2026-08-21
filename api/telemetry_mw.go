@@ -65,18 +65,18 @@ type requestLog struct {
 
 func (a *Api) LogRequest(humaCtx huma.Context, next func(huma.Context)) {
 	rl := &requestLog{logging.Metadata{
-		KeyValue: map[string]string{
-			"http.method": humaCtx.Method(),
-			"http.route":  getPath(humaCtx),
+		KeyValue: map[string][]string{
+			"http.method": []string{humaCtx.Method()},
+			"http.route":  []string{getPath(humaCtx)},
 		},
 	}}
 	span := trace.SpanFromContext(humaCtx.Context())
 	if span.SpanContext().IsValid() {
-		rl.KeyValue["trace_id"] = span.SpanContext().TraceID().String()
-		rl.KeyValue["span_id"] = span.SpanContext().SpanID().String()
+		rl.KeyValue["trace_id"] = []string{span.SpanContext().TraceID().String()}
+		rl.KeyValue["span_id"] = []string{span.SpanContext().SpanID().String()}
 	}
 	next(huma.WithValue(humaCtx, "request-log", rl))
-	rl.KeyValue["http.status_code"] = fmt.Sprintf("%d", humaCtx.Status())
+	rl.KeyValue["http.status_code"] = []string{fmt.Sprintf("%d", humaCtx.Status())}
 	switch getFirstDigit(humaCtx.Status()) {
 	case 4:
 		a.Logger.Warn("HTTP Client Error", rl.Metadata)
