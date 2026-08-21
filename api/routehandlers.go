@@ -284,49 +284,11 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
 	*datafetcher.DataBoundaryResponse, error) {
 	logFromTag(ctx, in)
-	user, ok := ctx.Value("user").(authstore.UserInfo)
-	if !ok {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"domain.error.message": {"authstore.UserInfo not found in context"}}})
-		return nil, huma.Error500InternalServerError(
-			"Internal error getting user.")
-	}
-	di, code, err := a.checkAccessToDevice(in.DeviceId, user)
+	db, err := a.getSensorDataBoundary(ctx, in)
 	if err != nil {
-		switch code {
-		case http.StatusUnauthorized:
-			return nil, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		case http.StatusNotFound:
-			return nil, huma.Error404NotFound(
-				"Device Not Found.")
-		default:
-			logMetadata(ctx, logging.Metadata{
-				KeyValue: map[string][]string{
-					"deviceinfo.error.message": {err.Error()}}})
-			return nil, huma.Error500InternalServerError(
-				"Internal error checking acess to DeviceId.")
-		}
+		return nil, err
 	}
-	if !authstore.HasPermission(authstore.Role(user.Role),
-		authstore.GetDataBoundary) {
-		return nil, huma.Error401Unauthorized("Access denied to DataBoundary.")
-	}
-	di.Timezone, err = in.Timezone.Location()
-	if err != nil {
-		return nil, huma.Error400BadRequest(
-			"Invalid location. Please try a different IANA Timezone.")
-	}
-	dataBoundary, err := a.DataFetcher.GetDataBoundary(di)
-	if err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"datafetcher.error.message": {fmt.Sprintf("getting data boundary: %v", err)}}})
-		return nil, huma.Error500InternalServerError(
-			"Internal error getting DataBoundary.")
-	}
-	return &datafetcher.DataBoundaryResponse{Body: dataBoundary}, nil
+	return &datafetcher.DataBoundaryResponse{Body: db}, nil
 }
 
 func (a *Api) BatchGetSensorDataBoundary(ctx context.Context,
