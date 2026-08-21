@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os/exec"
 	"reflect"
 	"strings"
 
@@ -269,7 +270,9 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 }
 
 func Config(mode Mode) (config huma.Config) {
-	config = huma.DefaultConfig("DataFarm SensorData API", "1.1.4")
+	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0")
+	version, _ := cmd.Output()
+	config = huma.DefaultConfig("DataFarm SensorData API", string(version))
 	config.Info.Description = `
 ## Welcome
 

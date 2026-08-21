@@ -244,9 +244,6 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	*deviceinfo.DeviceIdsResponse, error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"domain.error.message": {"authstore.UserInfo not found in context"}}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}

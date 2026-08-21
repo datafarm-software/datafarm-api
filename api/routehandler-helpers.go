@@ -180,9 +180,6 @@ func (a *Api) getSensorData(
 	}
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"domain.error.message": {"authstore.UserInfo not found in context"}}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
@@ -246,9 +243,6 @@ func (a *Api) getQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 	qf deviceinfo.QueryFields, err error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"domain.error.message": {"authstore.UserInfo not found in context"}}})
 		return qf, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
@@ -289,9 +283,6 @@ func (a *Api) getSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 	db datafetcher.DataBoundary, err error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"domain.error.message": {"authstore.UserInfo not found in context"}}})
 		return db, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
