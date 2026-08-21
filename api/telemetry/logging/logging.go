@@ -2,6 +2,7 @@ package logging
 
 import (
 	"context"
+	"reflect"
 )
 
 type Logger interface {
@@ -16,8 +17,36 @@ type Metadata struct {
 	KeySlice map[string][]string
 }
 
-type RequestMetadataProvider interface {
-	Metadata() Metadata
+func FromTagMetadata(a any) (m Metadata) {
+	m.KeyValue = make(map[string]string)
+	m.KeySlice = make(map[string][]string)
+	t := reflect.TypeOf(a)
+	v := reflect.ValueOf(a)
+	var field reflect.StructField
+	var val reflect.Value
+	var key string
+	var strSlice []string
+	var ok bool
+	for i := 0; i < t.NumField(); i++ {
+		key = ""
+		field = t.Field(i)
+		key = field.Tag.Get("log")
+		if key == "" {
+			continue
+		}
+		val = v.Field(i)
+		switch val.Kind() {
+		case reflect.String:
+			m.KeyValue[key] = val.String()
+		case reflect.Slice:
+			strSlice, ok = val.Interface().([]string)
+			if !ok {
+				continue
+			}
+			m.KeySlice[key] = strSlice
+		}
+	}
+	return
 }
 
 type MockLogger struct{}
