@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os/exec"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -269,15 +270,28 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	huma.Register(api, op, ho.GetSensorDataBoundary)
 }
 
+var versionRegex = regexp.MustCompile(`[\d]+.[\d]+.[\d]+`)
+
+func findVersion(stdOut []byte) string {
+	verStr := string(stdOut)
+	return versionRegex.FindString(verStr)
+}
+
 func Config(mode Mode) (config huma.Config) {
 	var cmd *exec.Cmd
 	cmd = exec.Command("git", "describe", "--tags", "--abbrev=0")
-	version, _ := cmd.Output()
-	if version == nil {
+	stdOut, _ := cmd.Output()
+	verStr := findVersion(stdOut)
+	if verStr == "" {
 		cmd = exec.Command("cat", "/app/.git-version")
-		version, _ = cmd.Output()
+		stdOut, _ = cmd.Output()
+		verStr = findVersion(stdOut)
 	}
-	config = huma.DefaultConfig("DataFarm SensorData API", string(version))
+	if verStr == "" {
+		//NOTE: if all else fails, fallback to v1
+		verStr = "1"
+	}
+	config = huma.DefaultConfig("DataFarm SensorData API", verStr)
 	config.Info.Description = `
 ## Welcome
 
