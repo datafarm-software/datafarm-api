@@ -49,8 +49,11 @@ func (o *OtlpTracer) Close(ctx context.Context) error {
 
 func (o *OtlpTracer) Start(ctx context.Context, name string, kind SpanKind,
 	mapAttrs map[string]string) (retCtx context.Context, s Span) {
-	attrs := make([]attribute.KeyValue, len(mapAttrs)+1)
+	attrs := make([]attribute.KeyValue, 0, len(mapAttrs)+1)
 	for k, v := range mapAttrs {
+		if k == "" {
+			continue
+		}
 		attrs = append(attrs, attribute.String(k, v))
 	}
 	os := &OtlpSpan{}
@@ -74,10 +77,15 @@ type OtlpSpan struct {
 	trace.Span
 }
 
-func (o *OtlpSpan) End() {}
+func (o *OtlpSpan) End() {
+	o.Span.End()
+}
 func (o *OtlpSpan) SetAttributes(mapAttrs map[string]string) {
-	attrs := make([]attribute.KeyValue, len(mapAttrs))
+	attrs := make([]attribute.KeyValue, 0, len(mapAttrs))
 	for k, v := range mapAttrs {
+		if k == "" {
+			continue
+		}
 		attrs = append(attrs, attribute.String(k, v))
 	}
 	o.Span.SetAttributes(attrs...)

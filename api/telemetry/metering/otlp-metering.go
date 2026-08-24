@@ -160,8 +160,11 @@ func (o *OtlpRecorder) ActiveUsersCountAdd(i int) {
 }
 
 func (o *OtlpRecorder) CountApiRequest(ctx context.Context, i int, attrMap map[string]string) {
-	attrs := make([]attribute.KeyValue, len(attrMap))
+	attrs := make([]attribute.KeyValue, 0, len(attrMap))
 	for k, v := range attrMap {
+		if k == "" {
+			continue
+		}
 		attrs = append(attrs, attribute.String(k, v))
 	}
 	o.apiCounter.Add(ctx, int64(i), metric.WithAttributes(attrs...))
