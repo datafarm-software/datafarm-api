@@ -15,7 +15,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      - run: git fetch --depth=1 origin ${{ github.base_ref }}
+        with:
+          fetch-tags: true
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -31,4 +32,4 @@ jobs:
         with:
           base: "origin/${{ github.base_ref }}:api/openapi.yaml"
           revision: "api/openapi.generated.yaml"
-          fail-on: 'WARN'
+          fail-on: "WARN"
