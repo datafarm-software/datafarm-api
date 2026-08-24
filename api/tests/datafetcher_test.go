@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/datafarm-software/datafarm-api/datafetcher"
+	"github.com/datafarm-software/datafarm-api/api/datafetcher"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -107,11 +107,9 @@ func TestSensorDataSliceCsvInfo(t *testing.T) {
 		},
 	}
 
-	var got datafetcher.CsvInfo
-	var err error
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err = tc.input.CsvInfo()
+			got, err := tc.input.CsvInfo()
 			if tc.wantErr != (err != nil) {
 				t.Fatalf("wantErr: %v, err: %v", tc.wantErr, err)
 			}
@@ -214,11 +212,9 @@ func TestSensorDataSliceCsv(t *testing.T) {
 		},
 	}
 
-	var got string
-	var err error
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err = tc.input.Csv()
+			got, err := tc.input.Csv()
 			if tc.wantErr != (err != nil) {
 				t.Fatalf("wantErr: %v, err: %v", tc.wantErr, err)
 			}

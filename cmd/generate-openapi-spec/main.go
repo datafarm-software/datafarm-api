@@ -29,8 +29,7 @@ func main() {
 	router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
 	config := localhuma.Config(localhuma.Production)
 	humaApi := humamux.New(router, config)
-	a := new(api.Api)
-	localhuma.SetupApi(humaApi, a)
+	localhuma.SetupApiOperations(humaApi, &api.Api{})
 	doc := humaApi.OpenAPI()
 	out, err := yaml.Marshal(doc)
 	if err != nil {

@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os/exec"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/datafarm-software/datafarm-api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
-	"github.com/datafarm-software/datafarm-api/tokenprovider"
+	"github.com/datafarm-software/datafarm-api/api/datafetcher"
+	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 )
 
 type Mode int
@@ -25,6 +27,10 @@ const MajorApiVersionRoutePrefix = "/v1"
 
 type HumaOperator interface {
 	Mode() Mode
+	LogRequest(ctx huma.Context, next func(huma.Context))
+	TraceRequest(ctx huma.Context, next func(huma.Context))
+	CountApiRequest(ctx huma.Context, next func(huma.Context))
+	RecordLatency(ctx huma.Context, next func(huma.Context))
 	RateLimit(ctx huma.Context, next func(huma.Context))
 	VerifyToken(ctx huma.Context, next func(huma.Context))
 	GetSensorData(context.Context,
@@ -161,8 +167,13 @@ func baseOperation(method string, middlewares *huma.Middlewares) huma.Operation 
 }
 
 func RegisterHumaOperations(api huma.API, ho HumaOperator) {
-	mw := &huma.Middlewares{ho.RateLimit, ho.VerifyToken}
-	op := baseOperation("POST", &huma.Middlewares{ho.RateLimit})
+	mw := []func(ctx huma.Context, next func(huma.Context)){
+		ho.RateLimit, ho.CountApiRequest, ho.TraceRequest, ho.LogRequest, ho.RecordLatency,
+		ho.VerifyToken,
+	}
+	noTokenVerification := huma.Middlewares(mw[:len(mw)-1])
+	allMw := huma.Middlewares(mw)
+	op := baseOperation("POST", &noTokenVerification)
 	op.Path = "/login"
 	op.Summary = "Login"
 	op.Security = Basic
@@ -174,7 +185,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.Login)
 
-	op = baseOperation("POST", mw)
+	op = baseOperation("POST", &allMw)
 	op.Path = "/batch/device/sensordata"
 	op.Summary = "Batch Get Sensor Data"
 	op.Description = "Clients can use this route to request data from multiple device ids."
@@ -182,7 +193,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.BatchGetSensorData)
 
-	op = baseOperation("POST", mw)
+	op = baseOperation("POST", &allMw)
 	op.Path = "/batch/device/queryfields"
 	op.Summary = "Batch Get DeviceId QueryFields"
 	op.Description =
@@ -191,7 +202,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.BatchGetQueryFields)
 
-	op = baseOperation("POST", mw)
+	op = baseOperation("POST", &allMw)
 	op.Path = "/batch/device/databoundary"
 	op.Summary = "Batch Get DeviceId DataBoundary"
 	op.Description = "Clients can use this route to get the DataBoundary of multiple devices."
@@ -209,7 +220,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 		},
 	}
 
-	op = baseOperation("GET", mw)
+	op = baseOperation("GET", &allMw)
 	op.Path = "/device/{deviceId}/sensordata"
 	deviceIdParam.Description = "Device Id to request data from."
 	op.Parameters = []*huma.Param{deviceIdParam}
@@ -226,7 +237,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["204"] = &huma.Response{}
 	op.Parameters = []*huma.Param{}
 
-	op = baseOperation("GET", mw)
+	op = baseOperation("GET", &allMw)
 	op.Path = "/device/{deviceId}/queryfields"
 	op.Summary = "Get DeviceId QueryFields"
 	op.Description = "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor might have a 'temperature' QueryField."
@@ -237,7 +248,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	huma.Register(api, op, ho.GetQueryFields)
 
-	op = baseOperation("GET", mw)
+	op = baseOperation("GET", &allMw)
 	op.Path = "/device/ids"
 	op.Summary = "Get Client DeviceIds"
 	op.Description = "Clients can use this route to get the DeviceIds they have access to."
@@ -247,7 +258,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.GetDeviceIds)
 
-	op = baseOperation("GET", mw)
+	op = baseOperation("GET", &allMw)
 	op.Path = "/device/{deviceId}/databoundary"
 	op.Summary = "Get DeviceId DataBoundary"
 	op.Description = "Clients can use this route to get the device's DataBoundary. A DataBoundary contains the oldest and most recent sensordata timestamps for the device."
@@ -259,8 +270,28 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	huma.Register(api, op, ho.GetSensorDataBoundary)
 }
 
+var versionRegex = regexp.MustCompile(`[\d]+.[\d]+.[\d]+`)
+
+func findVersion(stdOut []byte) string {
+	verStr := string(stdOut)
+	return versionRegex.FindString(verStr)
+}
+
 func Config(mode Mode) (config huma.Config) {
-	config = huma.DefaultConfig("DataFarm SensorData API", "1.1.4")
+	var cmd *exec.Cmd
+	cmd = exec.Command("git", "describe", "--tags", "--abbrev=0")
+	stdOut, _ := cmd.Output()
+	verStr := findVersion(stdOut)
+	if verStr == "" {
+		cmd = exec.Command("cat", "/app/.git-version")
+		stdOut, _ = cmd.Output()
+		verStr = findVersion(stdOut)
+	}
+	if verStr == "" {
+		//NOTE: if all else fails, fallback to v1
+		verStr = "1"
+	}
+	config = huma.DefaultConfig("DataFarm SensorData API", verStr)
 	config.Info.Description = `
 ## Welcome
 
@@ -344,7 +375,7 @@ DataFarm welcomes external contribution to the API, through Open Source under th
 	return
 }
 
-func SetupApi(humaApi huma.API, a HumaOperator) {
+func SetupApiOperations(humaApi huma.API, a HumaOperator) {
 	if a.Mode() == Production {
 		humaApi.OpenAPI().Servers = append(humaApi.OpenAPI().Servers, &huma.Server{
 			URL: MajorApiVersionRoutePrefix,

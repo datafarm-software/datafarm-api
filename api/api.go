@@ -12,20 +12,25 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/danielgtaylor/huma/v2/humacli"
+	"github.com/datafarm-software/datafarm-api/api/authstore"
+	"github.com/datafarm-software/datafarm-api/api/datafetcher"
+	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
 	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
-	"github.com/datafarm-software/datafarm-api/authstore"
-	"github.com/datafarm-software/datafarm-api/datafetcher"
-	df "github.com/datafarm-software/datafarm-api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
-	"github.com/datafarm-software/datafarm-api/tokenprovider"
+	"github.com/datafarm-software/datafarm-api/api/telemetry"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/metering"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/tracing"
+	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource"
 
-	"github.com/datafarm-software/datafarm-api/redis"
+	"github.com/datafarm-software/datafarm-api/api/redis"
 	"github.com/gorilla/mux"
 )
 
 const EmptyPayloadLength int = 16
 
-var ctx context.Context
+var pkgCtx context.Context
 
 var QUERYFIELD_REGEX = regexp.MustCompile(`^[a-zA-Z0-9_\-\s:]*$`)
 
@@ -40,6 +45,7 @@ var SPECIAL_CHARS_REGEX = regexp.MustCompile(`[@$!%*?&#]`)
 type ApiOpts struct {
 	RedisOpts      redis.RedisOpts        `mapstructure:"Redis" validate:"required"`
 	InfluxOpts     datafetcher.InfluxOpts `mapstructure:"Influx" validate:"required"`
+	TelemetryOpts  telemetry.Opts         `mapstructure:"telemetry" validate:"required"`
 	Port           string                 `mapstructure:"port" validate:"required"`
 	PrivateKeyFile string                 `mapstructure:"privatekeyfile" validate:"required"`
 	PublicKeyFile  string                 `mapstructure:"publickeyfile" validate:"required"`
@@ -48,14 +54,21 @@ type ApiOpts struct {
 
 type Api struct {
 	DeviceInfo    deviceinfo.DeviceInfoFetcher
-	DataFetcher   df.DataFetcher
+	DataFetcher   datafetcher.DataFetcher
 	TokenProvider tokenprovider.TokenProvider
 	AuthStore     authstore.AuthStore
+	Meter         metering.Meter
+	Tracer        tracing.Tracer
+	Logger        logging.Logger
 	Port          string
 	mode          localhuma.Mode
 }
 
 func Start(opts ApiOpts) error {
+	pkgCtx = context.Background()
+	go func() {
+		cleanupOldLimiters(pkgCtx)
+	}()
 	redis, err := redis.NewRedis(opts.RedisOpts)
 	if err != nil {
 		return err
@@ -68,16 +81,36 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("error initializing jwt authstore: %v", err)
 	}
-	ctx = context.Background()
-	go func() {
-		cleanupOldLimiters(ctx)
-	}()
+	res, err := resource.New(pkgCtx, resource.WithContainer(),
+		resource.WithAttributes(
+			attribute.String("service.name", "datafarm-sensordata-api"),
+		),
+	)
+	if err != nil {
+		return fmt.Errorf("init resource: %v", err)
+	}
+	logger, err := logging.NewOtlpLogger(res, opts.TelemetryOpts.CollectorEndpoint)
+	if err != nil {
+		return fmt.Errorf("init logger: %v", err)
+	}
+	tracer, err := tracing.NewOtlpTracer(res, opts.TelemetryOpts.CollectorEndpoint)
+	if err != nil {
+		return fmt.Errorf("init tracer: %v", err)
+	}
+	meter, err := metering.NewOtlpMeter(res, opts.TelemetryOpts.CollectorEndpoint)
+	if err != nil {
+		return fmt.Errorf("init meter: %v", err)
+	}
 	api := &Api{
-		DeviceInfo: redis, DataFetcher: df,
+		DeviceInfo:    redis,
+		DataFetcher:   df,
 		TokenProvider: tokenAuth,
 		AuthStore:     redis,
 		Port:          opts.Port,
 		mode:          opts.Mode,
+		Logger:        logger,
+		Tracer:        tracer,
+		Meter:         meter,
 	}
 	authstore.InitRoles()
 	cli := humacli.New(func(hooks humacli.Hooks, options *ApiOpts) {
@@ -90,13 +123,13 @@ func Start(opts ApiOpts) error {
 			log.Println("Server started on ", server.Addr)
 			if err := server.ListenAndServe(); err != nil {
 				if !errors.Is(err, http.ErrServerClosed) {
-					log.Fatalf("HTTP server error: %v", err)
+					log.Printf("HTTP server close: %v", err)
 				}
 			}
 		})
 		hooks.OnStop(func() {
 			api.Close()
-			server.Shutdown(ctx)
+			server.Shutdown(pkgCtx)
 		})
 	})
 	cli.Run()
@@ -107,22 +140,32 @@ func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
 	config := localhuma.Config(a.mode)
 	router := mux.NewRouter()
 	humaApi := humamux.New(router, config)
-	localhuma.SetupApi(humaApi, a)
+	localhuma.SetupApiOperations(humaApi, a)
 	return router, &config
 }
 
 func (a *Api) Close() {
-	if err := a.DeviceInfo.Close(); err != nil {
-		log.Fatalf("error closing metadatafetcher: %v", err)
+	var err error
+	if err = a.DeviceInfo.Close(); err != nil {
+		log.Printf("error closing metadatafetcher: %v", err)
 	}
-	if err := a.DataFetcher.Close(); err != nil {
-		log.Fatalf("error closing datafetcher: %v", err)
+	if err = a.DataFetcher.Close(); err != nil {
+		log.Printf("error closing datafetcher: %v", err)
 	}
-	if err := a.TokenProvider.Close(); err != nil {
-		log.Fatalf("error closing token auth: %v", err)
+	if err = a.TokenProvider.Close(); err != nil {
+		log.Printf("error closing token auth: %v", err)
 	}
-	if err := a.AuthStore.Close(); err != nil {
-		log.Fatalf("error closing basic auth: %v", err)
+	if err = a.AuthStore.Close(); err != nil {
+		log.Printf("error closing basic auth: %v", err)
+	}
+	if err = a.Logger.Close(pkgCtx); err != nil {
+		log.Printf("error closing logger: %v", err)
+	}
+	if err = a.Tracer.Close(pkgCtx); err != nil {
+		log.Printf("error closing tracer: %v", err)
+	}
+	if err = a.Meter.Close(pkgCtx); err != nil {
+		log.Printf("error closing meter: %v", err)
 	}
 	log.Println("Api shutdown.")
 }

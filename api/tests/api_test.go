@@ -14,12 +14,15 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/datafarm-software/datafarm-api/api"
+	"github.com/datafarm-software/datafarm-api/api/authstore"
+	"github.com/datafarm-software/datafarm-api/api/datafetcher"
+	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
 	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
-	"github.com/datafarm-software/datafarm-api/authstore"
-	"github.com/datafarm-software/datafarm-api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
-	"github.com/datafarm-software/datafarm-api/redis"
-	"github.com/datafarm-software/datafarm-api/tokenprovider"
+	"github.com/datafarm-software/datafarm-api/api/redis"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/metering"
+	"github.com/datafarm-software/datafarm-api/api/telemetry/tracing"
+	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 	"github.com/google/go-cmp/cmp"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
@@ -56,7 +59,6 @@ var OutsideTimeRange = time.Now().UTC().Add(-25 * time.Hour)
 var InsideTimeRange = time.Now().UTC().Add(-2 * time.Hour)
 var AlsoInsideTimeRange = time.Now().UTC().Add(-1 * time.Hour)
 var RegisteredCompanyDevices = []string{RegisteredDeviceId}
-var a = &api.Api{}
 
 var considerTimeZone = cmp.Comparer(func(x, y time.Time) bool {
 	return x.Equal(y) &&
@@ -66,12 +68,11 @@ var cmpOpts = []cmp.Option{considerTimeZone}
 
 func TestLogin(t *testing.T) {
 	tests := map[string]struct {
-		wantErr            bool
-		wantStatus         int
+		MockApi
 		wantToken          string
 		username, password string
-		mockAuthStore      authstore.Schema
-		mockDeviceInfo     deviceinfo.Schema
+		wantStatus         int
+		wantErr            bool
 	}{
 
 		"successfully login": {
@@ -80,14 +81,16 @@ func TestLogin(t *testing.T) {
 			wantToken:  ValidToken,
 			username:   RegisteredUsername,
 			password:   RegisteredPassword,
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  RegisteredCompany,
-						Role:     int(authstore.User),
-						Password: RegisteredPassword,
-						Network:  RegisteredNetwork,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
 					},
 				},
 			},
@@ -98,37 +101,28 @@ func TestLogin(t *testing.T) {
 			wantStatus: http.StatusUnauthorized,
 			username:   UnregisteredUsername,
 			password:   UnregisteredPassword,
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  RegisteredCompany,
-						Role:     int(authstore.User),
-						Password: RegisteredPassword,
-						Network:  RegisteredNetwork,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
 					},
 				},
 			},
 		},
 	}
 
-	db, err := miniredis.Run()
-	require.Nil(t, err)
-	defer db.Close()
-	humaTest := setupHuma(t)
+	var humaTest humatest.TestAPI
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			testingRedis, err := redis.NewTestingRedis(db.Addr())
-			require.Nil(t, err)
-			defer testingRedis.Close()
-			a.DeviceInfo = testingRedis
-			a.AuthStore = testingRedis
-			err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
-			require.Nil(t, err)
-			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
-			require.Nil(t, err)
-			a.TokenProvider = &tokenprovider.MockTokenProvider{}
-			defer a.TokenProvider.Close()
+			a, close := tc.MockApi.Setup(t)
+			defer close()
+			humaTest = setupHuma(t, a)
 			encodedDetails := base64.StdEncoding.EncodeToString(
 				[]byte(tc.username + ":" + tc.password))
 			resp := humaTest.Post("/login",
@@ -152,8 +146,9 @@ func TestLogin(t *testing.T) {
 
 func TestGetSensorData(t *testing.T) {
 	tests := map[string]struct {
+		MockApi
+		GetSensorDataTest
 		want []datafetcher.SensorData
-		gsdt GetSensorDataTest
 	}{
 
 		"successfully get deviceid data": {
@@ -166,9 +161,7 @@ func TestGetSensorData(t *testing.T) {
 					},
 				},
 			},
-			gsdt: GetSensorDataTest{
-				wantErr:    false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -209,9 +202,13 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{
 						QueryFields: []string{RegisteredQueryField},
 					},
@@ -232,9 +229,7 @@ func TestGetSensorData(t *testing.T) {
 					},
 				},
 			},
-			gsdt: GetSensorDataTest{
-				wantErr:    false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -275,9 +270,13 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start:    RelativeStart,
@@ -289,8 +288,7 @@ func TestGetSensorData(t *testing.T) {
 
 		"invalid timezone requested so unprocessable": {
 			want: nil,
-			gsdt: GetSensorDataTest{wantErr: true,
-				wantStatus: http.StatusUnprocessableEntity,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -328,12 +326,16 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				token: ValidToken,
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    true,
+				wantStatus: http.StatusUnprocessableEntity,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start:    RelativeStart,
@@ -345,9 +347,7 @@ func TestGetSensorData(t *testing.T) {
 
 		"unprocessable because more than 20 queryFields requested": {
 			want: nil,
-			gsdt: GetSensorDataTest{
-				wantErr:    true,
-				wantStatus: http.StatusUnprocessableEntity,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -427,12 +427,16 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				token: ValidToken,
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    true,
+				wantStatus: http.StatusUnprocessableEntity,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{
 						QueryFields: []string{
 							RegisteredQueryField,
@@ -476,9 +480,7 @@ func TestGetSensorData(t *testing.T) {
 					},
 				},
 			},
-			gsdt: GetSensorDataTest{
-				wantErr:    false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -523,9 +525,13 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{"all"}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -545,8 +551,7 @@ func TestGetSensorData(t *testing.T) {
 					},
 				},
 			},
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -591,9 +596,13 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{"all"}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -613,8 +622,7 @@ func TestGetSensorData(t *testing.T) {
 					},
 				},
 			},
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -659,9 +667,13 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{"all"}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -672,11 +684,12 @@ func TestGetSensorData(t *testing.T) {
 
 		"unknown token": {
 			want: nil,
-			gsdt: GetSensorDataTest{wantErr: true,
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    true,
 				wantStatus: http.StatusUnauthorized,
 				token:      InvalidToken,
 				deviceId:   RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -687,17 +700,20 @@ func TestGetSensorData(t *testing.T) {
 
 		"start time in future": {
 			want: nil,
-			gsdt: GetSensorDataTest{wantErr: true,
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    true,
 				wantStatus: http.StatusBadRequest,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: FutureStart,
 						Stop:  Stop,
 					},
 				},
+			},
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -720,17 +736,20 @@ func TestGetSensorData(t *testing.T) {
 
 		"start time greater than stop time": {
 			want: nil,
-			gsdt: GetSensorDataTest{wantErr: true,
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    true,
 				wantStatus: http.StatusBadRequest,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: StartGreaterThanStop,
 						Stop:  Stop,
 					},
 				},
+			},
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -768,8 +787,7 @@ func TestGetSensorData(t *testing.T) {
 					},
 				},
 			},
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -817,9 +835,13 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: Start,
@@ -831,9 +853,7 @@ func TestGetSensorData(t *testing.T) {
 
 		"relative start time more than 90 days in the past": {
 			want: nil,
-			gsdt: GetSensorDataTest{wantErr: true,
-				wantStatus: http.StatusBadRequest,
-				token:      ValidToken,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -851,8 +871,13 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    true,
+				wantStatus: http.StatusBadRequest,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeMoreThanNinetyDays,
@@ -863,9 +888,7 @@ func TestGetSensorData(t *testing.T) {
 
 		"start time more than 90 days in the past": {
 			want: nil,
-			gsdt: GetSensorDataTest{wantErr: true,
-				wantStatus: http.StatusBadRequest,
-				token:      ValidToken,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -883,8 +906,13 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    true,
+				wantStatus: http.StatusBadRequest,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: MoreThanNinetyDays,
@@ -911,8 +939,7 @@ func TestGetSensorData(t *testing.T) {
 					},
 				},
 			},
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -960,9 +987,13 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -990,8 +1021,7 @@ func TestGetSensorData(t *testing.T) {
 					},
 				},
 			},
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -1041,10 +1071,16 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
-					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
+					Hardware: datafetcher.Hardware{
+						QueryFields: []string{
+							RegisteredQueryField, AnotherRegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
 					},
@@ -1069,8 +1105,7 @@ func TestGetSensorData(t *testing.T) {
 					},
 				},
 			},
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -1125,9 +1160,13 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -1153,8 +1192,7 @@ func TestGetSensorData(t *testing.T) {
 					},
 				},
 			},
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -1209,9 +1247,13 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -1222,8 +1264,7 @@ func TestGetSensorData(t *testing.T) {
 
 		"no data in requested range": {
 			want: nil,
-			gsdt: GetSensorDataTest{wantErr: true,
-				wantStatus: http.StatusNoContent,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -1264,9 +1305,13 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    true,
+				wantStatus: http.StatusNoContent,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: "-1h",
@@ -1277,8 +1322,7 @@ func TestGetSensorData(t *testing.T) {
 
 		"device doesnt exist": {
 			want: nil,
-			gsdt: GetSensorDataTest{wantErr: true,
-				wantStatus: http.StatusNotFound,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -1319,9 +1363,13 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: UnregisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    true,
+				wantStatus: http.StatusNotFound,
+				token:      ValidToken,
+				deviceId:   UnregisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: "-1h",
@@ -1332,8 +1380,7 @@ func TestGetSensorData(t *testing.T) {
 
 		"non admin can't request deviceid not in user company": {
 			want: nil,
-			gsdt: GetSensorDataTest{wantErr: true,
-				wantStatus: http.StatusUnauthorized,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -1374,9 +1421,13 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    true,
+				wantStatus: http.StatusUnauthorized,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -1395,8 +1446,7 @@ func TestGetSensorData(t *testing.T) {
 					},
 				},
 			},
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -1437,9 +1487,13 @@ func TestGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{
+				wantErr:    false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -1449,28 +1503,23 @@ func TestGetSensorData(t *testing.T) {
 		},
 	}
 
-	db, err := miniredis.Run()
-	require.Nil(t, err)
-	defer db.Close()
-	humaTest := setupHuma(t)
-	var closeFunc CloseFunc
-	var qp string
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			closeFunc = setupGetSensorDataTest(t, tc.gsdt, db)
+			api, closeFunc := tc.MockApi.Setup(t)
 			defer closeFunc()
-			qp = makeQueryParams(tc.gsdt.deviceRequest)
-			route := "/device/" + tc.gsdt.deviceId + "/sensordata" + qp
+			humaTest := setupHuma(t, api)
+			qp := makeQueryParams(tc.SensorDataRequest)
+			route := "/device/" + tc.deviceId + "/sensordata" + qp
 			resp := humaTest.Get(route,
-				fmt.Sprintf(`Authorization: Bearer %s`, tc.gsdt.token))
-			if resp.Code != tc.gsdt.wantStatus {
-				t.Fatalf("wantStatus: %d, response status: %d", tc.gsdt.wantStatus, resp.Code)
+				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
+			if resp.Code != tc.wantStatus {
+				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
 			}
 			defer resp.Result().Body.Close()
-			if !tc.gsdt.wantErr {
+			if !tc.wantErr {
 				var dd []datafetcher.SensorData
 				body := resp.Body.Bytes()
-				err = json.Unmarshal(body, &dd)
+				err := json.Unmarshal(body, &dd)
 				require.Nil(t, err)
 				if diff := cmp.Diff(tc.want, dd, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
@@ -1480,15 +1529,19 @@ func TestGetSensorData(t *testing.T) {
 	}
 }
 
-func setupHuma(t *testing.T) humatest.TestAPI {
+func setupHuma(t *testing.T, api *api.Api) humatest.TestAPI {
 	config := localhuma.Config(localhuma.Production)
 	router := mux.NewRouter()
 	humaApi := humamux.New(router, config)
-	localhuma.SetupApi(humaApi, a)
+	localhuma.SetupApiOperations(humaApi, api)
 	return humatest.Wrap(t, humaApi)
 }
 
-func makeQueryParams(dr datafetcher.SensorDataRequest) string {
+// TODO: make query params automatically add queries if new field added
+func makeQueryParams(dr *datafetcher.SensorDataRequest) string {
+	if dr == nil {
+		return "request is nil"
+	}
 	b := strings.Builder{}
 	start := url.QueryEscape(dr.Start)
 	fmt.Fprintf(&b, "?start=%s", start)
@@ -1505,14 +1558,12 @@ func makeQueryParams(dr datafetcher.SensorDataRequest) string {
 
 func TestGetQueryFields(t *testing.T) {
 	tests := map[string]struct {
-		wantErr        bool
-		wantStatus     int
-		deviceId       string
-		want           deviceinfo.QueryFields
-		mockTokens     map[string]bool
-		mockAuthStore  authstore.Schema
-		mockDeviceInfo deviceinfo.Schema
-		token          string
+		MockApi
+		want       deviceinfo.QueryFields
+		deviceId   string
+		token      string
+		wantStatus int
+		wantErr    bool
 	}{
 
 		"successfully get queryfields": {
@@ -1523,35 +1574,37 @@ func TestGetQueryFields(t *testing.T) {
 				DeviceId:    RegisteredDeviceId,
 				QueryFields: append(deviceinfo.GeneralQueryFields, RegisteredQueryField),
 			},
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  RegisteredCompany,
-						Role:     int(authstore.User),
-						Password: RegisteredPassword,
-						Network:  RegisteredNetwork,
+			token: ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				UserTokens: []authstore.UserToken{
-					{Username: RegisteredUsername, Token: ValidToken},
+				mockTokens: map[string]bool{
+					ValidToken: true,
 				},
-			},
-			mockTokens: map[string]bool{
-				ValidToken: true,
-			},
-			token: ValidToken,
-			mockDeviceInfo: deviceinfo.Schema{
-				DeviceCompanies: []deviceinfo.DeviceToCompany{
-					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
-				},
-				DeviceNetworks: []deviceinfo.DeviceToNetwork{
-					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
-				},
-				DeviceToQF: []deviceinfo.DeviceToQueryFields{
-					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
 					},
 				},
 			},
@@ -1562,35 +1615,37 @@ func TestGetQueryFields(t *testing.T) {
 			wantStatus: http.StatusUnauthorized,
 			deviceId:   RegisteredDeviceId,
 			want:       deviceinfo.QueryFields{},
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  OtherCompanyThanDevice,
-						Role:     int(authstore.User),
-						Password: RegisteredPassword,
-						Network:  RegisteredNetwork,
+			token:      ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  OtherCompanyThanDevice,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				UserTokens: []authstore.UserToken{
-					{Username: RegisteredUsername, Token: ValidToken},
+				mockTokens: map[string]bool{
+					ValidToken: true,
 				},
-			},
-			mockTokens: map[string]bool{
-				ValidToken: true,
-			},
-			token: ValidToken,
-			mockDeviceInfo: deviceinfo.Schema{
-				DeviceCompanies: []deviceinfo.DeviceToCompany{
-					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
-				},
-				DeviceNetworks: []deviceinfo.DeviceToNetwork{
-					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
-				},
-				DeviceToQF: []deviceinfo.DeviceToQueryFields{
-					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
 					},
 				},
 			},
@@ -1604,35 +1659,37 @@ func TestGetQueryFields(t *testing.T) {
 				DeviceId:    RegisteredDeviceId,
 				QueryFields: append(deviceinfo.GeneralQueryFields, RegisteredQueryField),
 			},
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  OtherCompanyThanDevice,
-						Role:     int(authstore.Admin),
-						Password: RegisteredPassword,
-						Network:  RegisteredNetwork,
+			token: ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  OtherCompanyThanDevice,
+							Role:     int(authstore.Admin),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				UserTokens: []authstore.UserToken{
-					{Username: RegisteredUsername, Token: ValidToken},
+				mockTokens: map[string]bool{
+					ValidToken: true,
 				},
-			},
-			mockTokens: map[string]bool{
-				ValidToken: true,
-			},
-			token: ValidToken,
-			mockDeviceInfo: deviceinfo.Schema{
-				DeviceCompanies: []deviceinfo.DeviceToCompany{
-					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
-				},
-				DeviceNetworks: []deviceinfo.DeviceToNetwork{
-					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
-				},
-				DeviceToQF: []deviceinfo.DeviceToQueryFields{
-					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
 					},
 				},
 			},
@@ -1647,26 +1704,11 @@ func TestGetQueryFields(t *testing.T) {
 		},
 	}
 
-	db, err := miniredis.Run()
-	require.Nil(t, err)
-	defer db.Close()
-	humaTest := setupHuma(t)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			a.TokenProvider = &tokenprovider.MockTokenProvider{
-				Tokens:    tc.mockTokens,
-				Increment: len(tc.mockTokens),
-			}
-			defer a.TokenProvider.Close()
-			testingRedis, err := redis.NewTestingRedis(db.Addr())
-			require.Nil(t, err)
-			defer testingRedis.Close()
-			a.DeviceInfo = testingRedis
-			a.AuthStore = testingRedis
-			err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
-			require.Nil(t, err)
-			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
-			require.Nil(t, err)
+			api, closeFunc := tc.MockApi.Setup(t)
+			defer closeFunc()
+			humaTest := setupHuma(t, api)
 			route := "/device/" + tc.deviceId + "/queryfields"
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
@@ -1677,7 +1719,7 @@ func TestGetQueryFields(t *testing.T) {
 			if !tc.wantErr {
 				var qf deviceinfo.QueryFields
 				body := resp.Body.Bytes()
-				err = json.Unmarshal(body, &qf)
+				err := json.Unmarshal(body, &qf)
 				require.Nil(t, err)
 				if diff := cmp.Diff(tc.want, qf, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
@@ -1689,167 +1731,156 @@ func TestGetQueryFields(t *testing.T) {
 
 func TestGetDeviceIds(t *testing.T) {
 	tests := map[string]struct {
-		wantErr        bool
-		wantStatus     int
-		want           []string
-		mockAuthStore  authstore.Schema
-		mockDeviceInfo deviceinfo.Schema
-		mockTokens     map[string]bool
-		token          string
+		MockApi
+		want       []string
+		token      string
+		wantStatus int
+		wantErr    bool
 	}{
 
 		"user gets deviceIds only in company, in network": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want:       []string{RegisteredDeviceId},
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  RegisteredCompany,
-						Role:     int(authstore.User),
-						Password: RegisteredPassword,
-						Network:  RegisteredNetwork,
+			token:      ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				UserTokens: []authstore.UserToken{
-					{Username: RegisteredUsername, Token: ValidToken},
-				},
-			},
-			mockDeviceInfo: deviceinfo.Schema{
-				DeviceCompanies: []deviceinfo.DeviceToCompany{
-					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
-					{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
-				},
-				DeviceNetworks: []deviceinfo.DeviceToNetwork{
-					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
-					{DeviceId: AnotherRegisteredDeviceId, Network: AnotherRegisteredNetwork},
-				},
-				DeviceToQF: []deviceinfo.DeviceToQueryFields{
-					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
 					},
-					{
-						DeviceId:    AnotherRegisteredDeviceId,
-						QueryFields: []string{AnotherRegisteredQueryField},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: AnotherRegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{AnotherRegisteredQueryField},
+						},
 					},
 				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
 			},
-			mockTokens: map[string]bool{
-				ValidToken: true,
-			},
-			token: ValidToken,
 		},
 
 		"network user gets deviceIds in network": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want:       []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  RegisteredCompany,
-						Role:     int(authstore.NetworkUser),
-						Password: RegisteredPassword,
-						Network:  RegisteredNetwork,
+			token:      ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.NetworkUser),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				UserTokens: []authstore.UserToken{
-					{Username: RegisteredUsername, Token: ValidToken},
-				},
-			},
-			mockDeviceInfo: deviceinfo.Schema{
-				DeviceCompanies: []deviceinfo.DeviceToCompany{
-					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
-					{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
-				},
-				DeviceNetworks: []deviceinfo.DeviceToNetwork{
-					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
-					{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
-				},
-				DeviceToQF: []deviceinfo.DeviceToQueryFields{
-					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
 					},
-					{
-						DeviceId:    AnotherRegisteredDeviceId,
-						QueryFields: []string{AnotherRegisteredQueryField},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{AnotherRegisteredQueryField},
+						},
 					},
 				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
 			},
-			mockTokens: map[string]bool{
-				ValidToken: true,
-			},
-			token: ValidToken,
 		},
 
 		"admin gets all deviceIds": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want:       []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  RegisteredCompany,
-						Role:     int(authstore.Admin),
-						Password: RegisteredPassword,
-						Network:  RegisteredNetwork,
+			token:      ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.Admin),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				UserTokens: []authstore.UserToken{
-					{Username: RegisteredUsername, Token: ValidToken},
-				},
-			},
-			mockDeviceInfo: deviceinfo.Schema{
-				DeviceCompanies: []deviceinfo.DeviceToCompany{
-					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
-					{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
-				},
-				DeviceNetworks: []deviceinfo.DeviceToNetwork{
-					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
-					{DeviceId: AnotherRegisteredDeviceId, Network: AnotherRegisteredNetwork},
-				},
-				DeviceToQF: []deviceinfo.DeviceToQueryFields{
-					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
 					},
-					{
-						DeviceId:    AnotherRegisteredDeviceId,
-						QueryFields: []string{AnotherRegisteredQueryField},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: AnotherRegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{AnotherRegisteredQueryField},
+						},
 					},
 				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
 			},
-			mockTokens: map[string]bool{
-				ValidToken: true,
-			},
-			token: ValidToken,
 		},
 	}
-	db, err := miniredis.Run()
-	require.Nil(t, err)
-	defer db.Close()
-	humaTest := setupHuma(t)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			a.TokenProvider = &tokenprovider.MockTokenProvider{
-				Tokens:    tc.mockTokens,
-				Increment: len(tc.mockTokens),
-			}
-			defer a.TokenProvider.Close()
-			testingRedis, err := redis.NewTestingRedis(db.Addr())
-			require.Nil(t, err)
-			defer testingRedis.Close()
-			a.DeviceInfo = testingRedis
-			a.AuthStore = testingRedis
-			err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
-			require.Nil(t, err)
-			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
-			require.Nil(t, err)
+			api, closeFunc := tc.MockApi.Setup(t)
+			defer closeFunc()
+			humaTest := setupHuma(t, api)
 			route := "/device/ids"
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
@@ -1860,7 +1891,7 @@ func TestGetDeviceIds(t *testing.T) {
 			if !tc.wantErr {
 				var dr []string
 				body := resp.Body.Bytes()
-				err = json.Unmarshal(body, &dr)
+				err := json.Unmarshal(body, &dr)
 				require.Nil(t, err)
 				if diff := cmp.Diff(tc.want, dr, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
@@ -1902,15 +1933,12 @@ func TestCheckOlderThanNinetyDays(t *testing.T) {
 
 func TestGetDataBoundary(t *testing.T) {
 	tests := map[string]struct {
-		wantErr         bool
-		wantStatus      int
-		mockDataFetcher []datafetcher.SensorData
-		want            datafetcher.DataBoundary
-		mockAuthStore   authstore.Schema
-		mockDeviceInfo  deviceinfo.Schema
-		mockTokens      map[string]bool
-		token           string
-		req             datafetcher.DataBoundaryRequest
+		MockApi
+		want       datafetcher.DataBoundary
+		req        datafetcher.DataBoundaryRequest
+		token      string
+		wantStatus int
+		wantErr    bool
 	}{
 
 		"user get deviceid data boundary": {
@@ -1921,56 +1949,58 @@ func TestGetDataBoundary(t *testing.T) {
 				Start:    InsideTimeRange,
 				Stop:     AlsoInsideTimeRange,
 			},
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  RegisteredCompany,
-						Role:     int(authstore.User),
-						Password: RegisteredPassword,
-						Network:  RegisteredNetwork,
-					},
-				},
-				UserTokens: []authstore.UserToken{
-					{Username: RegisteredUsername, Token: ValidToken},
-				},
-			},
-			mockDataFetcher: []datafetcher.SensorData{
-				{
-					DeviceID:  RegisteredDeviceId,
-					Timestamp: InsideTimeRange,
-					SensorData: map[string]float64{
-						RegisteredQueryField: 23,
-						"batv":               3.4,
-					},
-				},
-				{
-					DeviceID:  RegisteredDeviceId,
-					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]float64{
-						RegisteredQueryField: 23,
-						"batv":               3.4,
-					},
-				},
-			},
-			mockDeviceInfo: deviceinfo.Schema{
-				DeviceCompanies: []deviceinfo.DeviceToCompany{
-					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
-				},
-				DeviceNetworks: []deviceinfo.DeviceToNetwork{
-					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
-				},
-				DeviceToQF: []deviceinfo.DeviceToQueryFields{
-					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
-					},
-				},
-			},
-			mockTokens: map[string]bool{
-				ValidToken: true,
-			},
 			token: ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.SensorData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField: 23,
+							"batv":               3.4,
+						},
+					},
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: AlsoInsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField: 23,
+							"batv":               3.4,
+						},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
 			req: datafetcher.DataBoundaryRequest{
 				DeviceId: RegisteredDeviceId,
 			},
@@ -1984,56 +2014,58 @@ func TestGetDataBoundary(t *testing.T) {
 				Start:    InsideTimeRange.Local(),
 				Stop:     AlsoInsideTimeRange.Local(),
 			},
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  RegisteredCompany,
-						Role:     int(authstore.User),
-						Password: RegisteredPassword,
-						Network:  RegisteredNetwork,
-					},
-				},
-				UserTokens: []authstore.UserToken{
-					{Username: RegisteredUsername, Token: ValidToken},
-				},
-			},
-			mockDataFetcher: []datafetcher.SensorData{
-				{
-					DeviceID:  RegisteredDeviceId,
-					Timestamp: InsideTimeRange,
-					SensorData: map[string]float64{
-						RegisteredQueryField: 23,
-						"batv":               3.4,
-					},
-				},
-				{
-					DeviceID:  RegisteredDeviceId,
-					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]float64{
-						RegisteredQueryField: 23,
-						"batv":               3.4,
-					},
-				},
-			},
-			mockDeviceInfo: deviceinfo.Schema{
-				DeviceCompanies: []deviceinfo.DeviceToCompany{
-					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
-				},
-				DeviceNetworks: []deviceinfo.DeviceToNetwork{
-					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
-				},
-				DeviceToQF: []deviceinfo.DeviceToQueryFields{
-					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
-					},
-				},
-			},
-			mockTokens: map[string]bool{
-				ValidToken: true,
-			},
 			token: ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.SensorData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField: 23,
+							"batv":               3.4,
+						},
+					},
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: AlsoInsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField: 23,
+							"batv":               3.4,
+						},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
 			req: datafetcher.DataBoundaryRequest{
 				DeviceId: RegisteredDeviceId,
 				Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
@@ -2048,56 +2080,58 @@ func TestGetDataBoundary(t *testing.T) {
 				Start:    InsideTimeRange,
 				Stop:     AlsoInsideTimeRange,
 			},
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  AnotherRegisteredCompany,
-						Role:     int(authstore.NetworkUser),
-						Password: RegisteredPassword,
-						Network:  RegisteredNetwork,
-					},
-				},
-				UserTokens: []authstore.UserToken{
-					{Username: RegisteredUsername, Token: ValidToken},
-				},
-			},
-			mockDataFetcher: []datafetcher.SensorData{
-				{
-					DeviceID:  RegisteredDeviceId,
-					Timestamp: InsideTimeRange,
-					SensorData: map[string]float64{
-						RegisteredQueryField: 23,
-						"batv":               3.4,
-					},
-				},
-				{
-					DeviceID:  RegisteredDeviceId,
-					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]float64{
-						RegisteredQueryField: 23,
-						"batv":               3.4,
-					},
-				},
-			},
-			mockDeviceInfo: deviceinfo.Schema{
-				DeviceCompanies: []deviceinfo.DeviceToCompany{
-					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
-				},
-				DeviceNetworks: []deviceinfo.DeviceToNetwork{
-					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
-				},
-				DeviceToQF: []deviceinfo.DeviceToQueryFields{
-					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
-					},
-				},
-			},
-			mockTokens: map[string]bool{
-				ValidToken: true,
-			},
 			token: ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  AnotherRegisteredCompany,
+							Role:     int(authstore.NetworkUser),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.SensorData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField: 23,
+							"batv":               3.4,
+						},
+					},
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: AlsoInsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField: 23,
+							"batv":               3.4,
+						},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
 			req: datafetcher.DataBoundaryRequest{
 				DeviceId: RegisteredDeviceId,
 			},
@@ -2111,56 +2145,58 @@ func TestGetDataBoundary(t *testing.T) {
 				Start:    InsideTimeRange,
 				Stop:     AlsoInsideTimeRange,
 			},
-			mockAuthStore: authstore.Schema{
-				UserInfo: []authstore.UserInfo{
-					{
-						Username: RegisteredUsername,
-						Company:  AnotherRegisteredCompany,
-						Role:     int(authstore.Admin),
-						Password: RegisteredPassword,
-						Network:  AnotherRegisteredNetwork,
-					},
-				},
-				UserTokens: []authstore.UserToken{
-					{Username: RegisteredUsername, Token: ValidToken},
-				},
-			},
-			mockDataFetcher: []datafetcher.SensorData{
-				{
-					DeviceID:  RegisteredDeviceId,
-					Timestamp: InsideTimeRange,
-					SensorData: map[string]float64{
-						RegisteredQueryField: 23,
-						"batv":               3.4,
-					},
-				},
-				{
-					DeviceID:  RegisteredDeviceId,
-					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]float64{
-						RegisteredQueryField: 23,
-						"batv":               3.4,
-					},
-				},
-			},
-			mockDeviceInfo: deviceinfo.Schema{
-				DeviceCompanies: []deviceinfo.DeviceToCompany{
-					{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
-				},
-				DeviceNetworks: []deviceinfo.DeviceToNetwork{
-					{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
-				},
-				DeviceToQF: []deviceinfo.DeviceToQueryFields{
-					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{RegisteredQueryField},
-					},
-				},
-			},
-			mockTokens: map[string]bool{
-				ValidToken: true,
-			},
 			token: ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  AnotherRegisteredCompany,
+							Role:     int(authstore.Admin),
+							Password: RegisteredPassword,
+							Network:  AnotherRegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.SensorData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField: 23,
+							"batv":               3.4,
+						},
+					},
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: AlsoInsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField: 23,
+							"batv":               3.4,
+						},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
 			req: datafetcher.DataBoundaryRequest{
 				DeviceId: RegisteredDeviceId,
 			},
@@ -2176,31 +2212,11 @@ func TestGetDataBoundary(t *testing.T) {
 			},
 		},
 	}
-	db, err := miniredis.Run()
-	require.Nil(t, err)
-	defer db.Close()
-	humaTest := setupHuma(t)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			a.TokenProvider = &tokenprovider.MockTokenProvider{
-				Tokens:    tc.mockTokens,
-				Increment: len(tc.mockTokens),
-			}
-			defer a.TokenProvider.Close()
-			testingRedis, err := redis.NewTestingRedis(db.Addr())
-			require.Nil(t, err)
-			defer testingRedis.Close()
-			a.DeviceInfo = testingRedis
-			a.AuthStore = testingRedis
-			a.DataFetcher, err = datafetcher.NewTestingInflux("../config.yml")
-			require.Nil(t, err)
-			defer a.DataFetcher.Close()
-			err = a.DataFetcher.PrepareDb(&tc.mockDeviceInfo, tc.mockDataFetcher)
-			require.Nil(t, err)
-			err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
-			require.Nil(t, err)
-			err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
-			require.Nil(t, err)
+			api, closeFunc := tc.MockApi.Setup(t)
+			defer closeFunc()
+			humaTest := setupHuma(t, api)
 			route := "/device/" + tc.req.DeviceId + "/databoundary"
 			route += fmt.Sprintf(`?timezone-return=%s`, tc.req.Timezone.Timezone)
 			resp := humaTest.Get(route,
@@ -2212,7 +2228,7 @@ func TestGetDataBoundary(t *testing.T) {
 			if !tc.wantErr {
 				var got datafetcher.DataBoundary
 				body := resp.Body.Bytes()
-				err = json.Unmarshal(body, &got)
+				err := json.Unmarshal(body, &got)
 				require.Nil(t, err)
 				if diff := cmp.Diff(tc.want, got, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
@@ -2222,31 +2238,18 @@ func TestGetDataBoundary(t *testing.T) {
 	}
 }
 
-type GetSensorDataTest struct {
-	wantErr         bool
-	wantStatus      int
-	mockDataFetcher []datafetcher.SensorData
-	mockAuthStore   authstore.Schema
-	mockDeviceInfo  deviceinfo.Schema
-	mockTokens      map[string]bool
-	token           string
-	deviceId        string
-	deviceRequest   datafetcher.SensorDataRequest
-	batchRequests   datafetcher.BatchSensorDataRequest
-}
-
 func TestCsvGetSensorData(t *testing.T) {
 	tests := map[string]struct {
+		MockApi
+		GetSensorDataTest
 		want string
-		gsdt GetSensorDataTest
 	}{
 
 		"single deviceid, single queryfield": {
 			want: fmt.Sprintf(",%s\n%s\n%s,%s\n",
 				RegisteredQueryField, RegisteredDeviceId,
 				InsideTimeRange.Format(time.RFC3339), "23.000"),
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -2287,9 +2290,12 @@ func TestCsvGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{wantErr: false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
@@ -2302,8 +2308,7 @@ func TestCsvGetSensorData(t *testing.T) {
 			want: fmt.Sprintf(",%s\n%s\n%s,%s\n",
 				RegisteredQueryField, RegisteredDeviceId,
 				InsideTimeRange.Local().Format(time.RFC3339), "23.000"),
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -2344,9 +2349,12 @@ func TestCsvGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
+			},
+			GetSensorDataTest: GetSensorDataTest{wantErr: false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start:    RelativeStart,
@@ -2360,8 +2368,7 @@ func TestCsvGetSensorData(t *testing.T) {
 			want: fmt.Sprintf(",%s,%s\n%s\n%s,%s,%s\n",
 				AnotherRegisteredQueryField, RegisteredQueryField, RegisteredDeviceId,
 				InsideTimeRange.Format(time.RFC3339), "80.000", "23.000"),
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -2403,10 +2410,14 @@ func TestCsvGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
-					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+			},
+			GetSensorDataTest: GetSensorDataTest{wantErr: false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
+					Hardware: datafetcher.Hardware{QueryFields: []string{
+						RegisteredQueryField, AnotherRegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
 					},
@@ -2419,8 +2430,7 @@ func TestCsvGetSensorData(t *testing.T) {
 				AnotherRegisteredQueryField, RegisteredQueryField, RegisteredDeviceId,
 				InsideTimeRange.Format(time.RFC3339), "80.000", "23.000",
 				AlsoInsideTimeRange.Format(time.RFC3339), "81.000", "25.000"),
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -2470,10 +2480,14 @@ func TestCsvGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
-					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+			},
+			GetSensorDataTest: GetSensorDataTest{wantErr: false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
+					Hardware: datafetcher.Hardware{QueryFields: []string{
+						RegisteredQueryField, AnotherRegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
 					},
@@ -2486,8 +2500,7 @@ func TestCsvGetSensorData(t *testing.T) {
 				AnotherRegisteredQueryField, RegisteredQueryField, RegisteredDeviceId,
 				InsideTimeRange.Format(time.RFC3339), "80.000",
 				AlsoInsideTimeRange.Format(time.RFC3339), "25.000"),
-			gsdt: GetSensorDataTest{wantErr: false,
-				wantStatus: http.StatusOK,
+			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -2535,10 +2548,14 @@ func TestCsvGetSensorData(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				token:    ValidToken,
-				deviceId: RegisteredDeviceId,
-				deviceRequest: datafetcher.SensorDataRequest{
-					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField}},
+			},
+			GetSensorDataTest: GetSensorDataTest{wantErr: false,
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+				SensorDataRequest: &datafetcher.SensorDataRequest{
+					Hardware: datafetcher.Hardware{QueryFields: []string{
+						RegisteredQueryField, AnotherRegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start: RelativeStart,
 					},
@@ -2547,31 +2564,26 @@ func TestCsvGetSensorData(t *testing.T) {
 		},
 	}
 
-	db, err := miniredis.Run()
-	require.Nil(t, err)
-	defer db.Close()
-	humaTest := setupHuma(t)
-	var qp string
-	var close CloseFunc
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			close = setupGetSensorDataTest(t, tc.gsdt, db)
-			defer close()
-			qp = makeQueryParams(tc.gsdt.deviceRequest)
-			route := "/device/" + tc.gsdt.deviceId + "/sensordata" + qp
+			api, closeFunc := tc.MockApi.Setup(t)
+			defer closeFunc()
+			humaTest := setupHuma(t, api)
+			qp := makeQueryParams(tc.SensorDataRequest)
+			route := "/device/" + tc.deviceId + "/sensordata" + qp
 			resp := humaTest.Get(route,
-				fmt.Sprintf(`Authorization: Bearer %s`, tc.gsdt.token),
+				fmt.Sprintf(`Authorization: Bearer %s`, tc.token),
 				"Accept: text/csv",
 			)
-			if resp.Code != tc.gsdt.wantStatus {
-				t.Fatalf("wantStatus: %d, response status: %d", tc.gsdt.wantStatus, resp.Code)
+			if resp.Code != tc.wantStatus {
+				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
 			}
 			contentType := resp.Header().Get("Content-Type")
 			if contentType != "text/csv" {
 				t.Fatalf("response content-type not csv: %s", contentType)
 			}
 			defer resp.Result().Body.Close()
-			if !tc.gsdt.wantErr {
+			if !tc.wantErr {
 				body := resp.Body.String()
 				if diff := cmp.Diff(tc.want, body, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
@@ -2581,27 +2593,38 @@ func TestCsvGetSensorData(t *testing.T) {
 	}
 }
 
-type CloseFunc func()
+type MockApi struct {
+	mockDeviceInfo  deviceinfo.Schema
+	mockAuthStore   authstore.Schema
+	mockDataFetcher []datafetcher.SensorData
+	mockTokens      map[string]bool
+}
 
-func setupGetSensorDataTest(
-	t *testing.T, tc GetSensorDataTest, db *miniredis.Miniredis) CloseFunc {
+func (m MockApi) Setup(t *testing.T) (*api.Api, CloseFunc) {
+	a := &api.Api{}
 	a.TokenProvider = &tokenprovider.MockTokenProvider{
-		Tokens:    tc.mockTokens,
-		Increment: len(tc.mockTokens),
+		Tokens:    m.mockTokens,
+		Increment: len(m.mockTokens),
 	}
+	a.Logger = &logging.MockLogger{}
+	a.Meter = &metering.MockMeter{}
+	a.Tracer = &tracing.MockTracer{}
+	db, err := miniredis.Run()
+	require.Nil(t, err)
 	testingRedis, err := redis.NewTestingRedis(db.Addr())
 	require.Nil(t, err)
 	a.DeviceInfo = testingRedis
 	a.AuthStore = testingRedis
-	a.DataFetcher, err = datafetcher.NewTestingInflux("../config.yml")
+	a.DataFetcher, err = datafetcher.NewTestingInflux("../../config.yml")
 	require.Nil(t, err)
-	err = a.DataFetcher.PrepareDb(&tc.mockDeviceInfo, tc.mockDataFetcher)
+	err = a.DataFetcher.PrepareDb(&m.mockDeviceInfo, m.mockDataFetcher)
 	require.Nil(t, err)
-	err = testingRedis.PrepareDeviceInfo(tc.mockDeviceInfo)
+	err = testingRedis.PrepareDeviceInfo(m.mockDeviceInfo)
 	require.Nil(t, err)
-	err = testingRedis.PrepareAuthStore(tc.mockAuthStore)
+	err = testingRedis.PrepareAuthStore(m.mockAuthStore)
 	require.Nil(t, err)
-	return func() {
+	return a, func() {
+		db.Close()
 		err = a.TokenProvider.Close()
 		if err != nil {
 			t.Logf("tokenprovider close: %v", err)
@@ -2616,3 +2639,14 @@ func setupGetSensorDataTest(
 		}
 	}
 }
+
+type GetSensorDataTest struct {
+	token    string
+	deviceId string
+	*datafetcher.SensorDataRequest
+	*datafetcher.BatchSensorDataRequest
+	wantStatus int
+	wantErr    bool
+}
+
+type CloseFunc func()

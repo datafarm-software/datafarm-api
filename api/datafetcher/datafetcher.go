@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	deviceinfo "github.com/datafarm-software/datafarm-api/device-info"
+	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
 )
 
 var EmptySensorData = errors.New("empty sensor data")
@@ -20,12 +20,12 @@ type SensorDataResponse struct {
 }
 
 type Hardware struct {
-	DeviceId    string   `json:"deviceId" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-	QueryFields []string `query:"queryField,explode" json:"queryFields" required:"true" minItems:"1" maxItems:"20" uniqueItems:"true" doc:"One or more QueryFields to return. Specify \"all\" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField=\"temperature\"&queryField=\"humidity\""`
+	DeviceId    string   `log:"deviceid" json:"deviceId" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+	QueryFields []string `log:"queryfields" query:"queryField,explode" json:"queryFields" required:"true" minItems:"1" maxItems:"20" uniqueItems:"true" doc:"One or more QueryFields to return. Specify \"all\" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField=\"temperature\"&queryField=\"humidity\""`
 }
 
 type Timezone struct {
-	Timezone string `query:"timezone-return" json:"timezone-return" required:"false" pattern:"^(|[a-zA-Z]+/[a-zA-Z]+)$" doc:"Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg"`
+	Timezone string `log:"timezone" query:"timezone-return" json:"timezone-return" required:"false" pattern:"^(|[a-zA-Z]+/[a-zA-Z]+)$" doc:"Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg"`
 }
 
 func (t Timezone) IsEmpty() bool {
@@ -41,8 +41,8 @@ func (t Timezone) Location() (*time.Location, error) {
 
 type TimeFrame struct {
 	Timezone
-	Start string `query:"start" json:"start" required:"true" doc:"Client specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days."`
-	Stop  string `query:"stop" json:"stop" required:"false" doc:"Client specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop time must be later than Start. Stop can only ever be in RFC3339 Format."`
+	Start string `log:"start" query:"start" json:"start" required:"true" doc:"Client specified timestamps are treated as inclusive in returned data. Client can specify a start time in two formats. 1. Relative Format eg. '-[0-9]{1,3}mo|m|h|d'. In Relative Format a stop time is not required. 2. RFC3339 Format. Now a Stop time is required. Start cannot be older than 90 days."`
+	Stop  string `log:"stop" query:"stop" json:"stop" required:"false" doc:"Client specified timestamps are treated as inclusive in returned data. If Start is in RFC3339 Format, Stop field is required. Stop time must be later than Start. Stop can only ever be in RFC3339 Format."`
 }
 
 type SensorDataRequest struct {
@@ -200,7 +200,7 @@ type DataBoundary struct {
 }
 
 type DataBoundaryRequest struct {
-	DeviceId string `path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+	DeviceId string `log:"deviceid" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
 	Timezone
 }
 type DataBoundaryResponse struct{ Body DataBoundary }

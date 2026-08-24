@@ -7,10 +7,9 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"time"
 
-	"github.com/datafarm-software/datafarm-api/authstore"
+	"github.com/datafarm-software/datafarm-api/api/authstore"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -112,7 +111,7 @@ func (j *jwtAuth) GenerateToken(username string) (authstore.UserToken, error) {
 	}, nil
 }
 
-func (j *jwtAuth) IsValidToken(tr LoginResponse) bool {
+func (j *jwtAuth) ValidToken(tr LoginResponse) bool {
 	claims := jwt.MapClaims{}
 	token, err := jwt.ParseWithClaims(tr.Body, claims,
 		func(token *jwt.Token) (any, error) {
@@ -121,12 +120,7 @@ func (j *jwtAuth) IsValidToken(tr LoginResponse) bool {
 			}
 			return j.getPublicKey(), nil
 		})
-	if err != nil {
-		log.Printf("token parsing error: %v", err)
-		return false
-	}
-	if !token.Valid {
-		log.Println("Invalid token provided")
+	if err != nil || !token.Valid {
 		return false
 	}
 	return true
