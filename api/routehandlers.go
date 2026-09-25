@@ -241,7 +241,7 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 }
 
 func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
-	*deviceinfo.DeviceIdsResponse, error) {
+	*struct{ Body deviceinfo.DeviceIdsResponse }, error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
 		return nil, huma.Error500InternalServerError(
@@ -273,8 +273,8 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting DeviceIds.")
 	}
-	return &deviceinfo.DeviceIdsResponse{
-		Body: userDevices,
+	return &struct{ Body deviceinfo.DeviceIdsResponse }{
+		Body: deviceinfo.DeviceIdsResponse{DeviceIds: userDevices},
 	}, nil
 }
 

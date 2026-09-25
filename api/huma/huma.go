@@ -48,7 +48,7 @@ type HumaOperator interface {
 		*struct {
 			Body deviceinfo.BatchQueryFieldsResponse
 		}, error)
-	GetDeviceIds(context.Context, *struct{}) (*deviceinfo.DeviceIdsResponse, error)
+	GetDeviceIds(context.Context, *struct{}) (*struct{ Body deviceinfo.DeviceIdsResponse }, error)
 	GetSensorDataBoundary(context.Context, *datafetcher.DataBoundaryRequest) (
 		*datafetcher.DataBoundaryResponse, error)
 	BatchGetSensorDataBoundary(context.Context,

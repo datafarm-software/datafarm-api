@@ -62,7 +62,7 @@ type BatchQueryFieldsResponse struct {
 }
 
 type DeviceIdsResponse struct {
-	Body []string `json:"deviceIds" doc:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$"`
+	DeviceIds []string `json:"deviceIds" doc:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$"`
 }
 
 type DeviceToCompany struct {

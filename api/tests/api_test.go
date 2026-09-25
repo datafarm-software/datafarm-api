@@ -1732,7 +1732,7 @@ func TestGetQueryFields(t *testing.T) {
 func TestGetDeviceIds(t *testing.T) {
 	tests := map[string]struct {
 		MockApi
-		want       []string
+		want       deviceinfo.DeviceIdsResponse
 		token      string
 		wantStatus int
 		wantErr    bool
@@ -1741,7 +1741,7 @@ func TestGetDeviceIds(t *testing.T) {
 		"user gets deviceIds only in company, in network": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want:       []string{RegisteredDeviceId},
+			want:       deviceinfo.DeviceIdsResponse{DeviceIds: []string{RegisteredDeviceId}},
 			token:      ValidToken,
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
@@ -1787,8 +1787,9 @@ func TestGetDeviceIds(t *testing.T) {
 		"network user gets deviceIds in network": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want:       []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
-			token:      ValidToken,
+			want: deviceinfo.DeviceIdsResponse{DeviceIds: []string{
+				RegisteredDeviceId, AnotherRegisteredDeviceId}},
+			token: ValidToken,
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -1833,8 +1834,9 @@ func TestGetDeviceIds(t *testing.T) {
 		"admin gets all deviceIds": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
-			want:       []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
-			token:      ValidToken,
+			want: deviceinfo.DeviceIdsResponse{DeviceIds: []string{
+				RegisteredDeviceId, AnotherRegisteredDeviceId}},
+			token: ValidToken,
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -1889,7 +1891,7 @@ func TestGetDeviceIds(t *testing.T) {
 			}
 			defer resp.Result().Body.Close()
 			if !tc.wantErr {
-				var dr []string
+				var dr deviceinfo.DeviceIdsResponse
 				body := resp.Body.Bytes()
 				err := json.Unmarshal(body, &dr)
 				require.Nil(t, err)
