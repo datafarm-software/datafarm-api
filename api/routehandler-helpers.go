@@ -166,8 +166,8 @@ func (a *Api) checkAccess(user authstore.UserInfo, deviceId string) (
 		}
 		logMetadata(ctx, logging.Metadata{
 			KeyValue: map[string][]string{
-				"source":                   {"checkAccess.deviceInfo.getNetwork"},
-				"deviceinfo.error.message": {err.Error()}}})
+				"source":        {"checkAccess.deviceInfo.getNetwork"},
+				"error.message": {err.Error()}}})
 		return di, huma.Error500InternalServerError(
 			"Internal error checking access to DeviceId.")
 	}
@@ -199,18 +199,16 @@ func (a *Api) getSensorData(
 		if !authstore.HasPermission(authstore.Role(user.Role),
 			authstore.GetAllQueryFields) {
 			return nil, huma.Error401Unauthorized(
-				"Unauthorized for all queryfields.")
+				"Unauthorized for all QueryFields.")
 		}
 		qf, err := a.DeviceInfo.GetQueryFields(in.Hardware.DeviceId)
 		if err != nil {
 			logMetadata(ctx, logging.Metadata{
 				KeyValue: map[string][]string{
-					"deviceinof.error.message": {fmt.Sprintf(
-						"error getting query fields for: %s: %v",
-						in.Hardware.DeviceId, err)}}},
-			)
+					"source":        {"getSensorData.deviceInfo.getQueryFields"},
+					"error.message": {err.Error()}}})
 			return nil, huma.Error500InternalServerError(
-				"Internal error getting QueryFields for Device.")
+				"Internal error getting QueryFields.")
 		}
 		di.QueryFields = qf.QueryFields
 	}
@@ -223,10 +221,10 @@ func (a *Api) getSensorData(
 	if err != nil {
 		logMetadata(ctx, logging.Metadata{
 			KeyValue: map[string][]string{
-				"datafetcher.error.message": {fmt.Sprintf(
-					"error getting data: %v", err)}}})
+				"source":        {"getSensorData.dataFetcher.GetData"},
+				"error.message": {err.Error()}}})
 		return nil, huma.Error500InternalServerError(
-			"Internal error fetching data.")
+			"Internal error getting SensorData.")
 	}
 	return sensorData, nil
 }
@@ -241,10 +239,10 @@ func (a *Api) getQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 	if err != nil {
 		logMetadata(ctx, logging.Metadata{
 			KeyValue: map[string][]string{
-				"deviceinfo.error.message": {fmt.Sprintf(
-					"get queryfields: %v", err)}}})
+				"source":        {"getQueryFields.deviceInfo.getQueryFields"},
+				"error.message": {err.Error()}}})
 		return qf, huma.Error500InternalServerError(
-			"Internal error while getting queryfields.")
+			"Internal error while getting QueryFields.")
 	}
 	return
 }
@@ -291,7 +289,8 @@ func (a *Api) getSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 	if err != nil {
 		logMetadata(ctx, logging.Metadata{
 			KeyValue: map[string][]string{
-				"datafetcher.error.message": {fmt.Sprintf("getting data boundary: %v", err)}}})
+				"source":        {"getSensorDataBoundary.dataFetcher.GetDataBoundary"},
+				"error.message": {err.Error()}}})
 		return db, huma.Error500InternalServerError(
 			"Internal error getting DataBoundary.")
 	}
