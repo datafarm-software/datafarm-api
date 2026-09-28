@@ -210,7 +210,7 @@ type DataBoundaryRequest struct {
 type DataBoundaryResponse struct{ Body DataBoundary }
 
 // NOTE: this is exactly the same as deviceinfo.QueryFieldsError struct
-type DataBoundaryError struct {
+type BatchError struct {
 	DeviceId string `json:"deviceId"`
 	Error    string `json:"error"`
 }
@@ -221,8 +221,8 @@ type BatchDataBoundaryRequest struct {
 }
 
 type BatchDataBoundaryResponse struct {
-	Results []DataBoundary      `json:"results"`
-	Errors  []DataBoundaryError `json:"errors"`
+	Results []DataBoundary `json:"results"`
+	Errors  []BatchError   `json:"errors"`
 }
 
 var NoLocation = errors.New("no location")
@@ -232,9 +232,19 @@ type DeviceLocationRequest struct {
 }
 
 type DeviceLocationResponse struct {
-	DeviceId  string  `json:"deviceId"`
-	Latitude  float64 `log:"latitude" json:"latitude"`
-	Longitude float64 `log:"longitude" json:"longitude"`
+	DeviceId  string    `json:"deviceId"`
+	Time      time.Time `json:"time" doc:"Time the latest Location was reported."`
+	Latitude  float64   `log:"latitude" json:"latitude"`
+	Longitude float64   `log:"longitude" json:"longitude"`
+}
+
+type BatchLocationRequest struct {
+	deviceinfo.DeviceBatch
+}
+
+type BatchLocationResponse struct {
+	Results []DeviceLocationResponse `json:"results"`
+	Errors  []BatchError             `json:"errors"`
 }
 
 type TestingDataFetcher interface {

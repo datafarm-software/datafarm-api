@@ -2597,6 +2597,8 @@ func TestCsvGetSensorData(t *testing.T) {
 
 const Latitude float64 = -25.496973
 const Longitude float64 = 31.558536
+const AnotherLatitude float64 = -26.496973
+const AnotherLongitude float64 = 32.558536
 
 func TestGetLocation(t *testing.T) {
 	tests := map[string]struct {
