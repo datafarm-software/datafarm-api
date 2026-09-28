@@ -306,9 +306,9 @@ func (a *Api) BatchGetSensorDataBoundary(ctx context.Context,
 	logFromTag(ctx, in.Body)
 	var qr datafetcher.DataBoundaryRequest
 	var dataResp datafetcher.DataBoundary
-	var deviceErr datafetcher.DataBoundaryError
+	var deviceErr datafetcher.BatchError
 	var err error
-	errSlice := make([]datafetcher.DataBoundaryError, 0, len(in.Body.DeviceIds))
+	errSlice := make([]datafetcher.BatchError, 0, len(in.Body.DeviceIds))
 	resultSlice := make([]datafetcher.DataBoundary, 0, len(in.Body.DeviceIds))
 	for _, deviceId := range in.Body.DeviceIds {
 		qr = datafetcher.DataBoundaryRequest{

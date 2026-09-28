@@ -250,6 +250,7 @@ func (i *InfluxDatafetcher) GetLocation(deviceInfo deviceinfo.DeviceInfo) (
 		err = NoLocation
 	}
 	loc.DeviceId = deviceInfo.DeviceId
+	loc.Time = dataRows[0].Time
 	return
 }
 
