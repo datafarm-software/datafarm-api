@@ -14,8 +14,8 @@ import (
 	"github.com/datafarm-software/datafarm-api/api/authstore"
 	"github.com/datafarm-software/datafarm-api/api/datafetcher"
 	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
-	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
+	"github.com/datafarm-software/telemetry/logging"
 )
 
 func (a *Api) GetSensorData(ctx context.Context,
@@ -329,4 +329,5 @@ func (a *Api) GetLocation(ctx context.Context, in *datafetcher.DeviceLocationReq
 	*struct {
 		Body datafetcher.DeviceLocationResponse
 	}, error) {
+
 }

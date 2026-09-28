@@ -8,8 +8,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
-	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
-	"github.com/datafarm-software/datafarm-api/api/telemetry/tracing"
+	"github.com/datafarm-software/telemetry/logging"
+	"github.com/datafarm-software/telemetry/tracing"
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -15,7 +14,7 @@ import (
 	"github.com/datafarm-software/datafarm-api/api/authstore"
 	"github.com/datafarm-software/datafarm-api/api/datafetcher"
 	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
-	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
+	"github.com/datafarm-software/telemetry/logging"
 )
 
 func (a *Api) httpErr(humaCtx huma.Context, w http.ResponseWriter, msg string, code int) {
@@ -28,14 +27,6 @@ func (a *Api) httpErr(humaCtx huma.Context, w http.ResponseWriter, msg string, c
 	}
 	humaCtx.SetStatus(code)
 	w.Write([]byte(msg))
-}
-
-func logMetadata(ctx context.Context, m logging.Metadata) {
-	//NOTE: requestLog added to context via telemetry middleware
-	rl, _ := ctx.Value("request-log").(*requestLog)
-	if rl != nil {
-		maps.Copy(rl.KeyValue, m.KeyValue)
-	}
 }
 
 func logFromTag(ctx context.Context, a any) error {
