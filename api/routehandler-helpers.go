@@ -139,37 +139,46 @@ func formatTimestamp(in *datafetcher.SensorDataRequest) (err error) {
 }
 
 func (a *Api) checkAccess(user authstore.UserInfo, deviceId string) (
-	deviceinfo.DeviceInfo, error) {
-	di := deviceinfo.DeviceInfo{DeviceId: deviceId}
+	di deviceinfo.DeviceInfo, err error) {
+	di = deviceinfo.DeviceInfo{DeviceId: deviceId}
 	deviceCompany, err := a.DeviceInfo.GetCompany(deviceId)
 	if err != nil {
 		if errors.Is(err, deviceinfo.NotFound) {
-			return di, http.StatusNotFound, fmt.Errorf(
-				"Device not found.")
+			return di, huma.Error404NotFound("Device Not Found.")
 		}
-		return di, http.StatusInternalServerError, err
+		logMetadata(ctx, logging.Metadata{
+			KeyValue: map[string][]string{
+				"source":        {"checkAccess.deviceInfo.getCompany"},
+				"error.message": {err.Error()}}})
+		return di, huma.Error500InternalServerError(
+			"Internal error checking access to DeviceId.")
 	}
 	if user.Company != deviceCompany {
 		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyCompany) {
-			return di, http.StatusUnauthorized, fmt.Errorf("Unauthorized access to this device.")
+			return di, huma.Error401Unauthorized(
+				"Unauthorized access to this Device.")
 		}
 	}
 	deviceNetwork, err := a.DeviceInfo.GetNetwork(deviceId)
 	if err != nil {
 		if errors.Is(err, deviceinfo.NotFound) {
-			return di, http.StatusNotFound, fmt.Errorf(
-				"Device not found.")
+			return di, huma.Error404NotFound("Device Not Found.")
 		}
-		return di, http.StatusInternalServerError, err
+		logMetadata(ctx, logging.Metadata{
+			KeyValue: map[string][]string{
+				"source":                   {"checkAccess.deviceInfo.getNetwork"},
+				"deviceinfo.error.message": {err.Error()}}})
+		return di, huma.Error500InternalServerError(
+			"Internal error checking access to DeviceId.")
 	}
 	if user.Network != deviceNetwork {
 		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyNetwork) {
-			return di, http.StatusUnauthorized, fmt.Errorf("Unauthorized access to this device.")
+			return di, huma.Error401Unauthorized("Unauthorized access to this Device.")
 		}
 	}
 	di.Company = deviceCompany
 	di.Network = deviceNetwork
-	return di, http.StatusOK, nil
+	return
 }
 
 func (a *Api) getSensorData(
@@ -248,25 +257,12 @@ func (a *Api) deviceInfoIfAccessAndPermission(ctx context.Context,
 		return di, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
-	di, code, err := a.checkAccess(user, deviceId)
+	di, err = a.checkAccess(user, deviceId)
 	if err != nil {
-		switch code {
-		case http.StatusUnauthorized:
-			return di, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		case http.StatusNotFound:
-			return di, huma.Error404NotFound(
-				"Device Not Found.")
-		default:
-			logMetadata(ctx, logging.Metadata{
-				KeyValue: map[string][]string{
-					"deviceinfo.error.message": {err.Error()}}})
-			return di, huma.Error500InternalServerError(
-				"Internal error checking acess to DeviceId.")
-		}
+		return
 	}
 	if !authstore.HasPermission(authstore.Role(user.Role), permission) {
-		return di, huma.Error401Unauthorized("Access denied to DataBoundary.")
+		return di, huma.Error401Unauthorized("Access denied.")
 	}
 	return
 }
