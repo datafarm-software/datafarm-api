@@ -74,16 +74,16 @@ func (a *Api) LogRequest(humaCtx huma.Context, next func(huma.Context)) {
 			"trace_id": {span.TraceId()},
 			"span_id":  {span.SpanId()},
 		})
-		humaCtx = huma.WithValue(humaCtx, "request-log", log)
-		next(humaCtx)
-		log.AddMetadata(logging.Metadata{
-			"http.status_code": {string(humaCtx.Status())}})
-		switch getFirstDigit(humaCtx.Status()) {
-		case 4:
-			a.Logger.Warn("HTTP Client Error", log.Metadata())
-		case 5:
-			a.Logger.Error("HTTP Internal Error", log.Metadata())
-		}
+	}
+	humaCtx = huma.WithValue(humaCtx, "request-log", log)
+	next(humaCtx)
+	log.AddMetadata(logging.Metadata{
+		"http.status_code": {string(humaCtx.Status())}})
+	switch getFirstDigit(humaCtx.Status()) {
+	case 4:
+		a.Logger.Warn("HTTP Client Error", log.Metadata())
+	case 5:
+		a.Logger.Error("HTTP Internal Error", log.Metadata())
 	}
 }
 

@@ -34,7 +34,12 @@ func logFromTag(ctx context.Context, a any) error {
 	if err != nil {
 		return err
 	}
-	logMetadata(ctx, m)
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		return huma.Error500InternalServerError(
+			"Internal error while getting request log.")
+	}
+	log.AddMetadata(m)
 	return nil
 }
 
@@ -183,6 +188,11 @@ func (a *Api) getSensorData(
 	di.Start = in.TimeFrame.Start
 	di.Stop = in.TimeFrame.Stop
 	di.QueryFields = in.Hardware.QueryFields
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error while getting request log.")
+	}
 	if in.Hardware.QueryFields[0] == "all" {
 		user, _ := a.user(ctx)
 		if !authstore.HasPermission(authstore.Role(user.Role),
@@ -222,9 +232,14 @@ func (a *Api) getQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 	if err != nil {
 		return
 	}
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		return qf, huma.Error500InternalServerError(
+			"Internal error while getting request log.")
+	}
 	qf, err = a.DeviceInfo.GetQueryFields(in.DeviceId)
 	if err != nil {
-		log.AddMetadata(ctx, logging.Metadata{
+		log.AddMetadata(logging.Metadata{
 			"source":        {"getQueryFields.deviceInfo.getQueryFields"},
 			"error.message": {err.Error()}})
 		return qf, huma.Error500InternalServerError(
@@ -241,7 +256,12 @@ func (a *Api) deviceInfoIfAccessAndPermission(ctx context.Context,
 		return di, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
-	di, err = a.checkAccess(user, deviceId)
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		return di, huma.Error500InternalServerError(
+			"Internal error while getting request log.")
+	}
+	di, err = a.checkAccess(log, user, deviceId)
 	if err != nil {
 		return
 	}
@@ -271,12 +291,16 @@ func (a *Api) getSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 		return db, huma.Error400BadRequest(
 			"Invalid location. Please try a different IANA Timezone.")
 	}
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		return db, huma.Error500InternalServerError(
+			"Internal error while getting request log.")
+	}
 	db, err = a.DataFetcher.GetDataBoundary(di)
 	if err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"source":        {"getSensorDataBoundary.dataFetcher.GetDataBoundary"},
-				"error.message": {err.Error()}}})
+		log.AddMetadata(logging.Metadata{
+			"source":        {"getSensorDataBoundary.dataFetcher.GetDataBoundary"},
+			"error.message": {err.Error()}})
 		return db, huma.Error500InternalServerError(
 			"Internal error getting DataBoundary.")
 	}
