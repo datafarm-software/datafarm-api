@@ -221,6 +221,11 @@ type BatchDataBoundaryResponse struct {
 	Errors  []DataBoundaryError `json:"errors"`
 }
 
+type DeviceLocationResponse struct {
+	Latitude  float64 `log:"latitude" json:"latitude"`
+	Longitude float64 `log:"longitude" json:"longitude"`
+}
+
 type TestingDataFetcher interface {
 	PrepareDb(*deviceinfo.Schema, SensorDataSlice) error
 }

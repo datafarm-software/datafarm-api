@@ -2595,6 +2595,97 @@ func TestCsvGetSensorData(t *testing.T) {
 	}
 }
 
+const Latitude float64 = -25.496973
+const Longitude float64 = 31.558536
+
+func TestGetLocation(t *testing.T) {
+	tests := map[string]struct {
+		MockApi
+		GetSensorDataTest
+		want datafetcher.DeviceLocationResponse
+	}{
+
+		"successfully retrieve device location information": {
+			MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.SensorData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							"latitude":  Latitude,
+							"longitude": Longitude,
+						},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			GetSensorDataTest{
+				wantStatus: http.StatusOK,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+			},
+			datafetcher.DeviceLocationResponse{
+				Latitude: Latitude, Longitude: Longitude,
+			},
+		},
+
+		"device no location information so no content": {},
+		"device not found": {},
+		"device no access": {},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			api, closeFunc := tc.MockApi.Setup(t)
+			defer closeFunc()
+			humaTest := setupHuma(t, api)
+			route := "/device/" + tc.deviceId + "/location"
+			resp := humaTest.Get(route,
+				fmt.Sprintf(`Authorization: Bearer %s`, tc.token),
+			)
+			if resp.Code != tc.wantStatus {
+				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
+			}
+			defer resp.Result().Body.Close()
+			if !tc.wantErr {
+				var location datafetcher.DeviceLocationResponse
+				if diff := cmp.Diff(tc.want, &location, cmpOpts...); diff != "" {
+					t.Fatalf("response mismatch (-want +got):\n%s", diff)
+				}
+			}
+		})
+	}
+}
+
 type MockApi struct {
 	mockDeviceInfo  deviceinfo.Schema
 	mockAuthStore   authstore.Schema
