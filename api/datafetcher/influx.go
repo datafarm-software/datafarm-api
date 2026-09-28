@@ -226,6 +226,7 @@ func (i *InfluxDatafetcher) GetLocation(deviceInfo deviceinfo.DeviceInfo) (
 		deviceInfo.Company, deviceInfo.DeviceId)
 	fmt.Fprintf(&queryBuilder, `|> group(columns: ["_field"])`)
 	fmt.Fprintf(&queryBuilder, `|> last()`)
+	fmt.Fprintf(&queryBuilder, `|> yield(name: "last")`)
 	result, err := i.queryApi.Query(context.Background(), queryBuilder.String())
 	if err != nil {
 		return loc, fmt.Errorf("error querying influxdb: %v", err)
@@ -343,13 +344,14 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, sensorData 
 	var ok bool
 	var deviceInfo deviceinfo.DeviceInfo
 	for _, sd := range sensorData {
-		fields := make(map[string]any)
+		fields := make(map[string]any, len(sd.SensorData))
 		for key, value := range sd.SensorData {
 			fields[key] = value
 		}
 		deviceInfo, ok = deviceInfoMap[sd.DeviceID]
 		if !ok {
 			err = fmt.Errorf("could not find deviceInfo: %s", sd.DeviceID)
+			break
 		}
 		writeApi = t.influx.db.WriteAPI(testingInfluxOpts.Org, deviceInfo.Network)
 		p := influxdb2.NewPoint(
@@ -393,4 +395,9 @@ func (t *TestingInflux) GetData(metadata deviceinfo.DeviceInfo) (
 func (t *TestingInflux) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
 	DataBoundary, error) {
 	return t.influx.GetDataBoundary(deviceInfo)
+}
+
+func (t *TestingInflux) GetLocation(deviceInfo deviceinfo.DeviceInfo) (
+	DeviceLocationResponse, error) {
+	return t.influx.GetLocation(deviceInfo)
 }

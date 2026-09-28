@@ -2678,7 +2678,9 @@ func TestGetLocation(t *testing.T) {
 			defer resp.Result().Body.Close()
 			if !tc.wantErr {
 				var location datafetcher.DeviceLocationResponse
-				if diff := cmp.Diff(tc.want, &location, cmpOpts...); diff != "" {
+				err := json.Unmarshal(resp.Body.Bytes(), &location)
+				require.Nil(t, err)
+				if diff := cmp.Diff(tc.want, location, cmpOpts...); diff != "" {
 					t.Fatalf("response mismatch (-want +got):\n%s", diff)
 				}
 			}
