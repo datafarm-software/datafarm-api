@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
@@ -86,11 +85,16 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 	var lr tokenprovider.LoginResponse
 	lr.Body = strings.TrimSpace(parts[1])
 	lr.Body = strings.Trim(lr.Body, `"`)
+	log, ok := humaCtx.Context().Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		a.httpErr(humaCtx, w, "Internal error while getting request log.",
+			http.StatusInternalServerError)
+	}
 	if !a.TokenProvider.ValidToken(lr) {
 		if err := a.AuthStore.DeleteToken(authstore.UserToken{Token: lr.Body}); err != nil {
-			logMetadata(humaCtx.Context(), logging.Metadata{
-				KeyValue: map[string][]string{
-					"authstore.error.message": {err.Error()}}})
+			log.AddMetadata(logging.Metadata{
+				"source":        {"verifyToken.authStore.DeleteToken"},
+				"error.message": {err.Error()}})
 			a.httpErr(humaCtx, w,
 				`Your token is invalid. Please login again. 
 				There was an internal error while deleting the invalid token.`,
@@ -102,20 +106,18 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 	}
 	user, err := a.AuthStore.GetUser(lr.Body)
 	if err != nil {
-		logMetadata(humaCtx.Context(), logging.Metadata{
-			KeyValue: map[string][]string{
-				"authstore.error.message": {fmt.Sprintf("getting user: %v", err)}}})
+		log.AddMetadata(logging.Metadata{
+			"source":        {"verifyToken.authStore.getUser"},
+			"error.message": {fmt.Sprintf("getting user: %v", err)}})
 		a.httpErr(humaCtx, w, "Internal error while getting user information.",
 			http.StatusInternalServerError)
 		return
 	}
-	logMetadata(humaCtx.Context(),
-		logging.Metadata{KeyValue: map[string][]string{
-			"client.username": {user.Username},
-			"client.company":  {user.Company},
-			"client.network":  {user.Network},
-		}},
-	)
+	log.AddMetadata(logging.Metadata{
+		"client.username": {user.Username},
+		"client.company":  {user.Company},
+		"client.network":  {user.Network},
+	})
 	next(huma.WithValue(humaCtx, "user", user))
 }
 
@@ -123,15 +125,15 @@ func (a *Api) Login(ctx context.Context,
 	ar *tokenprovider.LoginRequest) (*tokenprovider.LoginResponse, error) {
 	parts := strings.Split(ar.Auth, " ")
 	logFromTag(ctx, ar)
-	if len(parts) != 2 || parts[0] != "Basic" {
-		return nil, huma.Error400BadRequest(
-			"Authorization header must follow the basic format: 'Basic base64(username:password)'")
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		huma.Error500InternalServerError("Internal error while getting request log.")
 	}
 	authBytes, err := base64.StdEncoding.DecodeString(parts[1])
 	if err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"domain.error.message": {fmt.Sprintf("base64 decode: %v", err)}}})
+		log.AddMetadata(logging.Metadata{
+			"source":        {"login.domain"},
+			"error.message": {fmt.Sprintf("base64 decode: %v", err)}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error decoding given base64.")
 	}
@@ -161,15 +163,17 @@ func (a *Api) Login(ctx context.Context,
 			"Password failed the regex.")
 	}
 	if err = a.AuthStore.VerifyCredentials(username, password); err != nil {
-		log.Printf("verifyCredentials error: %v", err)
-		return nil, huma.Error401Unauthorized("Bad credentials provided.")
+		log.AddMetadata(logging.Metadata{
+			"source":        {"login.authStore.verifyCredentials"},
+			"error.message": {err.Error()}})
+		return nil, huma.Error401Unauthorized("Bad credentials.")
 	}
 	ut, err := a.AuthStore.GetToken(username)
 	if err != nil {
 		if !errors.Is(err, authstore.NotLoggedIn) {
-			logMetadata(ctx, logging.Metadata{
-				KeyValue: map[string][]string{
-					"authstore.error.message": {fmt.Sprintf("getting token: %v", err)}}})
+			log.AddMetadata(logging.Metadata{
+				"source":        {"login.authStore.getToken"},
+				"error.message": {err.Error()}})
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking if user is logged in.")
 		}
@@ -179,18 +183,18 @@ func (a *Api) Login(ctx context.Context,
 	}
 	ut, err = a.TokenProvider.GenerateToken(username)
 	if err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"tokenprovider.error.message": {fmt.Sprintf("generate token: %v", err)}}})
+		log.AddMetadata(logging.Metadata{
+			"source":        {"login.tokenProvider.generateToken"},
+			"error.message": {err.Error()}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error generating an access token.")
 	}
 	if err = a.AuthStore.StoreToken(ut); err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"authstore.error.message": {fmt.Sprintf("store token: %v", err)}}})
+		log.AddMetadata(logging.Metadata{
+			"source":        {"login.authStore.storeToken"},
+			"error.message": {err.Error()}})
 		return nil, huma.Error500InternalServerError(
-			"Internal error linking the token to the user.")
+			"Internal error storing the token.")
 	}
 	a.Meter.ActiveUsersCountAdd(1)
 	return &tokenprovider.LoginResponse{Body: ut.Token}, nil
@@ -251,6 +255,10 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 		Company: user.Company,
 		Network: user.Network,
 	}
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		huma.Error500InternalServerError("Internal error while getting request log.")
+	}
 	switch authstore.Role(user.Role) {
 	case authstore.User:
 		sr.Scope = deviceinfo.DevicesInCompanyInNetwork
@@ -259,17 +267,17 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	case authstore.Admin:
 		sr.Scope = deviceinfo.AllDevices
 	default:
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"domain.error.message": {fmt.Sprintf("unknown user role: %v", user.Role)}}})
+		log.AddMetadata(logging.Metadata{
+			"source":        {"getDeviceIds.domain"},
+			"error.message": {fmt.Sprintf("unexpected user role: %v", user.Role)}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error determining user role.")
 	}
 	userDevices, err := a.DeviceInfo.GetDevices(sr)
 	if err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"deviceinfo.error.message": {fmt.Sprintf("get devices: %v", err)}}})
+		log.AddMetadata(logging.Metadata{
+			"source":        {"getDeviceIds.deviceInfo.getDevices"},
+			"error.message": {err.Error()}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting DeviceIds.")
 	}
@@ -329,5 +337,5 @@ func (a *Api) GetLocation(ctx context.Context, in *datafetcher.DeviceLocationReq
 	*struct {
 		Body datafetcher.DeviceLocationResponse
 	}, error) {
-
+	return nil, fmt.Errorf("not implemented")
 }

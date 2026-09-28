@@ -16,11 +16,11 @@ import (
 	"github.com/datafarm-software/datafarm-api/api/datafetcher"
 	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
 	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
+	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 	"github.com/datafarm-software/telemetry"
 	"github.com/datafarm-software/telemetry/logging"
 	"github.com/datafarm-software/telemetry/metering"
 	"github.com/datafarm-software/telemetry/tracing"
-	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 
@@ -93,11 +93,15 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("init logger: %v", err)
 	}
-	tracer, err := tracing.NewOtlpTracer(res, opts.TelemetryOpts.CollectorEndpoint)
+	tracer, err := tracing.NewOtlpTracer(res, "datafarm-software/datafarm-api", opts.TelemetryOpts.CollectorEndpoint, 0.25)
 	if err != nil {
 		return fmt.Errorf("init tracer: %v", err)
 	}
-	meter, err := metering.NewOtlpMeter(res, opts.TelemetryOpts.CollectorEndpoint)
+	meter, err := metering.NewOtlpMeter(metering.OtlpOpts{
+		Name:     "datafarm-software/datafarm-api",
+		Endpoint: opts.TelemetryOpts.CollectorEndpoint, Res: res},
+		metering.WithLatency(), metering.WithMemoryUsage(), metering.WithActiveUsersCount(),
+		metering.WithOtelRuntime(), metering.WithUptime(), metering.WithRequestCount())
 	if err != nil {
 		return fmt.Errorf("init meter: %v", err)
 	}
