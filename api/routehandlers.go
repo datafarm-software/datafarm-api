@@ -337,5 +337,12 @@ func (a *Api) GetLocation(ctx context.Context, in *datafetcher.DeviceLocationReq
 	*struct {
 		Body datafetcher.DeviceLocationResponse
 	}, error) {
-	return nil, fmt.Errorf("not implemented")
+	logFromTag(ctx, in)
+	loc, err := a.getLocation(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return &struct {
+		Body datafetcher.DeviceLocationResponse
+	}{loc}, nil
 }
