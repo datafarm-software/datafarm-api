@@ -199,8 +199,12 @@ type DataBoundary struct {
 	Stop     time.Time `json:"stop"`
 }
 
-type DataBoundaryRequest struct {
+type DeviceIdParam struct {
 	DeviceId string `log:"deviceid" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+}
+
+type DataBoundaryRequest struct {
+	DeviceIdParam
 	Timezone
 }
 type DataBoundaryResponse struct{ Body DataBoundary }
@@ -219,6 +223,10 @@ type BatchDataBoundaryRequest struct {
 type BatchDataBoundaryResponse struct {
 	Results []DataBoundary      `json:"results"`
 	Errors  []DataBoundaryError `json:"errors"`
+}
+
+type DeviceLocationRequest struct {
+	DeviceIdParam
 }
 
 type DeviceLocationResponse struct {

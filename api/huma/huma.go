@@ -58,6 +58,10 @@ type HumaOperator interface {
 		*struct {
 			Body datafetcher.BatchDataBoundaryResponse
 		}, error)
+	GetLocation(context.Context, *datafetcher.DeviceLocationRequest) (
+		*struct {
+			Body datafetcher.DeviceLocationResponse
+		}, error)
 }
 
 type HumaError struct {
@@ -245,7 +249,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Summary = "Get DeviceId QueryFields"
 	op.Description = "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has SensorData attached to it eg. A temperature sensor might have a 'temperature' QueryField."
 	di = deviceIdParam()
-	di.Description = "Device Id to get QueryField information from."
+	di.Description = "DeviceId to get QueryField information from."
 	op.Parameters = []*huma.Param{di}
 	fh = FiveHundredExample()
 	fh.Detail = "Internal error getting queryFields."
@@ -267,12 +271,24 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Summary = "Get DeviceId DataBoundary"
 	op.Description = "Clients can use this route to get the device's DataBoundary. A DataBoundary contains the oldest and most recent sensordata timestamps for the device."
 	di = deviceIdParam()
-	di.Description = "Device Id to get DataBoundary information from."
+	di.Description = "DeviceId to get DataBoundary information from."
 	op.Parameters = []*huma.Param{di}
 	fh = FiveHundredExample()
 	fh.Detail = "Internal error getting DataBoundary."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	huma.Register(api, op, ho.GetSensorDataBoundary)
+
+	op = baseOperation("GET", &allMw)
+	op.Path = "/device/{deviceId}/location"
+	op.Summary = "Get DeviceId Location"
+	op.Description = "Clients can use this route to get the device's Location as GPS Coordinates."
+	di = deviceIdParam()
+	di.Description = "DeviceId to get DataBoundary information from."
+	op.Parameters = []*huma.Param{di}
+	fh = FiveHundredExample()
+	fh.Detail = "Internal error getting Location."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	huma.Register(api, op, ho.GetLocation)
 }
 
 var versionRegex = regexp.MustCompile(`[\d]+.[\d]+.[\d]+`)

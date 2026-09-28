@@ -2004,7 +2004,7 @@ func TestGetDataBoundary(t *testing.T) {
 				},
 			},
 			req: datafetcher.DataBoundaryRequest{
-				DeviceId: RegisteredDeviceId,
+				DeviceIdParam: datafetcher.DeviceIdParam{RegisteredDeviceId},
 			},
 		},
 
@@ -2069,8 +2069,8 @@ func TestGetDataBoundary(t *testing.T) {
 				},
 			},
 			req: datafetcher.DataBoundaryRequest{
-				DeviceId: RegisteredDeviceId,
-				Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
+				DeviceIdParam: datafetcher.DeviceIdParam{RegisteredDeviceId},
+				Timezone:      datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
 			},
 		},
 
@@ -2135,7 +2135,7 @@ func TestGetDataBoundary(t *testing.T) {
 				},
 			},
 			req: datafetcher.DataBoundaryRequest{
-				DeviceId: RegisteredDeviceId,
+				DeviceIdParam: datafetcher.DeviceIdParam{RegisteredDeviceId},
 			},
 		},
 
@@ -2200,7 +2200,7 @@ func TestGetDataBoundary(t *testing.T) {
 				},
 			},
 			req: datafetcher.DataBoundaryRequest{
-				DeviceId: RegisteredDeviceId,
+				DeviceIdParam: datafetcher.DeviceIdParam{RegisteredDeviceId},
 			},
 		},
 
@@ -2210,7 +2210,7 @@ func TestGetDataBoundary(t *testing.T) {
 			token:      InvalidToken,
 			want:       datafetcher.DataBoundary{},
 			req: datafetcher.DataBoundaryRequest{
-				DeviceId: RegisteredDeviceId,
+				DeviceIdParam: datafetcher.DeviceIdParam{RegisteredDeviceId},
 			},
 		},
 	}

@@ -304,8 +304,7 @@ func (a *Api) BatchGetSensorDataBoundary(ctx context.Context,
 	resultSlice := make([]datafetcher.DataBoundary, 0, len(in.Body.DeviceIds))
 	for _, deviceId := range in.Body.DeviceIds {
 		qr = datafetcher.DataBoundaryRequest{
-			DeviceId: deviceId,
-			Timezone: in.Body.Timezone,
+			datafetcher.DeviceIdParam{DeviceId: deviceId}, in.Body.Timezone,
 		}
 		dataResp, err = a.getSensorDataBoundary(ctx, &qr)
 		if err == nil {
@@ -324,4 +323,11 @@ func (a *Api) BatchGetSensorDataBoundary(ctx context.Context,
 			Errors:  errSlice,
 		},
 	}, nil
+}
+
+func (a *Api) GetLocation(ctx context.Context, in *datafetcher.DeviceLocationRequest) (
+	*struct {
+		Body datafetcher.DeviceLocationResponse
+	}, error) {
+	return nil, fmt.Errorf("not implemented")
 }
