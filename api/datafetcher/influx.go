@@ -214,6 +214,43 @@ func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
 	return dataBoundary, nil
 }
 
+func (i *InfluxDatafetcher) GetLocation(deviceInfo deviceinfo.DeviceInfo) (
+	loc DeviceLocationResponse, err error) {
+	queryBuilder := strings.Builder{}
+	fmt.Fprintf(&queryBuilder, `data = from(bucket: "%s") `, deviceInfo.Network)
+	fmt.Fprintf(&queryBuilder, "|> range(start: 0) ")
+	fmt.Fprintf(&queryBuilder, `
+		|> filter(fn: (r) => r._measurement == "%s")
+		|> filter(fn: (r) => r.deviceID == "%s")
+		|> filter(fn: (r) => r._field == "latitude" or r._field == "longitude")`,
+		deviceInfo.Company, deviceInfo.DeviceId)
+	fmt.Fprintf(&queryBuilder, `|> group(columns: ["_field"])`)
+	fmt.Fprintf(&queryBuilder, `|> last()`)
+	result, err := i.queryApi.Query(context.Background(), queryBuilder.String())
+	if err != nil {
+		return loc, fmt.Errorf("error querying influxdb: %v", err)
+	}
+	dataRows, err := i.extractValue(result)
+	if err != nil {
+		return loc, fmt.Errorf("error processing query result: %v", err)
+	}
+	if len(dataRows) != 2 {
+		return loc, NoLocation
+	}
+	var ok bool
+	if strings.Contains(dataRows[0].Field, "latitude") {
+		loc.Latitude, ok = dataRows[0].Value.(float64)
+		loc.Longitude, ok = dataRows[1].Value.(float64)
+	} else {
+		loc.Latitude, ok = dataRows[1].Value.(float64)
+		loc.Longitude, ok = dataRows[0].Value.(float64)
+	}
+	if !ok {
+		err = NoLocation
+	}
+	return
+}
+
 func (i *InfluxDatafetcher) PrepareDb(*deviceinfo.Schema, SensorDataSlice) error {
 	return nil
 }

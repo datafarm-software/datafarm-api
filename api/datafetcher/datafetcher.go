@@ -225,6 +225,8 @@ type BatchDataBoundaryResponse struct {
 	Errors  []DataBoundaryError `json:"errors"`
 }
 
+var NoLocation = errors.New("no location")
+
 type DeviceLocationRequest struct {
 	DeviceIdParam
 }
@@ -242,5 +244,7 @@ type DataFetcher interface {
 	TestingDataFetcher
 	GetData(metadata deviceinfo.DeviceInfo) (SensorDataSlice, error)
 	GetDataBoundary(metadata deviceinfo.DeviceInfo) (DataBoundary, error)
+	//NOTE: could return NoLocation
+	GetLocation(metadata deviceinfo.DeviceInfo) (DeviceLocationResponse, error)
 	Close() error
 }
