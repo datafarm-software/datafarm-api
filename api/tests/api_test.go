@@ -19,10 +19,10 @@ import (
 	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
 	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
 	"github.com/datafarm-software/datafarm-api/api/redis"
+	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 	"github.com/datafarm-software/telemetry/logging"
 	"github.com/datafarm-software/telemetry/metering"
 	"github.com/datafarm-software/telemetry/tracing"
-	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 	"github.com/google/go-cmp/cmp"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
@@ -2699,9 +2699,9 @@ func (m MockApi) Setup(t *testing.T) (*api.Api, CloseFunc) {
 		Tokens:    m.mockTokens,
 		Increment: len(m.mockTokens),
 	}
-	a.Logger = &logging.MockLogger{}
-	a.Meter = &metering.MockMeter{}
-	a.Tracer = &tracing.MockTracer{}
+	a.Logger = logging.MockLogger()
+	a.Meter = metering.MockMeter()
+	a.Tracer = tracing.MockTracer()
 	db, err := miniredis.Run()
 	require.Nil(t, err)
 	testingRedis, err := redis.NewTestingRedis(db.Addr())

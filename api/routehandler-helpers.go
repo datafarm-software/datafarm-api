@@ -151,7 +151,7 @@ func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, d
 	if user.Company != deviceCompany {
 		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyCompany) {
 			return di, huma.Error401Unauthorized(
-				"Unauthorized access to this Device.")
+				"Unauthorized access to this device.")
 		}
 	}
 	deviceNetwork, err := a.DeviceInfo.GetNetwork(deviceId)
@@ -167,7 +167,7 @@ func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, d
 	}
 	if user.Network != deviceNetwork {
 		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyNetwork) {
-			return di, huma.Error401Unauthorized("Unauthorized access to this Device.")
+			return di, huma.Error401Unauthorized("Unauthorized access to this device.")
 		}
 	}
 	di.Company = deviceCompany
