@@ -129,7 +129,7 @@ func formatTimestamp(in *datafetcher.SensorDataRequest) (err error) {
 	return nil
 }
 
-func (a *Api) checkAccess(user authstore.UserInfo, deviceId string) (
+func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, deviceId string) (
 	di deviceinfo.DeviceInfo, err error) {
 	di = deviceinfo.DeviceInfo{DeviceId: deviceId}
 	deviceCompany, err := a.DeviceInfo.GetCompany(deviceId)
@@ -137,10 +137,9 @@ func (a *Api) checkAccess(user authstore.UserInfo, deviceId string) (
 		if errors.Is(err, deviceinfo.NotFound) {
 			return di, huma.Error404NotFound("Device Not Found.")
 		}
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"source":        {"checkAccess.deviceInfo.getCompany"},
-				"error.message": {err.Error()}}})
+		log.AddMetadata(logging.Metadata{
+			"source":        {"checkAccess.deviceInfo.getCompany"},
+			"error.message": {err.Error()}})
 		return di, huma.Error500InternalServerError(
 			"Internal error checking access to DeviceId.")
 	}
@@ -155,10 +154,9 @@ func (a *Api) checkAccess(user authstore.UserInfo, deviceId string) (
 		if errors.Is(err, deviceinfo.NotFound) {
 			return di, huma.Error404NotFound("Device Not Found.")
 		}
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"source":        {"checkAccess.deviceInfo.getNetwork"},
-				"error.message": {err.Error()}}})
+		log.AddMetadata(logging.Metadata{
+			"source":        {"checkAccess.deviceInfo.getNetwork"},
+			"error.message": {err.Error()}})
 		return di, huma.Error500InternalServerError(
 			"Internal error checking access to DeviceId.")
 	}
@@ -194,10 +192,9 @@ func (a *Api) getSensorData(
 		}
 		qf, err := a.DeviceInfo.GetQueryFields(in.Hardware.DeviceId)
 		if err != nil {
-			logMetadata(ctx, logging.Metadata{
-				KeyValue: map[string][]string{
-					"source":        {"getSensorData.deviceInfo.getQueryFields"},
-					"error.message": {err.Error()}}})
+			log.AddMetadata(logging.Metadata{
+				"source":        {"getSensorData.deviceInfo.getQueryFields"},
+				"error.message": {err.Error()}})
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting QueryFields.")
 		}
@@ -210,10 +207,9 @@ func (a *Api) getSensorData(
 	}
 	sensorData, err = a.DataFetcher.GetData(di)
 	if err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"source":        {"getSensorData.dataFetcher.GetData"},
-				"error.message": {err.Error()}}})
+		log.AddMetadata(logging.Metadata{
+			"source":        {"getSensorData.dataFetcher.GetData"},
+			"error.message": {err.Error()}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting SensorData.")
 	}
@@ -228,10 +224,9 @@ func (a *Api) getQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 	}
 	qf, err = a.DeviceInfo.GetQueryFields(in.DeviceId)
 	if err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"source":        {"getQueryFields.deviceInfo.getQueryFields"},
-				"error.message": {err.Error()}}})
+		log.AddMetadata(ctx, logging.Metadata{
+			"source":        {"getQueryFields.deviceInfo.getQueryFields"},
+			"error.message": {err.Error()}})
 		return qf, huma.Error500InternalServerError(
 			"Internal error while getting QueryFields.")
 	}

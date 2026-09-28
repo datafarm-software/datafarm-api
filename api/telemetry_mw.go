@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"log"
 	"math"
 	"time"
@@ -64,27 +63,27 @@ type requestLog struct {
 }
 
 func (a *Api) LogRequest(humaCtx huma.Context, next func(huma.Context)) {
-	rl := &requestLog{logging.Metadata{
-		KeyValue: map[string][]string{
-			"http.method": {humaCtx.Method()},
-			"http.route":  {getPath(humaCtx)},
-		},
-	}}
+	log := a.Logger.LogAccumulator()
+	log.AddMetadata(logging.Metadata{
+		"http.method": {humaCtx.Method()},
+		"http.route":  {getPath(humaCtx)},
+	})
 	span, _ := a.Tracer.SpanFromContext(humaCtx.Context())
-	if span.IsValid() {
-		rl.KeyValue["trace_id"] = []string{span.TraceId()}
-		rl.KeyValue["span_id"] = []string{span.SpanId()}
-	}
-	humaCtx = huma.WithValue(humaCtx, "request-log", rl)
-	next(humaCtx)
-	rl.KeyValue["http.status_code"] = []string{fmt.Sprintf("%d", humaCtx.Status())}
-	switch getFirstDigit(humaCtx.Status()) {
-	case 4:
-		a.Logger.Warn("HTTP Client Error", rl.Metadata)
-	case 5:
-		a.Logger.Error("HTTP Internal Error", rl.Metadata)
-	default:
-		a.Logger.Info("HTTP Client Request", rl.Metadata)
+	if span.IsRecording() {
+		log.AddMetadata(logging.Metadata{
+			"trace_id": {span.TraceId()},
+			"span_id":  {span.SpanId()},
+		})
+		humaCtx = huma.WithValue(humaCtx, "request-log", log)
+		next(humaCtx)
+		log.AddMetadata(logging.Metadata{
+			"http.status_code": {string(humaCtx.Status())}})
+		switch getFirstDigit(humaCtx.Status()) {
+		case 4:
+			a.Logger.Warn("HTTP Client Error", log.Metadata())
+		case 5:
+			a.Logger.Error("HTTP Internal Error", log.Metadata())
+		}
 	}
 }
 
