@@ -18,12 +18,12 @@ func DefaultBatchRequest() datafetcher.BatchSensorDataRequest {
 	return datafetcher.BatchSensorDataRequest{
 		Hardware: []datafetcher.Hardware{
 			{
-				DeviceId:    RegisteredDeviceId,
-				QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+				DeviceIdParam: datafetcher.DeviceIdParam{RegisteredDeviceId},
+				QueryFields:   []string{RegisteredQueryField, AnotherRegisteredQueryField},
 			},
 			{
-				DeviceId:    AnotherRegisteredDeviceId,
-				QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+				DeviceIdParam: datafetcher.DeviceIdParam{AnotherRegisteredDeviceId},
+				QueryFields:   []string{RegisteredQueryField, AnotherRegisteredQueryField},
 			},
 		},
 		TimeFrame: datafetcher.TimeFrame{
@@ -705,28 +705,28 @@ func TestBatchGetSensorData(t *testing.T) {
 			deviceRequests: datafetcher.BatchSensorDataRequest{
 				Hardware: []datafetcher.Hardware{
 					{
-						DeviceId:    RegisteredDeviceId,
-						QueryFields: []string{"all"},
+						DeviceIdParam: datafetcher.DeviceIdParam{RegisteredDeviceId},
+						QueryFields:   []string{"all"},
 					},
 					{
-						DeviceId:    AnotherRegisteredDeviceId,
-						QueryFields: []string{"all"},
+						DeviceIdParam: datafetcher.DeviceIdParam{AnotherRegisteredDeviceId},
+						QueryFields:   []string{"all"},
 					},
 					{
-						DeviceId:    "device3",
-						QueryFields: []string{"all"},
+						DeviceIdParam: datafetcher.DeviceIdParam{"device3"},
+						QueryFields:   []string{"all"},
 					},
 					{
-						DeviceId:    "device4",
-						QueryFields: []string{"all"},
+						DeviceIdParam: datafetcher.DeviceIdParam{"device4"},
+						QueryFields:   []string{"all"},
 					},
 					{
-						DeviceId:    "device5",
-						QueryFields: []string{"all"},
+						DeviceIdParam: datafetcher.DeviceIdParam{"device5"},
+						QueryFields:   []string{"all"},
 					},
 					{
-						DeviceId:    "device6",
-						QueryFields: []string{"all"},
+						DeviceIdParam: datafetcher.DeviceIdParam{"device6"},
+						QueryFields:   []string{"all"},
 					},
 				},
 				TimeFrame: datafetcher.TimeFrame{
@@ -2249,12 +2249,12 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
-							DeviceId:    RegisteredDeviceId,
-							QueryFields: []string{RegisteredQueryField},
+							DeviceIdParam: datafetcher.DeviceIdParam{RegisteredDeviceId},
+							QueryFields:   []string{RegisteredQueryField},
 						},
 						{
-							DeviceId:    AnotherRegisteredDeviceId,
-							QueryFields: []string{RegisteredQueryField},
+							DeviceIdParam: datafetcher.DeviceIdParam{AnotherRegisteredDeviceId},
+							QueryFields:   []string{RegisteredQueryField},
 						},
 					},
 					TimeFrame: datafetcher.TimeFrame{
@@ -2331,12 +2331,12 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
-							DeviceId:    RegisteredDeviceId,
-							QueryFields: []string{RegisteredQueryField},
+							DeviceIdParam: datafetcher.DeviceIdParam{RegisteredDeviceId},
+							QueryFields:   []string{RegisteredQueryField},
 						},
 						{
-							DeviceId:    AnotherRegisteredDeviceId,
-							QueryFields: []string{RegisteredQueryField},
+							DeviceIdParam: datafetcher.DeviceIdParam{AnotherRegisteredDeviceId},
+							QueryFields:   []string{RegisteredQueryField},
 						},
 					},
 					TimeFrame: datafetcher.TimeFrame{
@@ -2416,12 +2416,12 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
-							DeviceId: RegisteredDeviceId,
+							DeviceIdParam: datafetcher.DeviceIdParam{RegisteredDeviceId},
 							QueryFields: []string{
 								RegisteredQueryField, AnotherRegisteredQueryField},
 						},
 						{
-							DeviceId: AnotherRegisteredDeviceId,
+							DeviceIdParam: datafetcher.DeviceIdParam{AnotherRegisteredDeviceId},
 							QueryFields: []string{
 								RegisteredQueryField, AnotherRegisteredQueryField},
 						},
@@ -2500,12 +2500,12 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
-							DeviceId: RegisteredDeviceId,
+							DeviceIdParam: datafetcher.DeviceIdParam{RegisteredDeviceId},
 							QueryFields: []string{
 								RegisteredQueryField, AnotherRegisteredQueryField},
 						},
 						{
-							DeviceId: AnotherRegisteredDeviceId,
+							DeviceIdParam: datafetcher.DeviceIdParam{AnotherRegisteredDeviceId},
 							QueryFields: []string{
 								RegisteredQueryField, AnotherRegisteredQueryField},
 						},
@@ -2581,12 +2581,12 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
-							DeviceId:    RegisteredDeviceId,
-							QueryFields: []string{RegisteredQueryField},
+							DeviceIdParam: datafetcher.DeviceIdParam{RegisteredDeviceId},
+							QueryFields:   []string{RegisteredQueryField},
 						},
 						{
-							DeviceId:    AnotherRegisteredDeviceId,
-							QueryFields: []string{RegisteredQueryField},
+							DeviceIdParam: datafetcher.DeviceIdParam{AnotherRegisteredDeviceId},
+							QueryFields:   []string{RegisteredQueryField},
 						},
 					},
 					TimeFrame: datafetcher.TimeFrame{
@@ -2662,12 +2662,12 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
-							DeviceId:    RegisteredDeviceId,
-							QueryFields: []string{RegisteredQueryField},
+							DeviceIdParam: datafetcher.DeviceIdParam{RegisteredDeviceId},
+							QueryFields:   []string{RegisteredQueryField},
 						},
 						{
-							DeviceId:    AnotherRegisteredDeviceId,
-							QueryFields: []string{RegisteredQueryField},
+							DeviceIdParam: datafetcher.DeviceIdParam{AnotherRegisteredDeviceId},
+							QueryFields:   []string{RegisteredQueryField},
 						},
 					},
 					TimeFrame: datafetcher.TimeFrame{
@@ -2744,12 +2744,13 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
-							DeviceId: RegisteredDeviceId,
+							DeviceIdParam: datafetcher.DeviceIdParam{RegisteredDeviceId},
 							QueryFields: []string{
 								RegisteredQueryField, AnotherRegisteredQueryField},
 						},
-						{DeviceId: AnotherRegisteredDeviceId,
-							QueryFields: []string{RegisteredQueryField},
+						{
+							DeviceIdParam: datafetcher.DeviceIdParam{AnotherRegisteredDeviceId},
+							QueryFields:   []string{RegisteredQueryField},
 						},
 					},
 					TimeFrame: datafetcher.TimeFrame{
@@ -2826,13 +2827,13 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				BatchSensorDataRequest: &datafetcher.BatchSensorDataRequest{
 					Hardware: []datafetcher.Hardware{
 						{
-							DeviceId: RegisteredDeviceId,
+							DeviceIdParam: datafetcher.DeviceIdParam{RegisteredDeviceId},
 							QueryFields: []string{
 								RegisteredQueryField, AnotherRegisteredQueryField},
 						},
 						{
-							DeviceId:    AnotherRegisteredDeviceId,
-							QueryFields: []string{RegisteredQueryField},
+							DeviceIdParam: datafetcher.DeviceIdParam{AnotherRegisteredDeviceId},
+							QueryFields:   []string{RegisteredQueryField},
 						},
 					},
 					TimeFrame: datafetcher.TimeFrame{
