@@ -232,6 +232,7 @@ type DeviceLocationRequest struct {
 }
 
 type DeviceLocationResponse struct {
+	DeviceId  string  `json:"deviceId"`
 	Latitude  float64 `log:"latitude" json:"latitude"`
 	Longitude float64 `log:"longitude" json:"longitude"`
 }

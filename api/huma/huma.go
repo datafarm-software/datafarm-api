@@ -204,7 +204,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 
 	op = baseOperation("POST", &allMw)
 	op.Path = "/batch/device/sensordata"
-	op.Summary = "Batch Get SensorData"
+	op.Summary = "Batch Get DeviceId SensorData"
 	op.Description = "Clients can use this route to request SensorData from multiple DeviceIds."
 	op.Responses["500"] = &huma.Response{}
 	op.Responses["404"] = &huma.Response{}
@@ -232,7 +232,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	di := deviceIdParam()
 	di.Description = "DeviceId to request SensorData from."
 	op.Parameters = []*huma.Param{di}
-	op.Summary = "Get SensorData"
+	op.Summary = "Get DeviceId SensorData"
 	op.Description =
 		"Clients can use this route to request SensorData from a DeviceId."
 	op.Responses["204"] = &huma.Response{

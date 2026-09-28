@@ -249,6 +249,7 @@ func (i *InfluxDatafetcher) GetLocation(deviceInfo deviceinfo.DeviceInfo) (
 	if !ok {
 		err = NoLocation
 	}
+	loc.DeviceId = deviceInfo.DeviceId
 	return
 }
 

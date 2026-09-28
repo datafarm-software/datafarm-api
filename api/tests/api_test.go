@@ -2655,6 +2655,7 @@ func TestGetLocation(t *testing.T) {
 				deviceId:   RegisteredDeviceId,
 			},
 			datafetcher.DeviceLocationResponse{
+				DeviceId: RegisteredDeviceId,
 				Latitude: Latitude, Longitude: Longitude,
 			},
 		},
