@@ -218,7 +218,7 @@ func (a *Api) getSensorData(
 	sensorData, err = a.DataFetcher.GetData(di)
 	if err != nil {
 		log.AddMetadata(logging.Metadata{
-			"source":        {"getSensorData.dataFetcher.GetData"},
+			"source":        {"getSensorData.dataFetcher.getData"},
 			"error.message": {err.Error()}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting SensorData.")
@@ -299,7 +299,7 @@ func (a *Api) getSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 	db, err = a.DataFetcher.GetDataBoundary(di)
 	if err != nil {
 		log.AddMetadata(logging.Metadata{
-			"source":        {"getSensorDataBoundary.dataFetcher.GetDataBoundary"},
+			"source":        {"getSensorDataBoundary.dataFetcher.getDataBoundary"},
 			"error.message": {err.Error()}})
 		return db, huma.Error500InternalServerError(
 			"Internal error getting DataBoundary.")
