@@ -63,6 +63,13 @@ type HumaOperator interface {
 			Status int
 			Body   datafetcher.DeviceLocationResponse
 		}, error)
+	BatchGetLocation(context.Context,
+		*struct {
+			Body datafetcher.BatchLocationRequest
+		}) (
+		*struct {
+			Body datafetcher.BatchLocationResponse
+		}, error)
 }
 
 type HumaError struct {
@@ -226,6 +233,14 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["500"] = &huma.Response{}
 	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.BatchGetSensorDataBoundary)
+
+	op = baseOperation("POST", &allMw)
+	op.Path = "/batch/device/location"
+	op.Summary = "Batch Get DeviceId Location"
+	op.Description = "Clients can use this route to get the Location of multiple DeviceIds."
+	op.Responses["500"] = &huma.Response{}
+	op.Responses["404"] = &huma.Response{}
+	huma.Register(api, op, ho.BatchGetLocation)
 
 	op = baseOperation("GET", &allMw)
 	op.Path = "/device/{deviceId}/sensordata"

@@ -354,3 +354,36 @@ func (a *Api) GetLocation(ctx context.Context, in *datafetcher.DeviceLocationReq
 		Body   datafetcher.DeviceLocationResponse
 	}{http.StatusOK, loc}, nil
 }
+
+func (a *Api) BatchGetLocation(ctx context.Context, in *struct {
+	Body datafetcher.BatchLocationRequest
+}) (*struct {
+	Body datafetcher.BatchLocationResponse
+}, error) {
+	logFromTag(ctx, in.Body)
+	var lr datafetcher.DeviceLocationRequest
+	var dataResp datafetcher.DeviceLocationResponse
+	var deviceErr datafetcher.BatchError
+	var err error
+	errSlice := make([]datafetcher.BatchError, 0, len(in.Body.DeviceIds))
+	resultSlice := make([]datafetcher.DeviceLocationResponse, 0, len(in.Body.DeviceIds))
+	for _, deviceId := range in.Body.DeviceIds {
+		lr.DeviceId = deviceId
+		dataResp, err = a.getLocation(ctx, &lr)
+		if err == nil {
+			resultSlice = append(resultSlice, dataResp)
+		} else {
+			deviceErr.DeviceId = deviceId
+			deviceErr.Error = err.Error()
+			errSlice = append(errSlice, deviceErr)
+		}
+	}
+	return &struct {
+		Body datafetcher.BatchLocationResponse
+	}{
+		Body: datafetcher.BatchLocationResponse{
+			Results: resultSlice,
+			Errors:  errSlice,
+		},
+	}, nil
+}
