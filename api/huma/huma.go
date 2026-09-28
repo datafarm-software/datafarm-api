@@ -166,6 +166,18 @@ func baseOperation(method string, middlewares *huma.Middlewares) huma.Operation 
 	return op
 }
 
+func deviceIdParam() *huma.Param {
+	return &huma.Param{
+		Name:     "deviceId",
+		In:       "path",
+		Required: true,
+		Schema: &huma.Schema{
+			Type:    "string",
+			Pattern: `^\w{1,30}$`,
+		},
+	}
+}
+
 func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	mw := []func(ctx huma.Context, next func(huma.Context)){
 		ho.RateLimit, ho.CountApiRequest, ho.TraceRequest, ho.LogRequest, ho.RecordLatency,
@@ -187,8 +199,8 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 
 	op = baseOperation("POST", &allMw)
 	op.Path = "/batch/device/sensordata"
-	op.Summary = "Batch Get Sensor Data"
-	op.Description = "Clients can use this route to request data from multiple device ids."
+	op.Summary = "Batch Get SensorData"
+	op.Description = "Clients can use this route to request SensorData from multiple DeviceIds."
 	op.Responses["500"] = &huma.Response{}
 	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.BatchGetSensorData)
@@ -197,7 +209,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Path = "/batch/device/queryfields"
 	op.Summary = "Batch Get DeviceId QueryFields"
 	op.Description =
-		"Clients can use this route to request QueryFields from multiple device ids."
+		"Clients can use this route to request QueryFields from multiple DeviceIds."
 	op.Responses["500"] = &huma.Response{}
 	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.BatchGetQueryFields)
@@ -205,33 +217,24 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op = baseOperation("POST", &allMw)
 	op.Path = "/batch/device/databoundary"
 	op.Summary = "Batch Get DeviceId DataBoundary"
-	op.Description = "Clients can use this route to get the DataBoundary of multiple devices."
+	op.Description = "Clients can use this route to get the DataBoundary of multiple DeviceIds."
 	op.Responses["500"] = &huma.Response{}
 	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.BatchGetSensorDataBoundary)
 
-	deviceIdParam := &huma.Param{
-		Name:     "deviceId",
-		In:       "path",
-		Required: true,
-		Schema: &huma.Schema{
-			Type:    "string",
-			Pattern: `^\w{1,30}$`,
-		},
-	}
-
 	op = baseOperation("GET", &allMw)
 	op.Path = "/device/{deviceId}/sensordata"
-	deviceIdParam.Description = "Device Id to request data from."
-	op.Parameters = []*huma.Param{deviceIdParam}
-	op.Summary = "Get Sensor Data"
+	di := deviceIdParam()
+	di.Description = "DeviceId to request SensorData from."
+	op.Parameters = []*huma.Param{di}
+	op.Summary = "Get SensorData"
 	op.Description =
-		"Clients can use this route to request data from a sensor using its device id."
+		"Clients can use this route to request SensorData from a DeviceId."
 	op.Responses["204"] = &huma.Response{
 		Description: "No SensorData for the requested time period.",
 	}
 	fh = FiveHundredExample()
-	fh.Detail = "Internal error while getting data for the device."
+	fh.Detail = "Internal error while getting SensorData for the DeviceId."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	huma.Register(api, op, ho.GetSensorData)
 	op.Responses["204"] = &huma.Response{}
@@ -240,9 +243,10 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op = baseOperation("GET", &allMw)
 	op.Path = "/device/{deviceId}/queryfields"
 	op.Summary = "Get DeviceId QueryFields"
-	op.Description = "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor might have a 'temperature' QueryField."
-	deviceIdParam.Description = "Device Id to get QueryField information from."
-	op.Parameters = []*huma.Param{deviceIdParam}
+	op.Description = "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has SensorData attached to it eg. A temperature sensor might have a 'temperature' QueryField."
+	di = deviceIdParam()
+	di.Description = "Device Id to get QueryField information from."
+	op.Parameters = []*huma.Param{di}
 	fh = FiveHundredExample()
 	fh.Detail = "Internal error getting queryFields."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
@@ -262,8 +266,9 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Path = "/device/{deviceId}/databoundary"
 	op.Summary = "Get DeviceId DataBoundary"
 	op.Description = "Clients can use this route to get the device's DataBoundary. A DataBoundary contains the oldest and most recent sensordata timestamps for the device."
-	deviceIdParam.Description = "Device Id to get DataBoundary information from."
-	op.Parameters = []*huma.Param{deviceIdParam}
+	di = deviceIdParam()
+	di.Description = "Device Id to get DataBoundary information from."
+	op.Parameters = []*huma.Param{di}
 	fh = FiveHundredExample()
 	fh.Detail = "Internal error getting DataBoundary."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
@@ -295,7 +300,7 @@ func Config(mode Mode) (config huma.Config) {
 	config.Info.Description = `
 ## Welcome
 
-The DataFarm SensorData API provides our clients with access to their Sensor Data,
+The DataFarm SensorData API provides our clients with access to their SensorData,
 Device Metadata, and Export Functionality.
 
 ### Authentication
@@ -383,7 +388,7 @@ func SetupApiOperations(humaApi huma.API, a HumaOperator) {
 	}
 	csvMediaType := &huma.MediaType{
 		Schema: &huma.Schema{
-			Description: "Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Timestamps will be in UTC timezone and RFC3339 Format. Should there be any errors, clients can expect these to be included in the CSV.",
+			Description: "Clients are able to negotiate CSV formatted SensorData using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Timestamps will be in UTC timezone and RFC3339 Format. Should there be any errors, clients can expect these to be included in the CSV.",
 			Type:        "string",
 		},
 	}
