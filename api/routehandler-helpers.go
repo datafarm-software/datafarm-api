@@ -138,8 +138,8 @@ func formatTimestamp(in *datafetcher.SensorDataRequest) (err error) {
 	return nil
 }
 
-func (a *Api) checkAccessToDevice(deviceId string, user authstore.UserInfo) (
-	deviceinfo.DeviceInfo, int, error) {
+func (a *Api) checkAccess(user authstore.UserInfo, deviceId string) (
+	deviceinfo.DeviceInfo, error) {
 	di := deviceinfo.DeviceInfo{DeviceId: deviceId}
 	deviceCompany, err := a.DeviceInfo.GetCompany(deviceId)
 	if err != nil {
@@ -178,32 +178,15 @@ func (a *Api) getSensorData(
 	if err = formatTimestamp(in); err != nil {
 		return nil, err
 	}
-	user, ok := ctx.Value("user").(authstore.UserInfo)
-	if !ok {
-		return nil, huma.Error500InternalServerError(
-			"Internal error getting user.")
-	}
-	di, code, err := a.checkAccessToDevice(in.Hardware.DeviceId, user)
+	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetSensorData)
 	if err != nil {
-		switch code {
-		case http.StatusUnauthorized:
-			return nil, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		case http.StatusNotFound:
-			return nil, huma.Error404NotFound(
-				"Device Not Found.")
-		default:
-			logMetadata(ctx, logging.Metadata{
-				KeyValue: map[string][]string{
-					"deviceinfo.error.message": {err.Error()}}})
-			return nil, huma.Error500InternalServerError(
-				"Internal error checking acess to DeviceId.")
-		}
+		return nil, err
 	}
 	di.Start = in.TimeFrame.Start
 	di.Stop = in.TimeFrame.Stop
 	di.QueryFields = in.Hardware.QueryFields
 	if in.Hardware.QueryFields[0] == "all" {
+		user, _ := a.user(ctx)
 		if !authstore.HasPermission(authstore.Role(user.Role),
 			authstore.GetAllQueryFields) {
 			return nil, huma.Error401Unauthorized(
@@ -241,31 +224,9 @@ func (a *Api) getSensorData(
 
 func (a *Api) getQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (
 	qf deviceinfo.QueryFields, err error) {
-	user, ok := ctx.Value("user").(authstore.UserInfo)
-	if !ok {
-		return qf, huma.Error500InternalServerError(
-			"Internal error getting user.")
-	}
-	_, code, err := a.checkAccessToDevice(in.DeviceId, user)
+	_, err = a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetAllQueryFields)
 	if err != nil {
-		switch code {
-		case http.StatusUnauthorized:
-			return qf, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		case http.StatusNotFound:
-			return qf, huma.Error404NotFound(
-				"Device Not Found.")
-		default:
-			logMetadata(ctx, logging.Metadata{
-				KeyValue: map[string][]string{
-					"deviceinfo.error.message": {err.Error()}}})
-			return qf, huma.Error500InternalServerError(
-				"Internal error checking acess to DeviceId.")
-		}
-	}
-	if !authstore.HasPermission(authstore.Role(user.Role),
-		authstore.GetAllQueryFields) {
-		return qf, huma.Error401Unauthorized("Access denied to QueryFields.")
+		return
 	}
 	qf, err = a.DeviceInfo.GetQueryFields(in.DeviceId)
 	if err != nil {
@@ -276,36 +237,54 @@ func (a *Api) getQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 		return qf, huma.Error500InternalServerError(
 			"Internal error while getting queryfields.")
 	}
-	return qf, nil
+	return
 }
 
-func (a *Api) getSensorDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
-	db datafetcher.DataBoundary, err error) {
+func (a *Api) deviceInfoIfAccessAndPermission(ctx context.Context,
+	deviceId string, permission authstore.Permission) (
+	di deviceinfo.DeviceInfo, err error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
-		return db, huma.Error500InternalServerError(
+		return di, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
-	di, code, err := a.checkAccessToDevice(in.DeviceId, user)
+	di, code, err := a.checkAccess(user, deviceId)
 	if err != nil {
 		switch code {
 		case http.StatusUnauthorized:
-			return db, huma.Error401Unauthorized(
+			return di, huma.Error401Unauthorized(
 				"Unauthorized access to this device.")
 		case http.StatusNotFound:
-			return db, huma.Error404NotFound(
+			return di, huma.Error404NotFound(
 				"Device Not Found.")
 		default:
 			logMetadata(ctx, logging.Metadata{
 				KeyValue: map[string][]string{
 					"deviceinfo.error.message": {err.Error()}}})
-			return db, huma.Error500InternalServerError(
+			return di, huma.Error500InternalServerError(
 				"Internal error checking acess to DeviceId.")
 		}
 	}
-	if !authstore.HasPermission(authstore.Role(user.Role),
-		authstore.GetDataBoundary) {
-		return db, huma.Error401Unauthorized("Access denied to DataBoundary.")
+	if !authstore.HasPermission(authstore.Role(user.Role), permission) {
+		return di, huma.Error401Unauthorized("Access denied to DataBoundary.")
+	}
+	return
+}
+
+func (a *Api) user(ctx context.Context) (authstore.UserInfo, error) {
+	user, ok := ctx.Value("user").(authstore.UserInfo)
+	if !ok {
+		return user, huma.Error500InternalServerError(
+			"Internal error getting user.")
+	}
+	return user, nil
+}
+
+func (a *Api) getSensorDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
+	db datafetcher.DataBoundary, err error) {
+	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetDataBoundary)
+	if err != nil {
+		return db, err
 	}
 	di.Timezone, err = in.Timezone.Location()
 	if err != nil {

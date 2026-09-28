@@ -42,10 +42,12 @@ const (
 	GetAnyNetwork     Permission = "get-any-network"
 	GetAllQueryFields Permission = "get-all-queryfields"
 	GetDataBoundary   Permission = "get-data-boundary"
+	GetSensorData     Permission = "get-sensor-data"
 )
 
 var rolePermissions = map[Role][]Permission{
 	User: {
+		GetSensorData,
 		GetAllQueryFields,
 		GetDataBoundary,
 	},

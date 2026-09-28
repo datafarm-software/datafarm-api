@@ -329,5 +329,4 @@ func (a *Api) GetLocation(ctx context.Context, in *datafetcher.DeviceLocationReq
 	*struct {
 		Body datafetcher.DeviceLocationResponse
 	}, error) {
-	return nil, fmt.Errorf("not implemented")
 }
