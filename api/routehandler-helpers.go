@@ -320,6 +320,9 @@ func (a *Api) getLocation(ctx context.Context, in *datafetcher.DeviceLocationReq
 	}
 	loc, err = a.DataFetcher.GetLocation(di)
 	if err != nil {
+		if errors.Is(err, datafetcher.NoLocation) {
+			return loc, err
+		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getLocation.dataFetcher.getLocation"},
 			"error.message": {err.Error()}})

@@ -335,14 +335,22 @@ func (a *Api) BatchGetSensorDataBoundary(ctx context.Context,
 
 func (a *Api) GetLocation(ctx context.Context, in *datafetcher.DeviceLocationRequest) (
 	*struct {
-		Body datafetcher.DeviceLocationResponse
+		Status int
+		Body   datafetcher.DeviceLocationResponse
 	}, error) {
 	logFromTag(ctx, in)
 	loc, err := a.getLocation(ctx, in)
 	if err != nil {
-		return nil, err
+		if !errors.Is(err, datafetcher.NoLocation) {
+			return nil, err
+		}
+		return &struct {
+			Status int
+			Body   datafetcher.DeviceLocationResponse
+		}{http.StatusNoContent, datafetcher.DeviceLocationResponse{}}, nil
 	}
 	return &struct {
-		Body datafetcher.DeviceLocationResponse
-	}{loc}, nil
+		Status int
+		Body   datafetcher.DeviceLocationResponse
+	}{http.StatusOK, loc}, nil
 }

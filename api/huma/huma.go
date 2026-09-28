@@ -60,7 +60,8 @@ type HumaOperator interface {
 		}, error)
 	GetLocation(context.Context, *datafetcher.DeviceLocationRequest) (
 		*struct {
-			Body datafetcher.DeviceLocationResponse
+			Status int
+			Body   datafetcher.DeviceLocationResponse
 		}, error)
 }
 
@@ -283,11 +284,14 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Summary = "Get DeviceId Location"
 	op.Description = "Clients can use this route to get the device's Location as GPS Coordinates."
 	di = deviceIdParam()
-	di.Description = "DeviceId to get DataBoundary information from."
+	di.Description = "DeviceId to get Location information of."
 	op.Parameters = []*huma.Param{di}
 	fh = FiveHundredExample()
 	fh.Detail = "Internal error getting Location."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	op.Responses["204"] = &huma.Response{
+		Description: "No Location Information for DeviceId.",
+	}
 	huma.Register(api, op, ho.GetLocation)
 }
 
