@@ -50,6 +50,10 @@ type SensorDataRequest struct {
 	TimeFrame
 }
 
+type LastSensorDataRequest struct {
+	Hardware
+}
+
 type BatchSensorDataRequest struct {
 	Hardware []Hardware `json:"hardware" required:"true" minItems:"2" maxItems:"5"`
 	TimeFrame
