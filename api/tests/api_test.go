@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"github.com/datafarm-software/telemetry/tracing"
 	"github.com/google/go-cmp/cmp"
 	"github.com/gorilla/mux"
+	"github.com/mitchellh/reflectwalk"
 	"github.com/stretchr/testify/require"
 )
 
@@ -1508,7 +1510,7 @@ func TestGetSensorData(t *testing.T) {
 			api, closeFunc := tc.MockApi.Setup(t)
 			defer closeFunc()
 			humaTest := setupHuma(t, api)
-			qp := makeQueryParams(tc.SensorDataRequest)
+			qp := makeQueryParams(any(tc.SensorDataRequest), t)
 			route := "/device/" + tc.deviceId + "/sensordata" + qp
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
@@ -2326,7 +2328,7 @@ func TestGetLastSensorData(t *testing.T) {
 			api, closeFunc := tc.MockApi.Setup(t)
 			defer closeFunc()
 			humaTest := setupHuma(t, api)
-			qp := makeQueryParams(tc.LastSensorDataRequest)
+			qp := makeQueryParams(any(tc.LastSensorDataRequest), t)
 			route := "/device/" + tc.deviceId + "/sensordata/last" + qp
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
@@ -2423,7 +2425,7 @@ func TestMakeQueryParams(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := makeQueryParams(tc.input)
+			got := makeQueryParams(tc.input, t)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Fatalf("response mismatch (-want +got): %s\n", diff)
 			}
@@ -2431,23 +2433,48 @@ func TestMakeQueryParams(t *testing.T) {
 	}
 }
 
+type queryWalker struct {
+	strings.Builder
+}
+
+func (w *queryWalker) Struct(reflect.Value) error { return nil }
+
+func (w *queryWalker) StructField(
+	field reflect.StructField,
+	value reflect.Value,
+) error {
+	tag := field.Tag.Get("query")
+	if tag == "" {
+		return nil
+	}
+	value = reflect.Indirect(value)
+	switch value.Kind() {
+	case reflect.String:
+		if value.String() != "" {
+			fmt.Fprintf(&w.Builder, `%s="%s&"`, tag, value.String())
+		}
+	case reflect.Slice:
+		for i := range value.Len() {
+			elem := value.Index(i)
+			if elem.Kind() != reflect.String || elem.String() == "" {
+				continue
+			}
+			fmt.Fprintf(&w.Builder, `%s="%s&"`, tag, elem.String())
+		}
+	}
+	return nil
+}
+
 // TODO: make query params automatically add queries if new field added
-func makeQueryParams(dr *datafetcher.SensorDataRequest) string {
-	if dr == nil {
-		return "request is nil"
-	}
-	b := strings.Builder{}
-	start := url.QueryEscape(dr.Start)
-	fmt.Fprintf(&b, "?start=%s", start)
-	if dr.Stop != "" {
-		stop := url.QueryEscape(dr.Stop)
-		fmt.Fprintf(&b, "&stop=%s", stop)
-	}
-	for _, q := range dr.QueryFields {
-		fmt.Fprintf(&b, "&queryField=%s", q)
-	}
-	fmt.Fprintf(&b, "&timezone-return=%s", dr.Timezone.Timezone)
-	return b.String()
+func makeQueryParams[T any](dr T, t *testing.T) string {
+	w := &queryWalker{strings.Builder{}}
+	fmt.Fprintf(&w.Builder, "?")
+	err := reflectwalk.Walk(dr, w)
+	require.Nil(t, err)
+	urlQuery := w.String()
+	lastAnd := strings.LastIndex(urlQuery, "&")
+	urlQuery = urlQuery[:lastAnd]
+	return urlQuery
 }
 
 func TestGetQueryFields(t *testing.T) {
@@ -3465,7 +3492,7 @@ func TestCsvGetSensorData(t *testing.T) {
 			api, closeFunc := tc.MockApi.Setup(t)
 			defer closeFunc()
 			humaTest := setupHuma(t, api)
-			qp := makeQueryParams(tc.SensorDataRequest)
+			qp := makeQueryParams(any(tc.SensorDataRequest), t)
 			route := "/device/" + tc.deviceId + "/sensordata" + qp
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token),
