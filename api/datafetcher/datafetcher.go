@@ -62,6 +62,11 @@ type LatestSensorDataRequest struct {
 	Timezone
 }
 
+type BatchLatestSensorDataRequest struct {
+	Hardware []Hardware `json:"hardware" required:"true" minItems:"2" maxItems:"5"`
+	Timezone
+}
+
 type BatchSensorDataRequest struct {
 	Hardware []Hardware `json:"hardware" required:"true" minItems:"2" maxItems:"5"`
 	TimeFrame
