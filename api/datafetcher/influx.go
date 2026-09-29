@@ -20,7 +20,7 @@ import (
 
 const TestOrg = "test-org"
 
-var ctx context.Context
+var pkgCtx context.Context
 
 type DataRow struct {
 	DeviceID string
@@ -72,7 +72,7 @@ func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
 	query := i.generateFluxQuery(metadata, formattedQueryRange)
 	sd, err = i.sensorDataSlice(context.Background(), query, metadata.Timezone)
 	if err != nil {
-		return sd, fmt.Errorf("query: %v", err)
+		return sd, fmt.Errorf("query: %w", err)
 	}
 	if len(sd) < 1 {
 		return sd, NoData
@@ -80,16 +80,27 @@ func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
 	return sd, nil
 }
 
-func (i *InfluxDatafetcher) sensorDataSlice(
-	ctx context.Context, query string, timezone *time.Location) (
-	sd SensorDataSlice, err error) {
+func (i *InfluxDatafetcher) dataRows(ctx context.Context, query string) ([]DataRow, error) {
 	result, err := i.queryApi.Query(ctx, query)
 	if err != nil {
+		if strings.Contains(err.Error(), "connect:") {
+			return nil, NoConnection
+		}
 		return nil, fmt.Errorf("error querying influxdb: %v", err)
 	}
 	dataRows, err := i.extractValue(result)
 	if err != nil {
 		return nil, fmt.Errorf("error processing query result: %v", err)
+	}
+	return dataRows, nil
+}
+
+func (i *InfluxDatafetcher) sensorDataSlice(
+	ctx context.Context, query string, timezone *time.Location) (
+	sd SensorDataSlice, err error) {
+	dataRows, err := i.dataRows(ctx, query)
+	if err != nil {
+		return nil, err
 	}
 	sd, err = i.dataRows2SensorData(dataRows, timezone)
 	if err != nil {
@@ -239,11 +250,7 @@ func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
 		lastTime = data |> last()
 		union(tables: [firstTime, lastTime])
 		  |> sort(columns: ["_time"], desc: false)`)
-	result, err := i.queryApi.Query(context.Background(), queryBuilder.String())
-	if err != nil {
-		return dataBoundary, fmt.Errorf("error querying influxdb: %v", err)
-	}
-	dataRows, err := i.extractValue(result)
+	dataRows, err := i.dataRows(pkgCtx, queryBuilder.String())
 	if err != nil {
 		return dataBoundary, fmt.Errorf("error processing query result: %v", err)
 	}
@@ -268,11 +275,7 @@ func (i *InfluxDatafetcher) GetLocation(deviceInfo deviceinfo.DeviceInfo) (
 	fmt.Fprintf(&queryBuilder, `|> group(columns: ["_field"])`)
 	fmt.Fprintf(&queryBuilder, `|> last()`)
 	fmt.Fprintf(&queryBuilder, `|> yield(name: "last")`)
-	result, err := i.queryApi.Query(context.Background(), queryBuilder.String())
-	if err != nil {
-		return loc, fmt.Errorf("error querying influxdb: %v", err)
-	}
-	dataRows, err := i.extractValue(result)
+	dataRows, err := i.dataRows(pkgCtx, queryBuilder.String())
 	if err != nil {
 		return loc, fmt.Errorf("error processing query result: %v", err)
 	}
@@ -310,7 +313,7 @@ func (b *BadConnQueryApi) Query(ctx context.Context, query string) (
 	*influxApi.QueryTableResult, error) {
 	return nil, &url.Error{
 		Op: "GET", URL: "http://localhost:8086",
-		Err: fmt.Errorf("connection reset by peer"),
+		Err: fmt.Errorf("connect: connection reset by peer"),
 	}
 }
 
@@ -343,7 +346,7 @@ func NewTestingInflux(configPath string) (*TestingInflux, error) {
 	if err != nil {
 		return nil, err
 	}
-	ctx = context.Background()
+	pkgCtx = context.Background()
 	return &TestingInflux{
 		influx: db,
 	}, nil
@@ -351,14 +354,14 @@ func NewTestingInflux(configPath string) (*TestingInflux, error) {
 
 func (t *TestingInflux) Close() error {
 	orgApi := t.influx.db.OrganizationsAPI()
-	org, err := orgApi.FindOrganizationByName(ctx, TestOrg)
+	org, err := orgApi.FindOrganizationByName(pkgCtx, TestOrg)
 	if err != nil {
 		return fmt.Errorf("finding org: %v", err)
 	}
 	if org == nil {
 		return fmt.Errorf("returned org is nil")
 	}
-	if err = orgApi.DeleteOrganization(ctx, org); err != nil {
+	if err = orgApi.DeleteOrganization(pkgCtx, org); err != nil {
 		return fmt.Errorf("deleting org: %v", err)
 	}
 	return t.influx.Close()
@@ -373,7 +376,7 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, sensorData 
 	}
 	deviceInfoMap := deviceInfoMap(allDevicesInfo)
 	orgApi := t.influx.db.OrganizationsAPI()
-	org, err := orgApi.CreateOrganizationWithName(ctx, TestOrg)
+	org, err := orgApi.CreateOrganizationWithName(pkgCtx, TestOrg)
 	if err != nil {
 		return fmt.Errorf("org api: %v", err)
 	}
@@ -384,7 +387,7 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, sensorData 
 			continue
 		}
 		uniqueNetworks = append(uniqueNetworks, dd.Network)
-		if _, err = bucketsApi.CreateBucketWithName(ctx, org, dd.Network); err != nil {
+		if _, err = bucketsApi.CreateBucketWithName(pkgCtx, org, dd.Network); err != nil {
 			if strings.Contains(err.Error(), "exists") {
 				err = nil
 			} else {

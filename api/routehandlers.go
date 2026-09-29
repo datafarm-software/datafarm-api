@@ -81,11 +81,15 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 		} else {
 			if !errors.Is(err, datafetcher.NoData) {
 				onlyDataMissingErrors = false
+				if errors.Is(err, datafetcher.NoConnection) {
+					break
+				}
 			}
 			deviceErr.DeviceId = hw.DeviceId
 			deviceErr.Error = err.Error()
 			errSlice = append(errSlice, deviceErr)
 		}
+		err = nil
 	}
 	resp := &struct {
 		Status int
@@ -97,7 +101,10 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 			Errors:  errSlice,
 		},
 	}
-	if len(resultSlice) < 1 && onlyDataMissingErrors {
+	if errors.Is(err, datafetcher.NoConnection) {
+		resp.Status = http.StatusInternalServerError
+		resp.Body = nil
+	} else if len(resultSlice) < 1 && onlyDataMissingErrors {
 		resp.Status = http.StatusNoContent
 		resp.Body = nil
 	}
