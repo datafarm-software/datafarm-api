@@ -84,6 +84,41 @@ func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
 	return sd, nil
 }
 
+func (i *InfluxDatafetcher) GetLatestData(metadata deviceinfo.DeviceInfo) (
+	sd SensorData, err error) {
+	qb := strings.Builder{}
+	fmt.Fprintf(&qb, `from(bucket: "%s")`, metadata.Network)
+	fmt.Fprintf(&qb, ` |> range(start: 0)`)
+	fmt.Fprintf(&qb, ` |> filter(fn: (r) => r["_measurement"] == "%s")`,
+		metadata.Company)
+	fmt.Fprintf(&qb, ` |> filter(fn: (r) => r["deviceID"] == "%s")`,
+		metadata.DeviceId)
+	fmt.Fprintf(&qb, ` |> filter(fn: (r) => `)
+	for _, filter := range metadata.QueryFields {
+		fmt.Fprintf(&qb, ` r["_field"] == "%s" or`, filter)
+	}
+	//NOTE: for clean syntax query termination, after the last iteration's 'or'
+	fmt.Fprintf(&qb, ` false)`)
+	fmt.Fprintf(&qb, `|> last()`)
+	fmt.Fprintf(&qb, ` |> yield(name: "last")`)
+	result, err := i.queryApi.Query(context.Background(), qb.String())
+	if err != nil {
+		return sd, fmt.Errorf("error querying influxdb: %v", err)
+	}
+	dataRows, err := i.extractValue(result)
+	if err != nil {
+		return sd, fmt.Errorf("error processing query result: %v", err)
+	}
+	sdSlice, err := i.dataRows2SensorData(dataRows, metadata.Timezone)
+	if err != nil {
+		return sd, err
+	}
+	if len(sdSlice) < 1 {
+		return sd, NoData
+	}
+	return sdSlice[0], nil
+}
+
 func (i *InfluxDatafetcher) generateFluxQuery(metadata deviceinfo.DeviceInfo, queryRange string) string {
 	var queryBuilder strings.Builder
 	fmt.Fprintf(&queryBuilder, `from(bucket: "%s")`, metadata.Network)
@@ -392,6 +427,11 @@ func deviceInfoMap(allDevicesInfo *deviceinfo.Schema) map[string]deviceinfo.Devi
 func (t *TestingInflux) GetData(metadata deviceinfo.DeviceInfo) (
 	SensorDataSlice, error) {
 	return t.influx.GetData(metadata)
+}
+
+func (t *TestingInflux) GetLatestData(metadata deviceinfo.DeviceInfo) (
+	SensorData, error) {
+	return t.influx.GetLatestData(metadata)
 }
 
 func (t *TestingInflux) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
