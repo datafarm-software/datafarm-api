@@ -50,6 +50,8 @@ const ValidToken = "someToken0"
 const InvalidToken = "invalidToken0"
 const RelativeStart = "-6h"
 const RelativeMoreThanNinetyDays = "-91d"
+const ValidTimezone = "Africa/Johannesburg"
+const InvalidTimezone = "$ome/Wr0ng/Timezone"
 
 var MoreThanNinetyDays = time.Now().UTC().Add(-91 * 24 * time.Hour).Format(time.RFC3339)
 var Start = time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
@@ -341,7 +343,7 @@ func TestGetSensorData(t *testing.T) {
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: datafetcher.TimeFrame{
 						Start:    RelativeStart,
-						Timezone: datafetcher.Timezone{Timezone: "$ome/Wr0ng/Timezone"},
+						Timezone: datafetcher.Timezone{Timezone: InvalidTimezone},
 					},
 				},
 			},
@@ -1732,7 +1734,7 @@ func TestGetLastSensorData(t *testing.T) {
 				LastSensorDataRequest: &datafetcher.LastSensorDataRequest{
 					Hardware: datafetcher.Hardware{
 						QueryFields: []string{RegisteredQueryField}},
-					Timezone: datafetcher.Timezone{Timezone: "$ome/Wr0ng/Timezone"},
+					Timezone: datafetcher.Timezone{Timezone: InvalidTimezone},
 				},
 			},
 		},
@@ -2368,11 +2370,11 @@ func TestMakeQueryParams(t *testing.T) {
 				Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 				TimeFrame: datafetcher.TimeFrame{
 					Start:    RelativeStart,
-					Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
+					Timezone: datafetcher.Timezone{Timezone: ValidTimezone},
 				},
 			},
 			want: fmt.Sprintf(`?queryField="%s"&timezone-return="%s"&start="%s"`,
-				RegisteredQueryField, "Africa/Johannesburg", RelativeStart),
+				RegisteredQueryField, url.QueryEscape(ValidTimezone), RelativeStart),
 		},
 
 		"sensordatarequest using multiple queryfields": {
@@ -2381,12 +2383,12 @@ func TestMakeQueryParams(t *testing.T) {
 					RegisteredQueryField, AnotherRegisteredQueryField}},
 				TimeFrame: datafetcher.TimeFrame{
 					Start:    RelativeStart,
-					Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
+					Timezone: datafetcher.Timezone{Timezone: ValidTimezone},
 				},
 			},
 			want: fmt.Sprintf(`?queryField="%s"&queryField="%s"&timezone-return="%s"&start="%s"`,
 				RegisteredQueryField, AnotherRegisteredQueryField,
-				"Africa/Johannesburg", RelativeStart),
+				url.QueryEscape(ValidTimezone), RelativeStart),
 		},
 
 		"sensordatarequest using absolute time": {
@@ -2395,31 +2397,32 @@ func TestMakeQueryParams(t *testing.T) {
 				TimeFrame: datafetcher.TimeFrame{
 					Start:    Start,
 					Stop:     Stop,
-					Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
+					Timezone: datafetcher.Timezone{Timezone: ValidTimezone},
 				},
 			},
 			want: fmt.Sprintf(`?queryField="%s"&timezone-return="%s"&start="%s"&stop="%s"`,
-				RegisteredQueryField, "Africa/Johannesburg",
+				RegisteredQueryField, url.QueryEscape(ValidTimezone),
 				url.QueryEscape(Start), url.QueryEscape(Stop)),
 		},
 
 		"lastsensordatarequest with single queryField": {
 			input: &datafetcher.LastSensorDataRequest{
 				Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
-				Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
+				Timezone: datafetcher.Timezone{Timezone: ValidTimezone},
 			},
 			want: fmt.Sprintf(`?queryField="%s"&timezone-return="%s"`,
-				RegisteredQueryField, "Africa/Johannesburg"),
+				RegisteredQueryField, url.QueryEscape(ValidTimezone)),
 		},
 
 		"lastsensordatarequest with multiple queryField": {
 			input: &datafetcher.LastSensorDataRequest{
 				Hardware: datafetcher.Hardware{QueryFields: []string{
 					RegisteredQueryField, AnotherRegisteredQueryField}},
-				Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
+				Timezone: datafetcher.Timezone{Timezone: ValidTimezone},
 			},
 			want: fmt.Sprintf(`?queryField="%s"&queryField="%s"&timezone-return="%s"`,
-				RegisteredQueryField, AnotherRegisteredQueryField, "Africa/Johannesburg"),
+				RegisteredQueryField, AnotherRegisteredQueryField,
+				url.QueryEscape(ValidTimezone)),
 		},
 	}
 
@@ -2447,11 +2450,12 @@ func (w *queryWalker) StructField(
 	if tag == "" {
 		return nil
 	}
+	tag = strings.ReplaceAll(tag, ",explode", "")
 	value = reflect.Indirect(value)
 	switch value.Kind() {
 	case reflect.String:
 		if value.String() != "" {
-			fmt.Fprintf(&w.Builder, `%s="%s&"`, tag, value.String())
+			fmt.Fprintf(&w.Builder, `%s="%s"&`, tag, url.QueryEscape(value.String()))
 		}
 	case reflect.Slice:
 		for i := range value.Len() {
@@ -2459,13 +2463,12 @@ func (w *queryWalker) StructField(
 			if elem.Kind() != reflect.String || elem.String() == "" {
 				continue
 			}
-			fmt.Fprintf(&w.Builder, `%s="%s&"`, tag, elem.String())
+			fmt.Fprintf(&w.Builder, `%s="%s"&`, tag, url.QueryEscape(elem.String()))
 		}
 	}
 	return nil
 }
 
-// TODO: make query params automatically add queries if new field added
 func makeQueryParams[T any](dr T, t *testing.T) string {
 	w := &queryWalker{strings.Builder{}}
 	fmt.Fprintf(&w.Builder, "?")

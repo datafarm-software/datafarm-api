@@ -52,6 +52,7 @@ type SensorDataRequest struct {
 
 type LastSensorDataRequest struct {
 	Hardware
+	Timezone
 }
 
 type BatchSensorDataRequest struct {
