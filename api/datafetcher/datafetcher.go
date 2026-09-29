@@ -14,6 +14,7 @@ import (
 var EmptySensorData = errors.New("empty sensor data")
 var EmptyTimeZone = errors.New("empty time zone")
 var NoData = errors.New("No Data")
+var NoLocation = errors.New("No Location")
 
 type SensorDataResponse struct {
 	Status int
@@ -238,8 +239,6 @@ type BatchDataBoundaryResponse struct {
 	Results []DataBoundary `json:"results"`
 	Errors  []BatchError   `json:"errors"`
 }
-
-var NoLocation = errors.New("no location")
 
 type DeviceLocationRequest struct {
 	DeviceIdParam

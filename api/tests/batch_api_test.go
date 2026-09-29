@@ -2404,6 +2404,141 @@ func TestBatchGetLocation(t *testing.T) {
 			},
 		},
 
+		"no data for both deviceids": {
+			wantStatus: http.StatusOK,
+			want: datafetcher.BatchLocationResponse{
+				Errors: []datafetcher.BatchError{
+					{DeviceId: RegisteredDeviceId, Error: "No Location"},
+					{DeviceId: AnotherRegisteredDeviceId, Error: "No Location"},
+				},
+				Results: []datafetcher.DeviceLocationResponse{},
+			},
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.SensorData{},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			token: ValidToken,
+			req: datafetcher.BatchLocationRequest{
+				DeviceBatch: deviceinfo.DeviceBatch{
+					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				},
+			},
+		},
+
+		"no data for one of the deviceids": {
+			wantStatus: http.StatusOK,
+			want: datafetcher.BatchLocationResponse{
+				Errors: []datafetcher.BatchError{
+					{DeviceId: AnotherRegisteredDeviceId, Error: "No Location"},
+				},
+				Results: []datafetcher.DeviceLocationResponse{
+					{
+						DeviceId:  RegisteredDeviceId,
+						Time:      AlsoInsideTimeRange,
+						Latitude:  Latitude,
+						Longitude: Longitude,
+					},
+				},
+			},
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.SensorData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							"latitude": Latitude, "longitude": Longitude,
+						},
+					},
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: AlsoInsideTimeRange,
+						SensorData: map[string]float64{
+							"latitude": Latitude, "longitude": Longitude,
+						},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			token: ValidToken,
+			req: datafetcher.BatchLocationRequest{
+				DeviceBatch: deviceinfo.DeviceBatch{
+					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				},
+			},
+		},
+
 		"network user get multiple deviceid location": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
