@@ -223,6 +223,7 @@ func (a *Api) getSensorData(
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getSensorData.dataFetcher.getData"},
 			"error.message": {err.Error()}})
+
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting SensorData.")
 	}

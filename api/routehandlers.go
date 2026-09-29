@@ -22,6 +22,9 @@ func (a *Api) GetSensorData(ctx context.Context,
 	logFromTag(ctx, in)
 	sensorData, err := a.getSensorData(ctx, in)
 	if err != nil {
+		if errors.Is(err, datafetcher.NoData) {
+			return &datafetcher.SensorDataResponse{Status: http.StatusNoContent}, nil
+		}
 		return nil, err
 	}
 	if len(sensorData) < 1 {
