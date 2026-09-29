@@ -305,7 +305,7 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	}, nil
 }
 
-func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
+func (a *Api) GetDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
 	*datafetcher.DataBoundaryResponse, error) {
 	logFromTag(ctx, in)
 	db, err := a.getSensorDataBoundary(ctx, in)
@@ -318,7 +318,7 @@ func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 	return &datafetcher.DataBoundaryResponse{Status: http.StatusOK, Body: db}, nil
 }
 
-func (a *Api) BatchGetSensorDataBoundary(ctx context.Context,
+func (a *Api) BatchGetDataBoundary(ctx context.Context,
 	in *struct {
 		Body datafetcher.BatchDataBoundaryRequest
 	}) (

@@ -51,9 +51,9 @@ type HumaOperator interface {
 			Body deviceinfo.BatchQueryFieldsResponse
 		}, error)
 	GetDeviceIds(context.Context, *struct{}) (*struct{ Body deviceinfo.DeviceIdsResponse }, error)
-	GetSensorDataBoundary(context.Context, *datafetcher.DataBoundaryRequest) (
+	GetDataBoundary(context.Context, *datafetcher.DataBoundaryRequest) (
 		*datafetcher.DataBoundaryResponse, error)
-	BatchGetSensorDataBoundary(context.Context,
+	BatchGetDataBoundary(context.Context,
 		*struct {
 			Body datafetcher.BatchDataBoundaryRequest
 		}) (
@@ -234,7 +234,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Description = "Clients can use this route to get the DataBoundary of multiple DeviceIds."
 	op.Responses["500"] = &huma.Response{}
 	op.Responses["404"] = &huma.Response{}
-	huma.Register(api, op, ho.BatchGetSensorDataBoundary)
+	huma.Register(api, op, ho.BatchGetDataBoundary)
 
 	op = baseOperation("POST", &allMw)
 	op.Path = "/batch/device/location"
@@ -311,7 +311,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["204"] = &huma.Response{
 		Description: "No SensorData for DeviceId.",
 	}
-	huma.Register(api, op, ho.GetSensorDataBoundary)
+	huma.Register(api, op, ho.GetDataBoundary)
 
 	op = baseOperation("GET", &allMw)
 	op.Path = "/device/{deviceId}/location"
