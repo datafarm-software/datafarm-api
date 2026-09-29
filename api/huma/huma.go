@@ -42,6 +42,11 @@ type HumaOperator interface {
 	}, error)
 	GetLatestSensorData(context.Context,
 		*datafetcher.LatestSensorDataRequest) (*datafetcher.LatestSensorDataResponse, error)
+	BatchGetLatestSensorData(context.Context, *struct {
+		Body datafetcher.BatchLatestSensorDataRequest
+	}) (*struct {
+		Body *datafetcher.BatchSensorDataResponse
+	}, error)
 	Login(context.Context, *tokenprovider.LoginRequest) (
 		*tokenprovider.LoginResponse, error)
 	GetQueryFields(context.Context, *deviceinfo.QueryFieldsRequest) (
@@ -221,6 +226,14 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Responses["500"] = &huma.Response{}
 	op.Responses["404"] = &huma.Response{}
 	huma.Register(api, op, ho.BatchGetSensorData)
+
+	op = baseOperation("POST", &allMw)
+	op.Path = "/batch/device/sensordata/latest"
+	op.Summary = "Batch Get DeviceId Latest SensorData"
+	op.Description = "Clients can use this route to request Latest SensorData from multiple DeviceIds."
+	op.Responses["500"] = &huma.Response{}
+	op.Responses["404"] = &huma.Response{}
+	huma.Register(api, op, ho.BatchGetLatestSensorData)
 
 	op = baseOperation("POST", &allMw)
 	op.Path = "/batch/device/queryfields"

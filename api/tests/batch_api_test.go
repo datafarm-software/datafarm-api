@@ -2168,7 +2168,7 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			api, closeFunc := tc.MockApi.Setup(t)
 			defer closeFunc()
 			humaTest := setupHuma(t, api)
-			route := "/batch/device/sensordata"
+			route := "/batch/device/sensordata/latest"
 			resp := humaTest.Post(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token), tc.deviceRequests)
 			if resp.Code != tc.wantStatus {

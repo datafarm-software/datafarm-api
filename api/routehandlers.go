@@ -89,6 +89,43 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 	}, nil
 }
 
+func (a *Api) BatchGetLatestSensorData(ctx context.Context,
+	in *struct {
+		Body datafetcher.BatchLatestSensorDataRequest
+	}) (*struct {
+	Body *datafetcher.BatchSensorDataResponse
+}, error) {
+	logFromTag(ctx, in.Body)
+	var dataReq *datafetcher.LatestSensorDataRequest
+	var deviceErr datafetcher.SensorDataError
+	var sds datafetcher.SensorData
+	var err error
+	errSlice := make([]datafetcher.SensorDataError, 0, len(in.Body.Hardware))
+	resultSlice := make(datafetcher.SensorDataSlice, 0, len(in.Body.Hardware))
+	for _, hw := range in.Body.Hardware {
+		dataReq = &datafetcher.LatestSensorDataRequest{
+			Hardware: hw,
+			Timezone: in.Body.Timezone,
+		}
+		sds, err = a.getLatestSensorData(ctx, dataReq)
+		if err == nil {
+			resultSlice = append(resultSlice, sds)
+		} else {
+			deviceErr.DeviceId = hw.DeviceId
+			deviceErr.Error = err.Error()
+			errSlice = append(errSlice, deviceErr)
+		}
+	}
+	return &struct {
+		Body *datafetcher.BatchSensorDataResponse
+	}{
+		Body: &datafetcher.BatchSensorDataResponse{
+			Results: resultSlice,
+			Errors:  errSlice,
+		},
+	}, nil
+}
+
 func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 	_, w := humamux.Unwrap(humaCtx)
 	authHeader := humaCtx.Header("Authorization")
