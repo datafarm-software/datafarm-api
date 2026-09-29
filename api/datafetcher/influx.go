@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net/url"
 	"os"
 	"slices"
 	"strings"
@@ -301,11 +302,23 @@ func (i *InfluxDatafetcher) PrepareDb(*deviceinfo.Schema, SensorDataSlice) error
 var testingInfluxOpts InfluxOpts
 var once sync.Once
 
+type BadConnQueryApi struct {
+	influxApi.QueryAPI
+}
+
+func (b *BadConnQueryApi) Query(ctx context.Context, query string) (
+	*influxApi.QueryTableResult, error) {
+	return nil, &url.Error{
+		Op: "GET", URL: "http://localhost:8086",
+		Err: fmt.Errorf("connection reset by peer"),
+	}
+}
+
 type TestingInflux struct {
 	influx *InfluxDatafetcher
 }
 
-func NewTestingInflux(configPath string) (DataFetcher, error) {
+func NewTestingInflux(configPath string) (*TestingInflux, error) {
 	var topErr error
 	once.Do(func() {
 		config, err := os.ReadFile(configPath)
@@ -411,6 +424,10 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, sensorData 
 	}
 	writeApi.Flush()
 	return nil
+}
+
+func (t *TestingInflux) BadConnQueryApi() {
+	t.influx.queryApi = &BadConnQueryApi{QueryAPI: t.influx.queryApi}
 }
 
 func deviceInfoMap(allDevicesInfo *deviceinfo.Schema) map[string]deviceinfo.DeviceInfo {

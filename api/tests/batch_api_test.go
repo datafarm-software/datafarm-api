@@ -35,11 +35,12 @@ func DefaultBatchRequest() datafetcher.BatchSensorDataRequest {
 func TestBatchGetSensorData(t *testing.T) {
 	tests := map[string]struct {
 		MockApi
-		deviceRequests datafetcher.BatchSensorDataRequest
-		want           datafetcher.BatchSensorDataResponse
-		token          string
-		wantStatus     int
-		wantErr        bool
+		deviceRequests          datafetcher.BatchSensorDataRequest
+		want                    datafetcher.BatchSensorDataResponse
+		token                   string
+		wantStatus              int
+		disconnectedDataFetcher bool
+		wantErr                 bool
 	}{
 
 		"get multiple deviceIds' data": {
@@ -227,14 +228,8 @@ func TestBatchGetSensorData(t *testing.T) {
 		},
 
 		"no data on all deviceids requested": {
-			wantStatus: http.StatusOK,
-			want: datafetcher.BatchSensorDataResponse{
-				Errors: []datafetcher.SensorDataError{
-					{DeviceId: RegisteredDeviceId, Error: "No Data"},
-					{DeviceId: AnotherRegisteredDeviceId, Error: "No Data"},
-				},
-				Results: []datafetcher.SensorData{},
-			},
+			wantStatus: http.StatusNoContent,
+			want:       datafetcher.BatchSensorDataResponse{},
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -296,6 +291,63 @@ func TestBatchGetSensorData(t *testing.T) {
 					},
 				},
 			},
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.SensorData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField:        23,
+							AnotherRegisteredQueryField: 80,
+						},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			token:          ValidToken,
+			deviceRequests: DefaultBatchRequest(),
+		},
+
+		"no data due to bad connection": {
+			wantErr:                 true,
+			disconnectedDataFetcher: true,
+			wantStatus:              http.StatusInternalServerError,
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -970,6 +1022,12 @@ func TestBatchGetSensorData(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			api, closeFunc := tc.MockApi.Setup(t)
 			defer closeFunc()
+			if tc.disconnectedDataFetcher {
+				testFlux, err := datafetcher.NewTestingInflux("../../config.yml")
+				require.Nil(t, err)
+				testFlux.BadConnQueryApi()
+				api.DataFetcher = testFlux
+			}
 			humaTest := setupHuma(t, api)
 			route := "/batch/device/sensordata"
 			resp := humaTest.Post(route,
@@ -978,7 +1036,7 @@ func TestBatchGetSensorData(t *testing.T) {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
 			}
 			defer resp.Result().Body.Close()
-			if !tc.wantErr {
+			if !tc.wantErr && tc.wantStatus != http.StatusNoContent {
 				var dd datafetcher.BatchSensorDataResponse
 				body := resp.Body.Bytes()
 				err := json.Unmarshal(body, &dd)

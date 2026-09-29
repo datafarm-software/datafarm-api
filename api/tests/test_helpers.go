@@ -111,17 +111,21 @@ func (m MockApi) Setup(t *testing.T) (*api.Api, CloseFunc) {
 	require.Nil(t, err)
 	return a, func() {
 		db.Close()
-		err = a.TokenProvider.Close()
-		if err != nil {
-			t.Logf("tokenprovider close: %v", err)
+		if a.TokenProvider != nil {
+			err = a.TokenProvider.Close()
+			if err != nil {
+				t.Logf("tokenprovider close: %v", err)
+			}
 		}
 		err = testingRedis.Close()
 		if err != nil {
 			t.Logf("testingRedis close: %v", err)
 		}
-		err = a.DataFetcher.Close()
-		if err != nil {
-			t.Logf("datafetcher close: %v", err)
+		if a.DataFetcher != nil {
+			err = a.DataFetcher.Close()
+			if err != nil {
+				t.Logf("datafetcher close: %v", err)
+			}
 		}
 	}
 }
