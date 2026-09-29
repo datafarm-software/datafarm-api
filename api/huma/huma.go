@@ -40,6 +40,8 @@ type HumaOperator interface {
 	}) (*struct {
 		Body *datafetcher.BatchSensorDataResponse
 	}, error)
+	GetLatestSensorData(context.Context,
+		*datafetcher.LatestSensorDataRequest) (*datafetcher.LatestSensorDataResponse, error)
 	Login(context.Context, *tokenprovider.LoginRequest) (
 		*tokenprovider.LoginResponse, error)
 	GetQueryFields(context.Context, *deviceinfo.QueryFieldsRequest) (
@@ -257,6 +259,24 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	fh.Detail = "Internal error while getting SensorData for the DeviceId."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	huma.Register(api, op, ho.GetSensorData)
+	op.Responses["204"] = &huma.Response{}
+	op.Parameters = []*huma.Param{}
+
+	op = baseOperation("GET", &allMw)
+	op.Path = "/device/{deviceId}/sensordata/latest"
+	di = deviceIdParam()
+	di.Description = "DeviceId to request Latest SensorData from."
+	op.Parameters = []*huma.Param{di}
+	op.Summary = "Get DeviceId Latest SensorData"
+	op.Description =
+		"Clients can use this route to request only the Latest SensorData from a DeviceId."
+	op.Responses["204"] = &huma.Response{
+		Description: "No SensorData for the DeviceId.",
+	}
+	fh = FiveHundredExample()
+	fh.Detail = "Internal error while getting Latest SensorData for the DeviceId."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	huma.Register(api, op, ho.GetLatestSensorData)
 	op.Responses["204"] = &huma.Response{}
 	op.Parameters = []*huma.Param{}
 

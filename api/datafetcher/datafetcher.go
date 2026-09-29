@@ -13,10 +13,16 @@ import (
 
 var EmptySensorData = errors.New("empty sensor data")
 var EmptyTimeZone = errors.New("empty time zone")
+var NoData = errors.New("no data")
 
 type SensorDataResponse struct {
 	Status int
 	Body   SensorDataSlice
+}
+
+type LatestSensorDataResponse struct {
+	Status int
+	Body   SensorData
 }
 
 type Hardware struct {
@@ -50,7 +56,7 @@ type SensorDataRequest struct {
 	TimeFrame
 }
 
-type LastSensorDataRequest struct {
+type LatestSensorDataRequest struct {
 	Hardware
 	Timezone
 }
@@ -259,6 +265,8 @@ type TestingDataFetcher interface {
 type DataFetcher interface {
 	TestingDataFetcher
 	GetData(metadata deviceinfo.DeviceInfo) (SensorDataSlice, error)
+	//NOTE: could return NoData
+	GetLatestData(metadata deviceinfo.DeviceInfo) (SensorData, error)
 	GetDataBoundary(metadata deviceinfo.DeviceInfo) (DataBoundary, error)
 	//NOTE: could return NoLocation
 	GetLocation(metadata deviceinfo.DeviceInfo) (DeviceLocationResponse, error)

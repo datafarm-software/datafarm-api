@@ -129,7 +129,7 @@ func (m MockApi) Setup(t *testing.T) (*api.Api, CloseFunc) {
 type GetSensorDataTest struct {
 	token    string
 	deviceId string
-	*datafetcher.LastSensorDataRequest
+	*datafetcher.LatestSensorDataRequest
 	*datafetcher.SensorDataRequest
 	*datafetcher.BatchSensorDataRequest
 	wantStatus int

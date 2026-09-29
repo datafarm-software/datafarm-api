@@ -1481,7 +1481,7 @@ func TestGetSensorData(t *testing.T) {
 	}
 }
 
-func TestGetLastSensorData(t *testing.T) {
+func TestGetLatestSensorData(t *testing.T) {
 	tests := map[string]struct {
 		MockApi
 		GetSensorDataTest
@@ -1551,7 +1551,7 @@ func TestGetLastSensorData(t *testing.T) {
 				wantStatus: http.StatusOK,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
-				LastSensorDataRequest: &datafetcher.LastSensorDataRequest{
+				LatestSensorDataRequest: &datafetcher.LatestSensorDataRequest{
 					Hardware: datafetcher.Hardware{
 						QueryFields: []string{RegisteredQueryField},
 					},
@@ -1623,7 +1623,7 @@ func TestGetLastSensorData(t *testing.T) {
 				wantStatus: http.StatusOK,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
-				LastSensorDataRequest: &datafetcher.LastSensorDataRequest{
+				LatestSensorDataRequest: &datafetcher.LatestSensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 					Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
 				},
@@ -1679,7 +1679,7 @@ func TestGetLastSensorData(t *testing.T) {
 				wantStatus: http.StatusUnprocessableEntity,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
-				LastSensorDataRequest: &datafetcher.LastSensorDataRequest{
+				LatestSensorDataRequest: &datafetcher.LatestSensorDataRequest{
 					Hardware: datafetcher.Hardware{
 						QueryFields: []string{RegisteredQueryField}},
 					Timezone: datafetcher.Timezone{Timezone: InvalidTimezone},
@@ -1778,7 +1778,7 @@ func TestGetLastSensorData(t *testing.T) {
 				wantStatus: http.StatusUnprocessableEntity,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
-				LastSensorDataRequest: &datafetcher.LastSensorDataRequest{
+				LatestSensorDataRequest: &datafetcher.LatestSensorDataRequest{
 					Hardware: datafetcher.Hardware{
 						QueryFields: []string{
 							RegisteredQueryField,
@@ -1877,7 +1877,7 @@ func TestGetLastSensorData(t *testing.T) {
 				wantStatus: http.StatusOK,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
-				LastSensorDataRequest: &datafetcher.LastSensorDataRequest{
+				LatestSensorDataRequest: &datafetcher.LatestSensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{"all"}},
 				},
 			},
@@ -1952,7 +1952,7 @@ func TestGetLastSensorData(t *testing.T) {
 				wantStatus: http.StatusOK,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
-				LastSensorDataRequest: &datafetcher.LastSensorDataRequest{
+				LatestSensorDataRequest: &datafetcher.LatestSensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{"all"}},
 				},
 			},
@@ -2027,7 +2027,7 @@ func TestGetLastSensorData(t *testing.T) {
 				wantStatus: http.StatusOK,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
-				LastSensorDataRequest: &datafetcher.LastSensorDataRequest{
+				LatestSensorDataRequest: &datafetcher.LatestSensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{"all"}},
 				},
 			},
@@ -2040,7 +2040,7 @@ func TestGetLastSensorData(t *testing.T) {
 				wantStatus: http.StatusUnauthorized,
 				token:      InvalidToken,
 				deviceId:   RegisteredDeviceId,
-				LastSensorDataRequest: &datafetcher.LastSensorDataRequest{
+				LatestSensorDataRequest: &datafetcher.LatestSensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 				},
 			},
@@ -2087,7 +2087,7 @@ func TestGetLastSensorData(t *testing.T) {
 				wantStatus: http.StatusNoContent,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
-				LastSensorDataRequest: &datafetcher.LastSensorDataRequest{
+				LatestSensorDataRequest: &datafetcher.LatestSensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 				},
 			},
@@ -2142,7 +2142,7 @@ func TestGetLastSensorData(t *testing.T) {
 				wantStatus: http.StatusNotFound,
 				token:      ValidToken,
 				deviceId:   UnregisteredDeviceId,
-				LastSensorDataRequest: &datafetcher.LastSensorDataRequest{
+				LatestSensorDataRequest: &datafetcher.LatestSensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 				},
 			},
@@ -2197,7 +2197,7 @@ func TestGetLastSensorData(t *testing.T) {
 				wantStatus: http.StatusUnauthorized,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
-				LastSensorDataRequest: &datafetcher.LastSensorDataRequest{
+				LatestSensorDataRequest: &datafetcher.LatestSensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 				},
 			},
@@ -2266,7 +2266,7 @@ func TestGetLastSensorData(t *testing.T) {
 				wantStatus: http.StatusOK,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
-				LastSensorDataRequest: &datafetcher.LastSensorDataRequest{
+				LatestSensorDataRequest: &datafetcher.LatestSensorDataRequest{
 					Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 				},
 			},
@@ -2278,8 +2278,8 @@ func TestGetLastSensorData(t *testing.T) {
 			api, closeFunc := tc.MockApi.Setup(t)
 			defer closeFunc()
 			humaTest := setupHuma(t, api)
-			qp := makeQueryParams(any(tc.LastSensorDataRequest), t)
-			route := "/device/" + tc.deviceId + "/sensordata/last" + qp
+			qp := makeQueryParams(any(tc.LatestSensorDataRequest), t)
+			route := "/device/" + tc.deviceId + "/sensordata/latest" + qp
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
 			if resp.Code != tc.wantStatus {
@@ -2346,7 +2346,7 @@ func TestMakeQueryParams(t *testing.T) {
 		},
 
 		"lastsensordatarequest with single queryField": {
-			input: &datafetcher.LastSensorDataRequest{
+			input: &datafetcher.LatestSensorDataRequest{
 				Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 				Timezone: datafetcher.Timezone{Timezone: ValidTimezone},
 			},
@@ -2355,7 +2355,7 @@ func TestMakeQueryParams(t *testing.T) {
 		},
 
 		"lastsensordatarequest with multiple queryField": {
-			input: &datafetcher.LastSensorDataRequest{
+			input: &datafetcher.LatestSensorDataRequest{
 				Hardware: datafetcher.Hardware{QueryFields: []string{
 					RegisteredQueryField, AnotherRegisteredQueryField}},
 				Timezone: datafetcher.Timezone{Timezone: ValidTimezone},

@@ -226,6 +226,55 @@ func (a *Api) getSensorData(
 	return sensorData, nil
 }
 
+func (a *Api) getLatestSensorData(
+	ctx context.Context, in *datafetcher.LatestSensorDataRequest) (
+	sd datafetcher.SensorData, err error) {
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		return sd, huma.Error500InternalServerError(
+			"Internal error while getting request log.")
+	}
+	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetSensorData)
+	if err != nil {
+		return sd, err
+	}
+	di.QueryFields = in.Hardware.QueryFields
+	if in.Hardware.QueryFields[0] == "all" {
+		user, _ := a.user(ctx)
+		if !authstore.HasPermission(authstore.Role(user.Role),
+			authstore.GetAllQueryFields) {
+			return sd, huma.Error401Unauthorized(
+				"Unauthorized for all QueryFields.")
+		}
+		qf, err := a.DeviceInfo.GetQueryFields(in.Hardware.DeviceId)
+		if err != nil {
+			log.AddMetadata(logging.Metadata{
+				"source":        {"getSensorData.deviceInfo.getQueryFields"},
+				"error.message": {err.Error()}})
+			return sd, huma.Error500InternalServerError(
+				"Internal error getting QueryFields.")
+		}
+		di.QueryFields = qf.QueryFields
+	}
+	di.Timezone, err = in.Timezone.Location()
+	if err != nil {
+		return sd, huma.Error400BadRequest(
+			"Invalid location. Please try a different IANA Timezone.")
+	}
+	sd, err = a.DataFetcher.GetLatestData(di)
+	if err != nil {
+		if errors.Is(err, datafetcher.NoData) {
+			return sd, err
+		}
+		log.AddMetadata(logging.Metadata{
+			"source":        {"getLatestSensorData.dataFetcher.getLatestData"},
+			"error.message": {err.Error()}})
+		return sd, huma.Error500InternalServerError(
+			"Internal error getting Latest SensorData.")
+	}
+	return
+}
+
 func (a *Api) getQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (
 	qf deviceinfo.QueryFields, err error) {
 	_, err = a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetAllQueryFields)

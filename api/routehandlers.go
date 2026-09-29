@@ -33,6 +33,25 @@ func (a *Api) GetSensorData(ctx context.Context,
 	}, nil
 }
 
+func (a *Api) GetLatestSensorData(ctx context.Context,
+	in *datafetcher.LatestSensorDataRequest) (
+	out *datafetcher.LatestSensorDataResponse, err error) {
+	logFromTag(ctx, in)
+	sensorData, err := a.getLatestSensorData(ctx, in)
+	if err != nil {
+		if errors.Is(err, datafetcher.NoData) {
+			return &datafetcher.LatestSensorDataResponse{
+				Status: http.StatusNoContent,
+			}, nil
+		}
+		return nil, err
+	}
+	return &datafetcher.LatestSensorDataResponse{
+		Status: http.StatusOK,
+		Body:   sensorData,
+	}, nil
+}
+
 func (a *Api) BatchGetSensorData(ctx context.Context,
 	in *struct {
 		Body datafetcher.BatchSensorDataRequest
