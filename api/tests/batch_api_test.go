@@ -1571,6 +1571,142 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			},
 		},
 
+		"no data for both deviceids": {
+			wantStatus: http.StatusOK,
+			want: datafetcher.BatchDataBoundaryResponse{
+				Errors: []datafetcher.BatchError{
+					{DeviceId: RegisteredDeviceId, Error: "No Data"},
+					{DeviceId: AnotherRegisteredDeviceId, Error: "No Data"},
+				},
+				Results: []datafetcher.DataBoundary{},
+			},
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.SensorData{},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			token: ValidToken,
+			req: datafetcher.BatchDataBoundaryRequest{
+				DeviceBatch: deviceinfo.DeviceBatch{
+					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				},
+			},
+		},
+
+		"no data for one of the deviceids request": {
+			wantStatus: http.StatusOK,
+			want: datafetcher.BatchDataBoundaryResponse{
+				Errors: []datafetcher.BatchError{
+					{DeviceId: AnotherRegisteredDeviceId, Error: "No Data"},
+				},
+				Results: []datafetcher.DataBoundary{
+					{
+						DeviceId: RegisteredDeviceId,
+						Start:    InsideTimeRange,
+						Stop:     AlsoInsideTimeRange,
+					},
+				},
+			},
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.SensorData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField: 23,
+							"batv":               3.4,
+						},
+					},
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: AlsoInsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField: 23,
+							"batv":               3.4,
+						},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			token: ValidToken,
+			req: datafetcher.BatchDataBoundaryRequest{
+				DeviceBatch: deviceinfo.DeviceBatch{
+					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				},
+			},
+		},
+
 		"user get multiple deviceid data boundary in specific timezone": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
