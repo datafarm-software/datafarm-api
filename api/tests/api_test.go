@@ -2355,6 +2355,82 @@ func setupHuma(t *testing.T, api *api.Api) humatest.TestAPI {
 	return humatest.Wrap(t, humaApi)
 }
 
+func TestMakeQueryParams(t *testing.T) {
+	tests := map[string]struct {
+		input any
+		want  string
+	}{
+
+		"sensordatarequest using relative time": {
+			input: &datafetcher.SensorDataRequest{
+				Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+				TimeFrame: datafetcher.TimeFrame{
+					Start:    RelativeStart,
+					Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
+				},
+			},
+			want: fmt.Sprintf(`?queryField="%s"&timezone-return="%s"&start="%s"`,
+				RegisteredQueryField, "Africa/Johannesburg", RelativeStart),
+		},
+
+		"sensordatarequest using multiple queryfields": {
+			input: &datafetcher.SensorDataRequest{
+				Hardware: datafetcher.Hardware{QueryFields: []string{
+					RegisteredQueryField, AnotherRegisteredQueryField}},
+				TimeFrame: datafetcher.TimeFrame{
+					Start:    RelativeStart,
+					Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
+				},
+			},
+			want: fmt.Sprintf(`?queryField="%s"&queryField="%s"&timezone-return="%s"&start="%s"`,
+				RegisteredQueryField, AnotherRegisteredQueryField,
+				"Africa/Johannesburg", RelativeStart),
+		},
+
+		"sensordatarequest using absolute time": {
+			input: &datafetcher.SensorDataRequest{
+				Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+				TimeFrame: datafetcher.TimeFrame{
+					Start:    Start,
+					Stop:     Stop,
+					Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
+				},
+			},
+			want: fmt.Sprintf(`?queryField="%s"&timezone-return="%s"&start="%s"&stop="%s"`,
+				RegisteredQueryField, "Africa/Johannesburg",
+				url.QueryEscape(Start), url.QueryEscape(Stop)),
+		},
+
+		"lastsensordatarequest with single queryField": {
+			input: &datafetcher.LastSensorDataRequest{
+				Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
+				Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
+			},
+			want: fmt.Sprintf(`?queryField="%s"&timezone-return="%s"`,
+				RegisteredQueryField, "Africa/Johannesburg"),
+		},
+
+		"lastsensordatarequest with multiple queryField": {
+			input: &datafetcher.LastSensorDataRequest{
+				Hardware: datafetcher.Hardware{QueryFields: []string{
+					RegisteredQueryField, AnotherRegisteredQueryField}},
+				Timezone: datafetcher.Timezone{Timezone: "Africa/Johannesburg"},
+			},
+			want: fmt.Sprintf(`?queryField="%s"&queryField="%s"&timezone-return="%s"`,
+				RegisteredQueryField, AnotherRegisteredQueryField, "Africa/Johannesburg"),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := makeQueryParams(tc.input)
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Fatalf("response mismatch (-want +got): %s\n", diff)
+			}
+		})
+	}
+}
+
 // TODO: make query params automatically add queries if new field added
 func makeQueryParams(dr *datafetcher.SensorDataRequest) string {
 	if dr == nil {
