@@ -269,6 +269,7 @@ func (a *Api) getLatestSensorData(
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getLatestSensorData.dataFetcher.getLatestData"},
 			"error.message": {err.Error()}})
+		stdlog.Printf("err: %v\n", err)
 		return sd, huma.Error500InternalServerError(
 			"Internal error getting Latest SensorData.")
 	}

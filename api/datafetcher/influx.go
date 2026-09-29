@@ -60,7 +60,7 @@ func (i *InfluxDatafetcher) Close() error {
 }
 
 func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
-	SensorDataSlice, error) {
+	sd SensorDataSlice, err error) {
 	if metadata.Timezone == nil {
 		return SensorDataSlice{}, fmt.Errorf("nil timezone")
 	}
@@ -69,7 +69,17 @@ func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
 		return nil, err
 	}
 	query := i.generateFluxQuery(metadata, formattedQueryRange)
-	result, err := i.queryApi.Query(context.Background(), query)
+	sd, err = i.sensorDataSlice(context.Background(), query, metadata.Timezone)
+	if err != nil {
+		return sd, fmt.Errorf("query: %v", err)
+	}
+	return sd, nil
+}
+
+func (i *InfluxDatafetcher) sensorDataSlice(
+	ctx context.Context, query string, timezone *time.Location) (
+	sd SensorDataSlice, err error) {
+	result, err := i.queryApi.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("error querying influxdb: %v", err)
 	}
@@ -77,11 +87,11 @@ func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
 	if err != nil {
 		return nil, fmt.Errorf("error processing query result: %v", err)
 	}
-	sd, err := i.dataRows2SensorData(dataRows, metadata.Timezone)
+	sd, err = i.dataRows2SensorData(dataRows, timezone)
 	if err != nil {
 		return nil, err
 	}
-	return sd, nil
+	return
 }
 
 func (i *InfluxDatafetcher) GetLatestData(metadata deviceinfo.DeviceInfo) (
@@ -101,15 +111,7 @@ func (i *InfluxDatafetcher) GetLatestData(metadata deviceinfo.DeviceInfo) (
 	fmt.Fprintf(&qb, ` false)`)
 	fmt.Fprintf(&qb, `|> last()`)
 	fmt.Fprintf(&qb, ` |> yield(name: "last")`)
-	result, err := i.queryApi.Query(context.Background(), qb.String())
-	if err != nil {
-		return sd, fmt.Errorf("error querying influxdb: %v", err)
-	}
-	dataRows, err := i.extractValue(result)
-	if err != nil {
-		return sd, fmt.Errorf("error processing query result: %v", err)
-	}
-	sdSlice, err := i.dataRows2SensorData(dataRows, metadata.Timezone)
+	sdSlice, err := i.sensorDataSlice(context.Background(), qb.String(), metadata.Timezone)
 	if err != nil {
 		return sd, err
 	}
