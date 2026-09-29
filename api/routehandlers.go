@@ -264,7 +264,10 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 }
 
 func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
-	*struct{ Body deviceinfo.DeviceIdsResponse }, error) {
+	*struct {
+		Status int
+		Body   deviceinfo.DeviceIdsResponse
+	}, error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
 		return nil, huma.Error500InternalServerError(
@@ -300,9 +303,17 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting DeviceIds.")
 	}
-	return &struct{ Body deviceinfo.DeviceIdsResponse }{
-		Body: deviceinfo.DeviceIdsResponse{DeviceIds: userDevices},
-	}, nil
+	resp := &struct {
+		Status int
+		Body   deviceinfo.DeviceIdsResponse
+	}{
+		Status: http.StatusOK,
+		Body:   deviceinfo.DeviceIdsResponse{DeviceIds: userDevices},
+	}
+	if len(userDevices) < 1 {
+		resp.Status = http.StatusNoContent
+	}
+	return resp, nil
 }
 
 func (a *Api) GetDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (

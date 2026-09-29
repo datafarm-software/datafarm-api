@@ -2592,6 +2592,45 @@ func TestGetDeviceIds(t *testing.T) {
 			},
 		},
 
+		"no content if user no access to any deviceid": {
+			wantStatus: http.StatusNoContent,
+			want:       deviceinfo.DeviceIdsResponse{DeviceIds: []string{}},
+			token:      ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  AnotherRegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+		},
+
 		"network user gets deviceIds in network": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
@@ -2698,7 +2737,7 @@ func TestGetDeviceIds(t *testing.T) {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
 			}
 			defer resp.Result().Body.Close()
-			if !tc.wantErr {
+			if !tc.wantErr && tc.wantStatus != http.StatusNoContent {
 				var dr deviceinfo.DeviceIdsResponse
 				body := resp.Body.Bytes()
 				err := json.Unmarshal(body, &dr)
