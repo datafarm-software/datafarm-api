@@ -102,9 +102,9 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 		},
 	}
 	if errors.Is(err, datafetcher.NoConnection) {
-		resp.Status = http.StatusInternalServerError
-		resp.Body = nil
-	} else if len(resultSlice) < 1 && onlyDataMissingErrors {
+		return nil, huma.Error500InternalServerError("Database Disconnected.")
+	}
+	if len(resultSlice) < 1 && onlyDataMissingErrors {
 		resp.Status = http.StatusNoContent
 		resp.Body = nil
 	}
