@@ -1485,17 +1485,15 @@ func TestGetLatestSensorData(t *testing.T) {
 	tests := map[string]struct {
 		MockApi
 		GetSensorDataTest
-		want []datafetcher.SensorData
+		want datafetcher.SensorData
 	}{
 
 		"successfully get last deviceid data": {
-			want: []datafetcher.SensorData{
-				{
-					DeviceID:  RegisteredDeviceId,
-					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]float64{
-						RegisteredQueryField: 23,
-					},
+			want: datafetcher.SensorData{
+				DeviceID:  RegisteredDeviceId,
+				Timestamp: AlsoInsideTimeRange,
+				SensorData: map[string]float64{
+					RegisteredQueryField: 23,
 				},
 			},
 			MockApi: MockApi{
@@ -1560,13 +1558,11 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"successfully get deviceid data in Africa/Johannesburg timezone": {
-			want: []datafetcher.SensorData{
-				{
-					DeviceID:  RegisteredDeviceId,
-					Timestamp: AlsoInsideTimeRange.Local(),
-					SensorData: map[string]float64{
-						RegisteredQueryField: 23,
-					},
+			want: datafetcher.SensorData{
+				DeviceID:  RegisteredDeviceId,
+				Timestamp: AlsoInsideTimeRange.Local(),
+				SensorData: map[string]float64{
+					RegisteredQueryField: 23,
 				},
 			},
 			MockApi: MockApi{
@@ -1631,7 +1627,7 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"invalid timezone requested so unprocessable": {
-			want: nil,
+			want: datafetcher.SensorData{},
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -1688,7 +1684,7 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"unprocessable because more than 20 queryFields requested": {
-			want: nil,
+			want: datafetcher.SensorData{},
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -1809,14 +1805,12 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"admin user can get all device queryfields": {
-			want: []datafetcher.SensorData{
-				{
-					DeviceID:  RegisteredDeviceId,
-					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]float64{
-						RegisteredQueryField:        23,
-						AnotherRegisteredQueryField: 80,
-					},
+			want: datafetcher.SensorData{
+				DeviceID:  RegisteredDeviceId,
+				Timestamp: AlsoInsideTimeRange,
+				SensorData: map[string]float64{
+					RegisteredQueryField:        23,
+					AnotherRegisteredQueryField: 80,
 				},
 			},
 			MockApi: MockApi{
@@ -1884,14 +1878,12 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"network user can get all device queryfields": {
-			want: []datafetcher.SensorData{
-				{
-					DeviceID:  RegisteredDeviceId,
-					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]float64{
-						RegisteredQueryField:        23,
-						AnotherRegisteredQueryField: 80,
-					},
+			want: datafetcher.SensorData{
+				DeviceID:  RegisteredDeviceId,
+				Timestamp: AlsoInsideTimeRange,
+				SensorData: map[string]float64{
+					RegisteredQueryField:        23,
+					AnotherRegisteredQueryField: 80,
 				},
 			},
 			MockApi: MockApi{
@@ -1959,14 +1951,12 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"user can get all device queryfields": {
-			want: []datafetcher.SensorData{
-				{
-					DeviceID:  RegisteredDeviceId,
-					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]float64{
-						RegisteredQueryField:        23,
-						AnotherRegisteredQueryField: 80,
-					},
+			want: datafetcher.SensorData{
+				DeviceID:  RegisteredDeviceId,
+				Timestamp: AlsoInsideTimeRange,
+				SensorData: map[string]float64{
+					RegisteredQueryField:        23,
+					AnotherRegisteredQueryField: 80,
 				},
 			},
 			MockApi: MockApi{
@@ -2034,7 +2024,7 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"unknown token": {
-			want: nil,
+			want: datafetcher.SensorData{},
 			GetSensorDataTest: GetSensorDataTest{
 				wantErr:    true,
 				wantStatus: http.StatusUnauthorized,
@@ -2047,7 +2037,7 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"no data": {
-			want: nil,
+			want: datafetcher.SensorData{},
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -2094,7 +2084,7 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"device doesnt exist": {
-			want: nil,
+			want: datafetcher.SensorData{},
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -2149,7 +2139,7 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"non admin can't request deviceid not in user company": {
-			want: nil,
+			want: datafetcher.SensorData{},
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -2204,13 +2194,11 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"admin user can request deviceid not in user company": {
-			want: []datafetcher.SensorData{
-				{
-					DeviceID:  RegisteredDeviceId,
-					Timestamp: AlsoInsideTimeRange,
-					SensorData: map[string]float64{
-						RegisteredQueryField: 23,
-					},
+			want: datafetcher.SensorData{
+				DeviceID:  RegisteredDeviceId,
+				Timestamp: AlsoInsideTimeRange,
+				SensorData: map[string]float64{
+					RegisteredQueryField: 23,
 				},
 			},
 			MockApi: MockApi{
@@ -2313,7 +2301,7 @@ func TestMakeQueryParams(t *testing.T) {
 					Timezone: datafetcher.Timezone{Timezone: ValidTimezone},
 				},
 			},
-			want: fmt.Sprintf(`?queryField="%s"&timezone-return="%s"&start="%s"`,
+			want: fmt.Sprintf(`?queryField=%s&timezone-return=%s&start=%s`,
 				RegisteredQueryField, url.QueryEscape(ValidTimezone), RelativeStart),
 		},
 
@@ -2326,7 +2314,7 @@ func TestMakeQueryParams(t *testing.T) {
 					Timezone: datafetcher.Timezone{Timezone: ValidTimezone},
 				},
 			},
-			want: fmt.Sprintf(`?queryField="%s"&queryField="%s"&timezone-return="%s"&start="%s"`,
+			want: fmt.Sprintf(`?queryField=%s&queryField=%s&timezone-return=%s&start=%s`,
 				RegisteredQueryField, AnotherRegisteredQueryField,
 				url.QueryEscape(ValidTimezone), RelativeStart),
 		},
@@ -2340,7 +2328,7 @@ func TestMakeQueryParams(t *testing.T) {
 					Timezone: datafetcher.Timezone{Timezone: ValidTimezone},
 				},
 			},
-			want: fmt.Sprintf(`?queryField="%s"&timezone-return="%s"&start="%s"&stop="%s"`,
+			want: fmt.Sprintf(`?queryField=%s&timezone-return=%s&start=%s&stop=%s`,
 				RegisteredQueryField, url.QueryEscape(ValidTimezone),
 				url.QueryEscape(Start), url.QueryEscape(Stop)),
 		},
@@ -2350,7 +2338,7 @@ func TestMakeQueryParams(t *testing.T) {
 				Hardware: datafetcher.Hardware{QueryFields: []string{RegisteredQueryField}},
 				Timezone: datafetcher.Timezone{Timezone: ValidTimezone},
 			},
-			want: fmt.Sprintf(`?queryField="%s"&timezone-return="%s"`,
+			want: fmt.Sprintf(`?queryField=%s&timezone-return=%s`,
 				RegisteredQueryField, url.QueryEscape(ValidTimezone)),
 		},
 
@@ -2360,7 +2348,7 @@ func TestMakeQueryParams(t *testing.T) {
 					RegisteredQueryField, AnotherRegisteredQueryField}},
 				Timezone: datafetcher.Timezone{Timezone: ValidTimezone},
 			},
-			want: fmt.Sprintf(`?queryField="%s"&queryField="%s"&timezone-return="%s"`,
+			want: fmt.Sprintf(`?queryField=%s&queryField=%s&timezone-return=%s`,
 				RegisteredQueryField, AnotherRegisteredQueryField,
 				url.QueryEscape(ValidTimezone)),
 		},

@@ -157,7 +157,7 @@ func (w *queryWalker) StructField(
 	switch value.Kind() {
 	case reflect.String:
 		if value.String() != "" {
-			fmt.Fprintf(&w.Builder, `%s="%s"&`, tag, url.QueryEscape(value.String()))
+			fmt.Fprintf(&w.Builder, `%s=%s&`, tag, url.QueryEscape(value.String()))
 		}
 	case reflect.Slice:
 		for i := range value.Len() {
@@ -165,7 +165,7 @@ func (w *queryWalker) StructField(
 			if elem.Kind() != reflect.String || elem.String() == "" {
 				continue
 			}
-			fmt.Fprintf(&w.Builder, `%s="%s"&`, tag, url.QueryEscape(elem.String()))
+			fmt.Fprintf(&w.Builder, `%s=%s&`, tag, url.QueryEscape(elem.String()))
 		}
 	}
 	return nil
