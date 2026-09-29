@@ -13,7 +13,7 @@ import (
 
 var EmptySensorData = errors.New("empty sensor data")
 var EmptyTimeZone = errors.New("empty time zone")
-var NoData = errors.New("no data")
+var NoData = errors.New("No Data")
 
 type SensorDataResponse struct {
 	Status int
@@ -267,6 +267,7 @@ type TestingDataFetcher interface {
 
 type DataFetcher interface {
 	TestingDataFetcher
+	//NOTE: could return NoData
 	GetData(metadata deviceinfo.DeviceInfo) (SensorDataSlice, error)
 	//NOTE: could return NoData
 	GetLatestData(metadata deviceinfo.DeviceInfo) (SensorData, error)

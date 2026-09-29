@@ -73,6 +73,9 @@ func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
 	if err != nil {
 		return sd, fmt.Errorf("query: %v", err)
 	}
+	if len(sd) < 1 {
+		return sd, NoData
+	}
 	return sd, nil
 }
 

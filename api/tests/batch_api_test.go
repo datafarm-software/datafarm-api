@@ -127,6 +127,129 @@ func TestBatchGetSensorData(t *testing.T) {
 			deviceRequests: DefaultBatchRequest(),
 		},
 
+		"no data on all deviceids requested": {
+			wantStatus: http.StatusOK,
+			want: datafetcher.BatchSensorDataResponse{
+				Errors: []datafetcher.SensorDataError{
+					{DeviceId: RegisteredDeviceId, Error: "No Data"},
+					{DeviceId: AnotherRegisteredDeviceId, Error: "No Data"},
+				},
+				Results: []datafetcher.SensorData{},
+			},
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.SensorData{},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			token:          ValidToken,
+			deviceRequests: DefaultBatchRequest(),
+		},
+
+		"no data on one of the deviceids requested": {
+			wantStatus: http.StatusOK,
+			want: datafetcher.BatchSensorDataResponse{
+				Errors: []datafetcher.SensorDataError{
+					{DeviceId: AnotherRegisteredDeviceId, Error: "No Data"},
+				},
+				Results: []datafetcher.SensorData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField:        23,
+							AnotherRegisteredQueryField: 80,
+						},
+					},
+				},
+			},
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.SensorData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							RegisteredQueryField:        23,
+							AnotherRegisteredQueryField: 80,
+						},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			token:          ValidToken,
+			deviceRequests: DefaultBatchRequest(),
+		},
+
 		"admin user can get sensor data from any company": {
 			wantErr:    false,
 			wantStatus: http.StatusOK,

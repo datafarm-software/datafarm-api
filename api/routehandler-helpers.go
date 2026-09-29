@@ -217,6 +217,9 @@ func (a *Api) getSensorData(
 	}
 	sensorData, err = a.DataFetcher.GetData(di)
 	if err != nil {
+		if errors.Is(err, datafetcher.NoData) {
+			return sensorData, err
+		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getSensorData.dataFetcher.getData"},
 			"error.message": {err.Error()}})
