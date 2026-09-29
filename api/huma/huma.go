@@ -308,6 +308,9 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	fh = FiveHundredExample()
 	fh.Detail = "Internal error getting DataBoundary."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	op.Responses["204"] = &huma.Response{
+		Description: "No SensorData for DeviceId.",
+	}
 	huma.Register(api, op, ho.GetSensorDataBoundary)
 
 	op = baseOperation("GET", &allMw)
