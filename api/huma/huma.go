@@ -299,6 +299,9 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	fh.Detail = "Internal error while getting deviceids."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	op.Responses["404"] = &huma.Response{}
+	op.Responses["204"] = &huma.Response{
+		Description: "When Client has no access to any DeviceIds.",
+	}
 	huma.Register(api, op, ho.GetDeviceIds)
 
 	op = baseOperation("GET", &allMw)
