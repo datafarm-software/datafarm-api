@@ -218,7 +218,10 @@ type DataBoundaryRequest struct {
 	DeviceIdParam
 	Timezone
 }
-type DataBoundaryResponse struct{ Body DataBoundary }
+type DataBoundaryResponse struct {
+	Status int
+	Body   DataBoundary
+}
 
 // NOTE: this is exactly the same as deviceinfo.QueryFieldsError struct
 type BatchError struct {
@@ -267,6 +270,7 @@ type DataFetcher interface {
 	GetData(metadata deviceinfo.DeviceInfo) (SensorDataSlice, error)
 	//NOTE: could return NoData
 	GetLatestData(metadata deviceinfo.DeviceInfo) (SensorData, error)
+	//NOTE: could return NoData
 	GetDataBoundary(metadata deviceinfo.DeviceInfo) (DataBoundary, error)
 	//NOTE: could return NoLocation
 	GetLocation(metadata deviceinfo.DeviceInfo) (DeviceLocationResponse, error)

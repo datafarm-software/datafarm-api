@@ -243,8 +243,8 @@ func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
 	if err != nil {
 		return dataBoundary, fmt.Errorf("error processing query result: %v", err)
 	}
-	if len(dataRows) != 2 {
-		return dataBoundary, fmt.Errorf("dataBoundary dataRows returned is not 2, instead: %d", len(dataRows))
+	if len(dataRows) < 2 {
+		return dataBoundary, NoData
 	}
 	dataBoundary.Start = dataRows[0].Time.In(deviceInfo.Timezone)
 	dataBoundary.Stop = dataRows[1].Time.In(deviceInfo.Timezone)

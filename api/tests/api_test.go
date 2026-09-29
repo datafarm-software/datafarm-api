@@ -3012,6 +3012,49 @@ func TestGetDataBoundary(t *testing.T) {
 			},
 		},
 
+		"no data": {
+			wantStatus: http.StatusNoContent,
+			want:       datafetcher.DataBoundary{},
+			token:      ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []datafetcher.SensorData{},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			req: datafetcher.DataBoundaryRequest{
+				DeviceIdParam: datafetcher.DeviceIdParam{DeviceId: RegisteredDeviceId},
+			},
+		},
+
 		"unknown token": {
 			wantErr:    true,
 			wantStatus: http.StatusUnauthorized,
@@ -3035,7 +3078,7 @@ func TestGetDataBoundary(t *testing.T) {
 				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
 			}
 			defer resp.Result().Body.Close()
-			if !tc.wantErr {
+			if !tc.wantErr && tc.wantStatus != http.StatusNoContent {
 				var got datafetcher.DataBoundary
 				body := resp.Body.Bytes()
 				err := json.Unmarshal(body, &got)

@@ -259,8 +259,6 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	fh.Detail = "Internal error while getting SensorData for the DeviceId."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	huma.Register(api, op, ho.GetSensorData)
-	op.Responses["204"] = &huma.Response{}
-	op.Parameters = []*huma.Param{}
 
 	op = baseOperation("GET", &allMw)
 	op.Path = "/device/{deviceId}/sensordata/latest"
@@ -277,8 +275,6 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	fh.Detail = "Internal error while getting Latest SensorData for the DeviceId."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	huma.Register(api, op, ho.GetLatestSensorData)
-	op.Responses["204"] = &huma.Response{}
-	op.Parameters = []*huma.Param{}
 
 	op = baseOperation("GET", &allMw)
 	op.Path = "/device/{deviceId}/queryfields"

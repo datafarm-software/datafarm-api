@@ -310,9 +310,12 @@ func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 	logFromTag(ctx, in)
 	db, err := a.getSensorDataBoundary(ctx, in)
 	if err != nil {
+		if errors.Is(err, datafetcher.NoData) {
+			return &datafetcher.DataBoundaryResponse{Status: http.StatusNoContent}, nil
+		}
 		return nil, err
 	}
-	return &datafetcher.DataBoundaryResponse{Body: db}, nil
+	return &datafetcher.DataBoundaryResponse{Status: http.StatusOK, Body: db}, nil
 }
 
 func (a *Api) BatchGetSensorDataBoundary(ctx context.Context,
