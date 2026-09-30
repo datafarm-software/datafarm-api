@@ -274,7 +274,7 @@ type DataFetcher interface {
 	TestingDataFetcher
 	//NOTE: could return NoData, NoConnection
 	GetData(metadata deviceinfo.DeviceInfo) (SensorDataSlice, error)
-	//NOTE: could return NoData
+	//NOTE: could return NoData, NoConnection
 	GetLatestData(metadata deviceinfo.DeviceInfo) (SensorData, error)
 	//NOTE: could return NoData
 	GetDataBoundary(metadata deviceinfo.DeviceInfo) (DataBoundary, error)

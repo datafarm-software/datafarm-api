@@ -46,7 +46,8 @@ type HumaOperator interface {
 	BatchGetLatestSensorData(context.Context, *struct {
 		Body datafetcher.BatchLatestSensorDataRequest
 	}) (*struct {
-		Body *datafetcher.BatchSensorDataResponse
+		Status int
+		Body   *datafetcher.BatchSensorDataResponse
 	}, error)
 	Login(context.Context, *tokenprovider.LoginRequest) (
 		*tokenprovider.LoginResponse, error)

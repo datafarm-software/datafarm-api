@@ -115,13 +115,15 @@ func (a *Api) BatchGetLatestSensorData(ctx context.Context,
 	in *struct {
 		Body datafetcher.BatchLatestSensorDataRequest
 	}) (*struct {
-	Body *datafetcher.BatchSensorDataResponse
+	Status int
+	Body   *datafetcher.BatchSensorDataResponse
 }, error) {
 	logFromTag(ctx, in.Body)
 	var dataReq *datafetcher.LatestSensorDataRequest
 	var deviceErr datafetcher.SensorDataError
 	var sds datafetcher.SensorData
 	var err error
+	onlyDataMissingErrors := true
 	errSlice := make([]datafetcher.SensorDataError, 0, len(in.Body.Hardware))
 	resultSlice := make(datafetcher.SensorDataSlice, 0, len(in.Body.Hardware))
 	for _, hw := range in.Body.Hardware {
@@ -133,19 +135,35 @@ func (a *Api) BatchGetLatestSensorData(ctx context.Context,
 		if err == nil {
 			resultSlice = append(resultSlice, sds)
 		} else {
+			if errors.Is(err, datafetcher.NoConnection) {
+				break
+			}
+			if !errors.Is(err, datafetcher.NoData) {
+				onlyDataMissingErrors = false
+			}
 			deviceErr.DeviceId = hw.DeviceId
 			deviceErr.Error = err.Error()
 			errSlice = append(errSlice, deviceErr)
 		}
 	}
-	return &struct {
-		Body *datafetcher.BatchSensorDataResponse
+	if errors.Is(err, datafetcher.NoConnection) {
+		return nil, huma.Error500InternalServerError("Database Disconnected.")
+	}
+	resp := &struct {
+		Status int
+		Body   *datafetcher.BatchSensorDataResponse
 	}{
+		Status: http.StatusOK,
 		Body: &datafetcher.BatchSensorDataResponse{
 			Results: resultSlice,
 			Errors:  errSlice,
 		},
-	}, nil
+	}
+	if len(resultSlice) < 1 && onlyDataMissingErrors {
+		resp.Status = http.StatusNoContent
+		resp.Body = nil
+	}
+	return resp, nil
 }
 
 func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
