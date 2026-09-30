@@ -2,10 +2,8 @@ package info
 
 import (
 	"errors"
-	"time"
 
 	"github.com/datafarm-software/datafarm-api/api/device"
-	"github.com/datafarm-software/datafarm-api/api/device/data"
 )
 
 var GeneralQueryFields = []string{
@@ -26,13 +24,6 @@ type ScopeRestriction struct {
 	Scope   Scope
 	Company string
 	Network string
-}
-
-type Device struct {
-	QueryFields                []string
-	Timezone                   *time.Location
-	DeviceId, Company, Network string
-	Start, Stop                string
 }
 
 type QueryFieldsResponse struct {
@@ -65,10 +56,10 @@ type DeviceIdsResponse struct {
 }
 
 type TestingDeviceInfoFetcher interface {
-	PrepareDeviceInfo(Schema) error
+	PrepareDeviceInfo(device.Schema) error
 }
 
-type DeviceInfoFetcher interface {
+type Fetcher interface {
 	TestingDeviceInfoFetcher
 	Close() error
 	GetQueryFields(deviceId string) (QueryFields, error)
@@ -83,7 +74,7 @@ type BadConn struct{}
 
 func (b *BadConn) Close() error { return nil }
 func (b *BadConn) GetQueryFields(deviceId string) (QueryFields, error) {
-	return QueryFields{}, data.NoConnection
+	return QueryFields{}, device.NoConnection
 }
 
 // NOTE: could return err: NotFound

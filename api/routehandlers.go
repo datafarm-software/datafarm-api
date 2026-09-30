@@ -11,45 +11,46 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/datafarm-software/datafarm-api/api/authstore"
-	"github.com/datafarm-software/datafarm-api/api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/device"
+	"github.com/datafarm-software/datafarm-api/api/device/data"
+	"github.com/datafarm-software/datafarm-api/api/device/info"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 	"github.com/datafarm-software/telemetry/logging"
 )
 
 func (a *Api) GetSensorData(ctx context.Context,
-	in *datafetcher.SensorDataRequest) (out *datafetcher.SensorDataResponse, err error) {
+	in *data.SensorDataRequest) (out *data.SensorDataResponse, err error) {
 	logFromTag(ctx, in)
 	sensorData, err := a.getSensorData(ctx, in)
 	if err != nil {
-		if errors.Is(err, datafetcher.NoData) {
-			return &datafetcher.SensorDataResponse{Status: http.StatusNoContent}, nil
+		if errors.Is(err, device.NoData) {
+			return &data.SensorDataResponse{Status: http.StatusNoContent}, nil
 		}
 		return nil, err
 	}
 	if len(sensorData) < 1 {
-		return &datafetcher.SensorDataResponse{Status: http.StatusNoContent}, nil
+		return &data.SensorDataResponse{Status: http.StatusNoContent}, nil
 	}
-	return &datafetcher.SensorDataResponse{
+	return &data.SensorDataResponse{
 		Status: http.StatusOK,
 		Body:   sensorData,
 	}, nil
 }
 
 func (a *Api) GetLatestSensorData(ctx context.Context,
-	in *datafetcher.LatestSensorDataRequest) (
-	out *datafetcher.LatestSensorDataResponse, err error) {
+	in *data.LatestSensorDataRequest) (
+	out *data.LatestSensorDataResponse, err error) {
 	logFromTag(ctx, in)
 	sensorData, err := a.getLatestSensorData(ctx, in)
 	if err != nil {
-		if errors.Is(err, datafetcher.NoData) {
-			return &datafetcher.LatestSensorDataResponse{
+		if errors.Is(err, device.NoData) {
+			return &data.LatestSensorDataResponse{
 				Status: http.StatusNoContent,
 			}, nil
 		}
 		return nil, err
 	}
-	return &datafetcher.LatestSensorDataResponse{
+	return &data.LatestSensorDataResponse{
 		Status: http.StatusOK,
 		Body:   sensorData,
 	}, nil
@@ -57,21 +58,21 @@ func (a *Api) GetLatestSensorData(ctx context.Context,
 
 func (a *Api) BatchGetSensorData(ctx context.Context,
 	in *struct {
-		Body datafetcher.BatchSensorDataRequest
+		Body data.BatchSensorDataRequest
 	}) (*struct {
 	Status int
-	Body   *datafetcher.BatchSensorDataResponse
+	Body   *data.BatchSensorDataResponse
 }, error) {
 	logFromTag(ctx, in.Body)
-	var dataReq *datafetcher.SensorDataRequest
-	var deviceErr datafetcher.SensorDataError
-	var sds datafetcher.SensorDataSlice
+	var dataReq *data.SensorDataRequest
+	var deviceErr data.SensorDataError
+	var sds data.SensorDataSlice
 	var err error
 	var onlyDataMissingErrors = true
-	errSlice := make([]datafetcher.SensorDataError, 0, len(in.Body.Hardware))
-	resultSlice := make(datafetcher.SensorDataSlice, 0, len(in.Body.Hardware))
+	errSlice := make([]data.SensorDataError, 0, len(in.Body.Hardware))
+	resultSlice := make(data.SensorDataSlice, 0, len(in.Body.Hardware))
 	for _, hw := range in.Body.Hardware {
-		dataReq = &datafetcher.SensorDataRequest{
+		dataReq = &data.SensorDataRequest{
 			Hardware:  hw,
 			TimeFrame: in.Body.TimeFrame,
 		}
@@ -79,9 +80,9 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 		if err == nil {
 			resultSlice = append(resultSlice, sds...)
 		} else {
-			if !errors.Is(err, datafetcher.NoData) {
+			if !errors.Is(err, device.NoData) {
 				onlyDataMissingErrors = false
-				if errors.Is(err, datafetcher.NoConnection) {
+				if errors.Is(err, device.NoConnection) {
 					break
 				}
 			}
@@ -93,15 +94,15 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 	}
 	resp := &struct {
 		Status int
-		Body   *datafetcher.BatchSensorDataResponse
+		Body   *data.BatchSensorDataResponse
 	}{
 		Status: http.StatusOK,
-		Body: &datafetcher.BatchSensorDataResponse{
+		Body: &data.BatchSensorDataResponse{
 			Results: resultSlice,
 			Errors:  errSlice,
 		},
 	}
-	if errors.Is(err, datafetcher.NoConnection) {
+	if errors.Is(err, device.NoConnection) {
 		return nil, huma.Error500InternalServerError("Database Disconnected.")
 	}
 	if len(resultSlice) < 1 && onlyDataMissingErrors {
@@ -113,21 +114,21 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 
 func (a *Api) BatchGetLatestSensorData(ctx context.Context,
 	in *struct {
-		Body datafetcher.BatchLatestSensorDataRequest
+		Body data.BatchLatestSensorDataRequest
 	}) (*struct {
 	Status int
-	Body   *datafetcher.BatchSensorDataResponse
+	Body   *data.BatchSensorDataResponse
 }, error) {
 	logFromTag(ctx, in.Body)
-	var dataReq *datafetcher.LatestSensorDataRequest
-	var deviceErr datafetcher.SensorDataError
-	var sds datafetcher.SensorData
+	var dataReq *data.LatestSensorDataRequest
+	var deviceErr data.SensorDataError
+	var sds data.SensorData
 	var err error
 	onlyDataMissingErrors := true
-	errSlice := make([]datafetcher.SensorDataError, 0, len(in.Body.Hardware))
-	resultSlice := make(datafetcher.SensorDataSlice, 0, len(in.Body.Hardware))
+	errSlice := make([]data.SensorDataError, 0, len(in.Body.Hardware))
+	resultSlice := make(data.SensorDataSlice, 0, len(in.Body.Hardware))
 	for _, hw := range in.Body.Hardware {
-		dataReq = &datafetcher.LatestSensorDataRequest{
+		dataReq = &data.LatestSensorDataRequest{
 			Hardware: hw,
 			Timezone: in.Body.Timezone,
 		}
@@ -135,10 +136,10 @@ func (a *Api) BatchGetLatestSensorData(ctx context.Context,
 		if err == nil {
 			resultSlice = append(resultSlice, sds)
 		} else {
-			if errors.Is(err, datafetcher.NoConnection) {
+			if errors.Is(err, device.NoConnection) {
 				break
 			}
-			if !errors.Is(err, datafetcher.NoData) {
+			if !errors.Is(err, device.NoData) {
 				onlyDataMissingErrors = false
 			}
 			deviceErr.DeviceId = hw.DeviceId
@@ -146,15 +147,15 @@ func (a *Api) BatchGetLatestSensorData(ctx context.Context,
 			errSlice = append(errSlice, deviceErr)
 		}
 	}
-	if errors.Is(err, datafetcher.NoConnection) {
+	if errors.Is(err, device.NoConnection) {
 		return nil, huma.Error500InternalServerError("Database Disconnected.")
 	}
 	resp := &struct {
 		Status int
-		Body   *datafetcher.BatchSensorDataResponse
+		Body   *data.BatchSensorDataResponse
 	}{
 		Status: http.StatusOK,
-		Body: &datafetcher.BatchSensorDataResponse{
+		Body: &data.BatchSensorDataResponse{
 			Results: resultSlice,
 			Errors:  errSlice,
 		},
@@ -295,29 +296,29 @@ func (a *Api) Login(ctx context.Context,
 	return &tokenprovider.LoginResponse{Body: ut.Token}, nil
 }
 
-func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (
-	*deviceinfo.QueryFieldsResponse, error) {
+func (a *Api) GetQueryFields(ctx context.Context, in *info.QueryFieldsRequest) (
+	*info.QueryFieldsResponse, error) {
 	logFromTag(ctx, in)
 	queryFields, err := a.getQueryFields(ctx, in)
 	if err != nil {
 		return nil, err
 	}
-	return &deviceinfo.QueryFieldsResponse{Body: queryFields}, nil
+	return &info.QueryFieldsResponse{Body: queryFields}, nil
 }
 
 func (a *Api) BatchGetQueryFields(ctx context.Context,
-	in *deviceinfo.BatchQueryFieldsRequest) (*struct {
-	Body deviceinfo.BatchQueryFieldsResponse
+	in *info.BatchQueryFieldsRequest) (*struct {
+	Body info.BatchQueryFieldsResponse
 }, error) {
 	logFromTag(ctx, in)
-	var qr deviceinfo.QueryFieldsRequest
-	var dataResp deviceinfo.QueryFields
-	var deviceErr deviceinfo.QueryFieldsError
+	var qr info.QueryFieldsRequest
+	var dataResp info.QueryFields
+	var deviceErr info.QueryFieldsError
 	var err error
-	errSlice := make([]deviceinfo.QueryFieldsError, 0, len(in.Body.DeviceIds))
-	resultSlice := make([]deviceinfo.QueryFields, 0, len(in.Body.DeviceIds))
+	errSlice := make([]info.QueryFieldsError, 0, len(in.Body.DeviceIds))
+	resultSlice := make([]info.QueryFields, 0, len(in.Body.DeviceIds))
 	for _, deviceId := range in.Body.DeviceIds {
-		qr = deviceinfo.QueryFieldsRequest{
+		qr = info.QueryFieldsRequest{
 			DeviceId: deviceId,
 		}
 		dataResp, err = a.getQueryFields(ctx, &qr)
@@ -330,9 +331,9 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 		}
 	}
 	return &struct {
-		Body deviceinfo.BatchQueryFieldsResponse
+		Body info.BatchQueryFieldsResponse
 	}{
-		Body: deviceinfo.BatchQueryFieldsResponse{
+		Body: info.BatchQueryFieldsResponse{
 			Results: resultSlice,
 			Errors:  errSlice,
 		},
@@ -342,14 +343,14 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	*struct {
 		Status int
-		Body   deviceinfo.DeviceIdsResponse
+		Body   info.DeviceIdsResponse
 	}, error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
-	sr := deviceinfo.ScopeRestriction{
+	sr := info.ScopeRestriction{
 		Company: user.Company,
 		Network: user.Network,
 	}
@@ -359,11 +360,11 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	}
 	switch authstore.Role(user.Role) {
 	case authstore.User:
-		sr.Scope = deviceinfo.DevicesInCompanyInNetwork
+		sr.Scope = info.DevicesInCompanyInNetwork
 	case authstore.NetworkUser:
-		sr.Scope = deviceinfo.DevicesInNetwork
+		sr.Scope = info.DevicesInNetwork
 	case authstore.Admin:
-		sr.Scope = deviceinfo.AllDevices
+		sr.Scope = info.AllDevices
 	default:
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getDeviceIds.domain"},
@@ -381,10 +382,10 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	}
 	resp := &struct {
 		Status int
-		Body   deviceinfo.DeviceIdsResponse
+		Body   info.DeviceIdsResponse
 	}{
 		Status: http.StatusOK,
-		Body:   deviceinfo.DeviceIdsResponse{DeviceIds: userDevices},
+		Body:   info.DeviceIdsResponse{DeviceIds: userDevices},
 	}
 	if len(userDevices) < 1 {
 		resp.Status = http.StatusNoContent
@@ -392,36 +393,36 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	return resp, nil
 }
 
-func (a *Api) GetDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
-	*datafetcher.DataBoundaryResponse, error) {
+func (a *Api) GetDataBoundary(ctx context.Context, in *data.DataBoundaryRequest) (
+	*data.DataBoundaryResponse, error) {
 	logFromTag(ctx, in)
 	db, err := a.getSensorDataBoundary(ctx, in)
 	if err != nil {
-		if errors.Is(err, datafetcher.NoData) {
-			return &datafetcher.DataBoundaryResponse{Status: http.StatusNoContent}, nil
+		if errors.Is(err, device.NoData) {
+			return &data.DataBoundaryResponse{Status: http.StatusNoContent}, nil
 		}
 		return nil, err
 	}
-	return &datafetcher.DataBoundaryResponse{Status: http.StatusOK, Body: db}, nil
+	return &data.DataBoundaryResponse{Status: http.StatusOK, Body: db}, nil
 }
 
 func (a *Api) BatchGetDataBoundary(ctx context.Context,
 	in *struct {
-		Body datafetcher.BatchDataBoundaryRequest
+		Body data.BatchDataBoundaryRequest
 	}) (
 	*struct {
-		Body datafetcher.BatchDataBoundaryResponse
+		Body data.BatchDataBoundaryResponse
 	}, error) {
 	logFromTag(ctx, in.Body)
-	var qr datafetcher.DataBoundaryRequest
-	var dataResp datafetcher.DataBoundary
-	var deviceErr datafetcher.BatchError
+	var qr data.DataBoundaryRequest
+	var dataResp data.DataBoundary
+	var deviceErr data.BatchError
 	var err error
-	errSlice := make([]datafetcher.BatchError, 0, len(in.Body.DeviceIds))
-	resultSlice := make([]datafetcher.DataBoundary, 0, len(in.Body.DeviceIds))
+	errSlice := make([]data.BatchError, 0, len(in.Body.DeviceIds))
+	resultSlice := make([]data.DataBoundary, 0, len(in.Body.DeviceIds))
 	for _, deviceId := range in.Body.DeviceIds {
-		qr = datafetcher.DataBoundaryRequest{
-			datafetcher.DeviceIdParam{DeviceId: deviceId}, in.Body.Timezone,
+		qr = data.DataBoundaryRequest{
+			data.DeviceIdParam{DeviceId: deviceId}, in.Body.Timezone,
 		}
 		dataResp, err = a.getSensorDataBoundary(ctx, &qr)
 		if err == nil {
@@ -433,49 +434,49 @@ func (a *Api) BatchGetDataBoundary(ctx context.Context,
 		}
 	}
 	return &struct {
-		Body datafetcher.BatchDataBoundaryResponse
+		Body data.BatchDataBoundaryResponse
 	}{
-		Body: datafetcher.BatchDataBoundaryResponse{
+		Body: data.BatchDataBoundaryResponse{
 			Results: resultSlice,
 			Errors:  errSlice,
 		},
 	}, nil
 }
 
-func (a *Api) GetLocation(ctx context.Context, in *datafetcher.DeviceLocationRequest) (
+func (a *Api) GetLocation(ctx context.Context, in *data.DeviceLocationRequest) (
 	*struct {
 		Status int
-		Body   datafetcher.DeviceLocationResponse
+		Body   data.DeviceLocationResponse
 	}, error) {
 	logFromTag(ctx, in)
 	loc, err := a.getLocation(ctx, in)
 	if err != nil {
-		if !errors.Is(err, datafetcher.NoLocation) {
+		if !errors.Is(err, device.NoLocation) {
 			return nil, err
 		}
 		return &struct {
 			Status int
-			Body   datafetcher.DeviceLocationResponse
-		}{http.StatusNoContent, datafetcher.DeviceLocationResponse{}}, nil
+			Body   data.DeviceLocationResponse
+		}{http.StatusNoContent, data.DeviceLocationResponse{}}, nil
 	}
 	return &struct {
 		Status int
-		Body   datafetcher.DeviceLocationResponse
+		Body   data.DeviceLocationResponse
 	}{http.StatusOK, loc}, nil
 }
 
 func (a *Api) BatchGetLocation(ctx context.Context, in *struct {
-	Body datafetcher.BatchLocationRequest
+	Body data.BatchLocationRequest
 }) (*struct {
-	Body datafetcher.BatchLocationResponse
+	Body data.BatchLocationResponse
 }, error) {
 	logFromTag(ctx, in.Body)
-	var lr datafetcher.DeviceLocationRequest
-	var dataResp datafetcher.DeviceLocationResponse
-	var deviceErr datafetcher.BatchError
+	var lr data.DeviceLocationRequest
+	var dataResp data.DeviceLocationResponse
+	var deviceErr data.BatchError
 	var err error
-	errSlice := make([]datafetcher.BatchError, 0, len(in.Body.DeviceIds))
-	resultSlice := make([]datafetcher.DeviceLocationResponse, 0, len(in.Body.DeviceIds))
+	errSlice := make([]data.BatchError, 0, len(in.Body.DeviceIds))
+	resultSlice := make([]data.DeviceLocationResponse, 0, len(in.Body.DeviceIds))
 	for _, deviceId := range in.Body.DeviceIds {
 		lr.DeviceId = deviceId
 		dataResp, err = a.getLocation(ctx, &lr)
@@ -488,9 +489,9 @@ func (a *Api) BatchGetLocation(ctx context.Context, in *struct {
 		}
 	}
 	return &struct {
-		Body datafetcher.BatchLocationResponse
+		Body data.BatchLocationResponse
 	}{
-		Body: datafetcher.BatchLocationResponse{
+		Body: data.BatchLocationResponse{
 			Results: resultSlice,
 			Errors:  errSlice,
 		},

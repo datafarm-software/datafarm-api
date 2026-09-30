@@ -13,8 +13,8 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/danielgtaylor/huma/v2/humacli"
 	"github.com/datafarm-software/datafarm-api/api/authstore"
-	"github.com/datafarm-software/datafarm-api/api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/device/data"
+	"github.com/datafarm-software/datafarm-api/api/device/info"
 	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 	"github.com/datafarm-software/telemetry"
@@ -43,18 +43,18 @@ var NUMBER_REGEX = regexp.MustCompile(`[0-9]`)
 var SPECIAL_CHARS_REGEX = regexp.MustCompile(`[@$!%*?&#]`)
 
 type ApiOpts struct {
-	RedisOpts      redis.RedisOpts        `mapstructure:"Redis" validate:"required"`
-	InfluxOpts     datafetcher.InfluxOpts `mapstructure:"Influx" validate:"required"`
-	TelemetryOpts  telemetry.Opts         `mapstructure:"telemetry" validate:"required"`
-	Port           string                 `mapstructure:"port" validate:"required"`
-	PrivateKeyFile string                 `mapstructure:"privatekeyfile" validate:"required"`
-	PublicKeyFile  string                 `mapstructure:"publickeyfile" validate:"required"`
-	Mode           localhuma.Mode         `mapstructure:"mode"`
+	RedisOpts      redis.RedisOpts `mapstructure:"Redis" validate:"required"`
+	InfluxOpts     data.InfluxOpts `mapstructure:"Influx" validate:"required"`
+	TelemetryOpts  telemetry.Opts  `mapstructure:"telemetry" validate:"required"`
+	Port           string          `mapstructure:"port" validate:"required"`
+	PrivateKeyFile string          `mapstructure:"privatekeyfile" validate:"required"`
+	PublicKeyFile  string          `mapstructure:"publickeyfile" validate:"required"`
+	Mode           localhuma.Mode  `mapstructure:"mode"`
 }
 
 type Api struct {
-	DeviceInfo    deviceinfo.DeviceInfoFetcher
-	DataFetcher   datafetcher.DataFetcher
+	DeviceInfo    info.DeviceInfoFetcher
+	DataFetcher   data.DataFetcher
 	TokenProvider tokenprovider.TokenProvider
 	AuthStore     authstore.AuthStore
 	Meter         metering.Meter
@@ -73,7 +73,7 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return err
 	}
-	df, err := datafetcher.NewInfluxDatafetcher(opts.InfluxOpts)
+	df, err := data.NewInfluxDatafetcher(opts.InfluxOpts)
 	if err != nil {
 		return fmt.Errorf("error init influx: %v", err)
 	}
@@ -151,10 +151,10 @@ func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
 func (a *Api) Close() {
 	var err error
 	if err = a.DeviceInfo.Close(); err != nil {
-		log.Printf("error closing metadatafetcher: %v", err)
+		log.Printf("error closing metadevice/data: %v", err)
 	}
 	if err = a.DataFetcher.Close(); err != nil {
-		log.Printf("error closing datafetcher: %v", err)
+		log.Printf("error closing device/data: %v", err)
 	}
 	if err = a.TokenProvider.Close(); err != nil {
 		log.Printf("error closing token auth: %v", err)

@@ -1,5 +1,21 @@
 package device
 
+import (
+	"errors"
+	"time"
+)
+
+var NoData = errors.New("No Data")
+var NoConnection = errors.New("No Connection")
+var NoLocation = errors.New("No Location")
+
+type Device struct {
+	QueryFields                []string
+	Timezone                   *time.Location
+	DeviceId, Company, Network string
+	Start, Stop                string
+}
+
 type Schema struct {
 	DeviceCompanies []DeviceToCompany
 	DeviceNetworks  []DeviceToNetwork

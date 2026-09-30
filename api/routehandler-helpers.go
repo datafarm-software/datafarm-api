@@ -12,8 +12,9 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/datafarm-software/datafarm-api/api/authstore"
-	"github.com/datafarm-software/datafarm-api/api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/device"
+	"github.com/datafarm-software/datafarm-api/api/device/data"
+	"github.com/datafarm-software/datafarm-api/api/device/info"
 	"github.com/datafarm-software/telemetry/logging"
 )
 
@@ -100,7 +101,7 @@ func CheckOlderThanNinetyDays(start string) bool {
 	return false
 }
 
-func formatTimestamp(in *datafetcher.SensorDataRequest) (err error) {
+func formatTimestamp(in *data.SensorDataRequest) (err error) {
 	in.TimeFrame.Start = strings.TrimSpace(in.TimeFrame.Start)
 	if RELATIVETIME_REGEX.MatchString(in.TimeFrame.Start) {
 		older := CheckOlderThanNinetyDays(in.TimeFrame.Start)
@@ -135,11 +136,11 @@ func formatTimestamp(in *datafetcher.SensorDataRequest) (err error) {
 }
 
 func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, deviceId string) (
-	di deviceinfo.DeviceInfo, err error) {
-	di = deviceinfo.DeviceInfo{DeviceId: deviceId}
+	di device.Device, err error) {
+	di = device.Device{DeviceId: deviceId}
 	deviceCompany, err := a.DeviceInfo.GetCompany(deviceId)
 	if err != nil {
-		if errors.Is(err, deviceinfo.NotFound) {
+		if errors.Is(err, info.NotFound) {
 			return di, huma.Error404NotFound("Device Not Found.")
 		}
 		log.AddMetadata(logging.Metadata{
@@ -156,7 +157,7 @@ func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, d
 	}
 	deviceNetwork, err := a.DeviceInfo.GetNetwork(deviceId)
 	if err != nil {
-		if errors.Is(err, deviceinfo.NotFound) {
+		if errors.Is(err, info.NotFound) {
 			return di, huma.Error404NotFound("Device Not Found.")
 		}
 		log.AddMetadata(logging.Metadata{
@@ -176,8 +177,8 @@ func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, d
 }
 
 func (a *Api) getSensorData(
-	ctx context.Context, in *datafetcher.SensorDataRequest) (
-	sensorData datafetcher.SensorDataSlice, err error) {
+	ctx context.Context, in *data.SensorDataRequest) (
+	sensorData data.SensorDataSlice, err error) {
 	if err = formatTimestamp(in); err != nil {
 		return nil, err
 	}
@@ -217,8 +218,8 @@ func (a *Api) getSensorData(
 	}
 	sensorData, err = a.DataFetcher.GetData(di)
 	if err != nil {
-		if errors.Is(err, datafetcher.NoData) ||
-			errors.Is(err, datafetcher.NoConnection) {
+		if errors.Is(err, device.NoData) ||
+			errors.Is(err, device.NoConnection) {
 			return sensorData, err
 		}
 		log.AddMetadata(logging.Metadata{
@@ -232,8 +233,8 @@ func (a *Api) getSensorData(
 }
 
 func (a *Api) getLatestSensorData(
-	ctx context.Context, in *datafetcher.LatestSensorDataRequest) (
-	sd datafetcher.SensorData, err error) {
+	ctx context.Context, in *data.LatestSensorDataRequest) (
+	sd data.SensorData, err error) {
 	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
 	if !ok {
 		return sd, huma.Error500InternalServerError(
@@ -268,8 +269,8 @@ func (a *Api) getLatestSensorData(
 	}
 	sd, err = a.DataFetcher.GetLatestData(di)
 	if err != nil {
-		if errors.Is(err, datafetcher.NoData) ||
-			errors.Is(err, datafetcher.NoConnection) {
+		if errors.Is(err, device.NoData) ||
+			errors.Is(err, device.NoConnection) {
 			return sd, err
 		}
 		log.AddMetadata(logging.Metadata{
@@ -281,8 +282,8 @@ func (a *Api) getLatestSensorData(
 	return
 }
 
-func (a *Api) getQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (
-	qf deviceinfo.QueryFields, err error) {
+func (a *Api) getQueryFields(ctx context.Context, in *info.QueryFieldsRequest) (
+	qf info.QueryFields, err error) {
 	_, err = a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetAllQueryFields)
 	if err != nil {
 		return
@@ -305,7 +306,7 @@ func (a *Api) getQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequ
 
 func (a *Api) deviceInfoIfAccessAndPermission(ctx context.Context,
 	deviceId string, permission authstore.Permission) (
-	di deviceinfo.DeviceInfo, err error) {
+	di device.Device, err error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
 		return di, huma.Error500InternalServerError(
@@ -335,8 +336,8 @@ func (a *Api) user(ctx context.Context) (authstore.UserInfo, error) {
 	return user, nil
 }
 
-func (a *Api) getSensorDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
-	db datafetcher.DataBoundary, err error) {
+func (a *Api) getSensorDataBoundary(ctx context.Context, in *data.DataBoundaryRequest) (
+	db data.DataBoundary, err error) {
 	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetDataBoundary)
 	if err != nil {
 		return db, err
@@ -353,7 +354,7 @@ func (a *Api) getSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 	}
 	db, err = a.DataFetcher.GetDataBoundary(di)
 	if err != nil {
-		if errors.Is(err, datafetcher.NoData) {
+		if errors.Is(err, device.NoData) {
 			return db, err
 		}
 		log.AddMetadata(logging.Metadata{
@@ -365,8 +366,8 @@ func (a *Api) getSensorDataBoundary(ctx context.Context, in *datafetcher.DataBou
 	return
 }
 
-func (a *Api) getLocation(ctx context.Context, in *datafetcher.DeviceLocationRequest) (
-	loc datafetcher.DeviceLocationResponse, err error) {
+func (a *Api) getLocation(ctx context.Context, in *data.DeviceLocationRequest) (
+	loc data.DeviceLocationResponse, err error) {
 	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetDataBoundary)
 	if err != nil {
 		return loc, err
@@ -378,7 +379,7 @@ func (a *Api) getLocation(ctx context.Context, in *datafetcher.DeviceLocationReq
 	}
 	loc, err = a.DataFetcher.GetLocation(di)
 	if err != nil {
-		if errors.Is(err, datafetcher.NoLocation) {
+		if errors.Is(err, device.NoLocation) {
 			return loc, err
 		}
 		log.AddMetadata(logging.Metadata{

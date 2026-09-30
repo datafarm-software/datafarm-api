@@ -9,14 +9,10 @@ import (
 	"time"
 
 	"github.com/datafarm-software/datafarm-api/api/device"
-	"github.com/datafarm-software/datafarm-api/api/device/info"
 )
 
 var EmptySensorData = errors.New("empty sensor data")
 var EmptyTimeZone = errors.New("empty time zone")
-var NoData = errors.New("No Data")
-var NoConnection = errors.New("No Connection")
-var NoLocation = errors.New("No Location")
 
 type SensorDataResponse struct {
 	Status int
@@ -271,15 +267,15 @@ type TestingDataFetcher interface {
 	PrepareDb(*device.Schema, SensorDataSlice) error
 }
 
-type DataFetcher interface {
+type Fetcher interface {
 	TestingDataFetcher
 	//NOTE: could return NoData, NoConnection
-	GetData(metadata info.Device) (SensorDataSlice, error)
+	GetData(metadata device.Device) (SensorDataSlice, error)
 	//NOTE: could return NoData, NoConnection
-	GetLatestData(metadata info.Device) (SensorData, error)
+	GetLatestData(metadata device.Device) (SensorData, error)
 	//NOTE: could return NoData
-	GetDataBoundary(metadata info.Device) (DataBoundary, error)
+	GetDataBoundary(metadata device.Device) (DataBoundary, error)
 	//NOTE: could return NoLocation
-	GetLocation(metadata info.Device) (DeviceLocationResponse, error)
+	GetLocation(metadata device.Device) (DeviceLocationResponse, error)
 	Close() error
 }
