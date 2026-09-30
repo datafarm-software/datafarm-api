@@ -34,7 +34,7 @@ type QueryFieldsRequest struct {
 	DeviceId string `log:"deviceid" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
 }
 
-type BatchQueryFieldsRequest struct{ Body device.DeviceBatch }
+type BatchQueryFieldsRequest struct{ Body device.Batch }
 
 type QueryFieldsError struct {
 	DeviceId string `json:"deviceId"`
@@ -70,16 +70,21 @@ type Fetcher interface {
 	GetDevices(ScopeRestriction) ([]string, error)
 }
 
-type BadConn struct{}
+type BadConnFetcher struct{}
 
-func (b *BadConn) Close() error { return nil }
-func (b *BadConn) GetQueryFields(deviceId string) (QueryFields, error) {
+func (b *BadConnFetcher) Close() error { return nil }
+func (b *BadConnFetcher) GetQueryFields(deviceId string) (QueryFields, error) {
 	return QueryFields{}, device.NoConnection
 }
 
-// NOTE: could return err: NotFound
-func (b *BadConn) GetCompany(deviceId string) (string, error)
+func (b *BadConnFetcher) GetCompany(deviceId string) (string, error) {
+	return "", device.NoConnection
+}
 
-// NOTE: could return err: NotFound
-func (b *BadConn) GetNetwork(deviceId string) (string, error)
-func (b *BadConn) GetDevices(ScopeRestriction) ([]string, error)
+func (b *BadConnFetcher) GetNetwork(deviceId string) (string, error) {
+	return "", device.NoConnection
+}
+
+func (b *BadConnFetcher) GetDevices(ScopeRestriction) ([]string, error) {
+	return nil, device.NoConnection
+}

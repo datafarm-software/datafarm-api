@@ -7,7 +7,8 @@ import (
 	"os"
 
 	"github.com/datafarm-software/datafarm-api/api/authstore"
-	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/device"
+	"github.com/datafarm-software/datafarm-api/api/device/info"
 	cfy "github.com/geraud22/config-from-yaml"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
@@ -112,7 +113,7 @@ func (t *TestingRedis) PrepareAuthStore(mockDb authstore.Schema) error {
 	return nil
 }
 
-func (t *TestingRedis) PrepareDeviceInfo(schema deviceinfo.Schema) error {
+func (t *TestingRedis) PrepareDeviceInfo(schema device.Schema) error {
 	pfn := func(pipe redis.Pipeliner) error {
 		for _, d := range schema.DeviceCompanies {
 			pipe.SAdd(ctx, "allDevices", d.DeviceId)
@@ -139,8 +140,8 @@ func (t *TestingRedis) PrepareDeviceInfo(schema deviceinfo.Schema) error {
 	return nil
 }
 
-func (t *TestingRedis) GetSnapshot() *deviceinfo.Schema {
-	schema := &deviceinfo.Schema{}
+func (t *TestingRedis) GetSnapshot() *device.Schema {
+	schema := &device.Schema{}
 	deviceIds, err := t.redis.db.SMembers(ctx, "deviceIds").Result()
 	if err != nil {
 		log.Printf("getting deviceIds: %v", err)
@@ -164,13 +165,13 @@ func (t *TestingRedis) GetSnapshot() *deviceinfo.Schema {
 	for _, id := range deviceIds {
 		company = getStringCmd(cmdVec[id]["company"])
 		schema.DeviceCompanies = append(schema.DeviceCompanies,
-			deviceinfo.DeviceToCompany{DeviceId: id, Company: company})
+			device.DeviceToCompany{DeviceId: id, Company: company})
 		network = getStringCmd(cmdVec[id]["network"])
 		schema.DeviceNetworks = append(schema.DeviceNetworks,
-			deviceinfo.DeviceToNetwork{DeviceId: id, Network: network})
+			device.DeviceToNetwork{DeviceId: id, Network: network})
 		queryFields = getStringSliceCmd(cmdVec[id]["queryFields"])
 		schema.DeviceToQF = append(schema.DeviceToQF,
-			deviceinfo.DeviceToQueryFields{DeviceId: id, QueryFields: queryFields})
+			device.DeviceToQueryFields{DeviceId: id, QueryFields: queryFields})
 	}
 
 	return schema
@@ -196,7 +197,7 @@ func getStringSliceCmd(cmd any) []string {
 	return slice
 }
 
-func (t *TestingRedis) GetQueryFields(deviceId string) (deviceinfo.QueryFields, error) {
+func (t *TestingRedis) GetQueryFields(deviceId string) (info.QueryFields, error) {
 	return t.redis.GetQueryFields(deviceId)
 }
 
@@ -239,7 +240,7 @@ func (t *TestingRedis) GetActiveTokens() []authstore.UserToken {
 	return userTokens
 }
 
-func (t *TestingRedis) GetDevices(sr deviceinfo.ScopeRestriction) ([]string, error) {
+func (t *TestingRedis) GetDevices(sr info.ScopeRestriction) ([]string, error) {
 	return t.redis.GetDevices(sr)
 }
 

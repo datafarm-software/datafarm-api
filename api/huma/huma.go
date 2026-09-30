@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/datafarm-software/datafarm-api/api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/device/data"
+	"github.com/datafarm-software/datafarm-api/api/device/info"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 )
 
@@ -34,53 +34,53 @@ type HumaOperator interface {
 	RateLimit(ctx huma.Context, next func(huma.Context))
 	VerifyToken(ctx huma.Context, next func(huma.Context))
 	GetSensorData(context.Context,
-		*datafetcher.SensorDataRequest) (*datafetcher.SensorDataResponse, error)
+		*data.SensorDataRequest) (*data.SensorDataResponse, error)
 	BatchGetSensorData(context.Context, *struct {
-		Body datafetcher.BatchSensorDataRequest
+		Body data.BatchSensorDataRequest
 	}) (*struct {
 		Status int
-		Body   *datafetcher.BatchSensorDataResponse
+		Body   *data.BatchSensorDataResponse
 	}, error)
 	GetLatestSensorData(context.Context,
-		*datafetcher.LatestSensorDataRequest) (*datafetcher.LatestSensorDataResponse, error)
+		*data.LatestSensorDataRequest) (*data.LatestSensorDataResponse, error)
 	BatchGetLatestSensorData(context.Context, *struct {
-		Body datafetcher.BatchLatestSensorDataRequest
+		Body data.BatchLatestSensorDataRequest
 	}) (*struct {
 		Status int
-		Body   *datafetcher.BatchSensorDataResponse
+		Body   *data.BatchSensorDataResponse
 	}, error)
 	Login(context.Context, *tokenprovider.LoginRequest) (
 		*tokenprovider.LoginResponse, error)
-	GetQueryFields(context.Context, *deviceinfo.QueryFieldsRequest) (
-		*deviceinfo.QueryFieldsResponse, error)
-	BatchGetQueryFields(context.Context, *deviceinfo.BatchQueryFieldsRequest) (
+	GetQueryFields(context.Context, *info.QueryFieldsRequest) (
+		*info.QueryFieldsResponse, error)
+	BatchGetQueryFields(context.Context, *info.BatchQueryFieldsRequest) (
 		*struct {
-			Body deviceinfo.BatchQueryFieldsResponse
+			Body info.BatchQueryFieldsResponse
 		}, error)
 	GetDeviceIds(context.Context, *struct{}) (*struct {
 		Status int
-		Body   deviceinfo.DeviceIdsResponse
+		Body   info.DeviceIdsResponse
 	}, error)
-	GetDataBoundary(context.Context, *datafetcher.DataBoundaryRequest) (
-		*datafetcher.DataBoundaryResponse, error)
+	GetDataBoundary(context.Context, *data.DataBoundaryRequest) (
+		*data.DataBoundaryResponse, error)
 	BatchGetDataBoundary(context.Context,
 		*struct {
-			Body datafetcher.BatchDataBoundaryRequest
+			Body data.BatchDataBoundaryRequest
 		}) (
 		*struct {
-			Body datafetcher.BatchDataBoundaryResponse
+			Body data.BatchDataBoundaryResponse
 		}, error)
-	GetLocation(context.Context, *datafetcher.DeviceLocationRequest) (
+	GetLocation(context.Context, *data.DeviceLocationRequest) (
 		*struct {
 			Status int
-			Body   datafetcher.DeviceLocationResponse
+			Body   data.DeviceLocationResponse
 		}, error)
 	BatchGetLocation(context.Context,
 		*struct {
-			Body datafetcher.BatchLocationRequest
+			Body data.BatchLocationRequest
 		}) (
 		*struct {
-			Body datafetcher.BatchLocationResponse
+			Body data.BatchLocationResponse
 		}, error)
 }
 
@@ -429,7 +429,7 @@ DataFarm welcomes external contribution to the API, through Open Source under th
 	config.DefaultFormat = "application/json"
 	config.Formats["text/csv"] = huma.Format{
 		Marshal: func(w io.Writer, v any) error {
-			cm, ok := v.(datafetcher.CsvMarshaller)
+			cm, ok := v.(data.CsvMarshaller)
 			if !ok {
 				return fmt.Errorf("csv marshal did not receive marshaller, got: %T", v)
 			}

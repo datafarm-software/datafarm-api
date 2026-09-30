@@ -53,8 +53,8 @@ type ApiOpts struct {
 }
 
 type Api struct {
-	DeviceInfo    info.DeviceInfoFetcher
-	DataFetcher   data.DataFetcher
+	DeviceInfo    info.Fetcher
+	DataFetcher   data.Fetcher
 	TokenProvider tokenprovider.TokenProvider
 	AuthStore     authstore.AuthStore
 	Meter         metering.Meter
