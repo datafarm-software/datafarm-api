@@ -1,4 +1,4 @@
-package datafetcher
+package data
 
 import (
 	"bytes"

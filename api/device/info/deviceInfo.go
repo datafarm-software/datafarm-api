@@ -1,8 +1,11 @@
-package deviceinfo
+package info
 
 import (
 	"errors"
 	"time"
+
+	"github.com/datafarm-software/datafarm-api/api/device"
+	"github.com/datafarm-software/datafarm-api/api/device/data"
 )
 
 var GeneralQueryFields = []string{
@@ -25,7 +28,7 @@ type ScopeRestriction struct {
 	Network string
 }
 
-type DeviceInfo struct {
+type Device struct {
 	QueryFields                []string
 	Timezone                   *time.Location
 	DeviceId, Company, Network string
@@ -40,11 +43,7 @@ type QueryFieldsRequest struct {
 	DeviceId string `log:"deviceid" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
 }
 
-type BatchQueryFieldsRequest struct{ Body DeviceBatch }
-
-type DeviceBatch struct {
-	DeviceIds []string `log:"deviceids" json:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$" minItems:"2" maxItems:"5"`
-}
+type BatchQueryFieldsRequest struct{ Body device.DeviceBatch }
 
 type QueryFieldsError struct {
 	DeviceId string `json:"deviceId"`
@@ -65,27 +64,6 @@ type DeviceIdsResponse struct {
 	DeviceIds []string `json:"deviceIds" doc:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$"`
 }
 
-type DeviceToCompany struct {
-	DeviceId string
-	Company  string
-}
-
-type DeviceToNetwork struct {
-	DeviceId string
-	Network  string
-}
-
-type DeviceToQueryFields struct {
-	DeviceId    string
-	QueryFields []string
-}
-
-type Schema struct {
-	DeviceCompanies []DeviceToCompany
-	DeviceNetworks  []DeviceToNetwork
-	DeviceToQF      []DeviceToQueryFields
-}
-
 type TestingDeviceInfoFetcher interface {
 	PrepareDeviceInfo(Schema) error
 }
@@ -100,3 +78,17 @@ type DeviceInfoFetcher interface {
 	GetNetwork(deviceId string) (string, error)
 	GetDevices(ScopeRestriction) ([]string, error)
 }
+
+type BadConn struct{}
+
+func (b *BadConn) Close() error { return nil }
+func (b *BadConn) GetQueryFields(deviceId string) (QueryFields, error) {
+	return QueryFields{}, data.NoConnection
+}
+
+// NOTE: could return err: NotFound
+func (b *BadConn) GetCompany(deviceId string) (string, error)
+
+// NOTE: could return err: NotFound
+func (b *BadConn) GetNetwork(deviceId string) (string, error)
+func (b *BadConn) GetDevices(ScopeRestriction) ([]string, error)

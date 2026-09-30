@@ -1291,6 +1291,7 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 		},
 
 		"no data due to bad connection": {
+			wantErr:                 true,
 			wantStatus:              http.StatusInternalServerError,
 			want:                    datafetcher.BatchSensorDataResponse{},
 			disconnectedDataFetcher: true,
@@ -2312,11 +2313,11 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 func TestBatchGetQueryFields(t *testing.T) {
 	tests := map[string]struct {
 		MockApi
-		want               deviceinfo.BatchQueryFieldsResponse
-		queryFieldRequests deviceinfo.BatchQueryFieldsRequest
-		token              string
-		wantStatus         int
-		wantErr            bool
+		want                            deviceinfo.BatchQueryFieldsResponse
+		queryFieldRequests              deviceinfo.BatchQueryFieldsRequest
+		token                           string
+		wantStatus                      int
+		wantErr, disconnectedDeviceInfo bool
 	}{
 
 		"get multiple deviceIds' queryfields": {
@@ -2381,6 +2382,102 @@ func TestBatchGetQueryFields(t *testing.T) {
 					DeviceIds: []string{
 						RegisteredDeviceId,
 						AnotherRegisteredDeviceId,
+					},
+				},
+			},
+		},
+
+		"deviceIds not found": {
+			wantErr:    true,
+			wantStatus: http.StatusNotFound,
+			want:       deviceinfo.BatchQueryFieldsResponse{},
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			token: ValidToken,
+			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
+				Body: deviceinfo.DeviceBatch{
+					DeviceIds: []string{
+						AnotherRegisteredDeviceId,
+						"Device3",
+					},
+				},
+			},
+		},
+
+		"no data due to bad connection": {
+			wantErr:                true,
+			disconnectedDeviceInfo: true,
+			wantStatus:             http.StatusInternalServerError,
+			want:                   deviceinfo.BatchQueryFieldsResponse{},
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDeviceInfo: deviceinfo.Schema{
+					DeviceCompanies: []deviceinfo.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []deviceinfo.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []deviceinfo.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			token: ValidToken,
+			queryFieldRequests: deviceinfo.BatchQueryFieldsRequest{
+				Body: deviceinfo.DeviceBatch{
+					DeviceIds: []string{
+						RegisteredDeviceId,
 					},
 				},
 			},
@@ -2858,6 +2955,12 @@ func TestBatchGetQueryFields(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			api, closeFunc := tc.MockApi.Setup(t)
 			defer closeFunc()
+			if tc.disconnectedDeviceInfo {
+				testFlux, err := datafetcher.NewTestingInflux("../../config.yml")
+				require.Nil(t, err)
+				testFlux.BadConnQueryApi()
+				api.DataFetcher = testFlux
+			}
 			humaTest := setupHuma(t, api)
 			route := "/batch/device/queryfields"
 			resp := humaTest.Post(route,

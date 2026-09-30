@@ -239,8 +239,14 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Path = "/batch/device/sensordata/latest"
 	op.Summary = "Batch Get DeviceId Latest SensorData"
 	op.Description = "Clients can use this route to request Latest SensorData from multiple DeviceIds."
-	op.Responses["500"] = &huma.Response{}
+	fh = FiveHundredExample()
+	fh.Detail =
+		"Database disconnected."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	op.Responses["404"] = &huma.Response{}
+	op.Responses["204"] = &huma.Response{
+		Description: "No SensorData for any DeviceId requested.",
+	}
 	huma.Register(api, op, ho.BatchGetLatestSensorData)
 
 	op = baseOperation("POST", &allMw)

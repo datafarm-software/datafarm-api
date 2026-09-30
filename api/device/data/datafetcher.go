@@ -1,4 +1,4 @@
-package datafetcher
+package data
 
 import (
 	"encoding/csv"
@@ -8,7 +8,8 @@ import (
 	"strings"
 	"time"
 
-	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/device"
+	"github.com/datafarm-software/datafarm-api/api/device/info"
 )
 
 var EmptySensorData = errors.New("empty sensor data")
@@ -237,7 +238,7 @@ type BatchError struct {
 }
 
 type BatchDataBoundaryRequest struct {
-	deviceinfo.DeviceBatch
+	device.Batch
 	Timezone
 }
 
@@ -258,7 +259,7 @@ type DeviceLocationResponse struct {
 }
 
 type BatchLocationRequest struct {
-	deviceinfo.DeviceBatch
+	device.Batch
 }
 
 type BatchLocationResponse struct {
@@ -267,18 +268,18 @@ type BatchLocationResponse struct {
 }
 
 type TestingDataFetcher interface {
-	PrepareDb(*deviceinfo.Schema, SensorDataSlice) error
+	PrepareDb(*device.Schema, SensorDataSlice) error
 }
 
 type DataFetcher interface {
 	TestingDataFetcher
 	//NOTE: could return NoData, NoConnection
-	GetData(metadata deviceinfo.DeviceInfo) (SensorDataSlice, error)
+	GetData(metadata info.Device) (SensorDataSlice, error)
 	//NOTE: could return NoData, NoConnection
-	GetLatestData(metadata deviceinfo.DeviceInfo) (SensorData, error)
+	GetLatestData(metadata info.Device) (SensorData, error)
 	//NOTE: could return NoData
-	GetDataBoundary(metadata deviceinfo.DeviceInfo) (DataBoundary, error)
+	GetDataBoundary(metadata info.Device) (DataBoundary, error)
 	//NOTE: could return NoLocation
-	GetLocation(metadata deviceinfo.DeviceInfo) (DeviceLocationResponse, error)
+	GetLocation(metadata info.Device) (DeviceLocationResponse, error)
 	Close() error
 }

@@ -192,8 +192,7 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 				"source":        {"verifyToken.authStore.DeleteToken"},
 				"error.message": {err.Error()}})
 			a.httpErr(humaCtx, w,
-				`Your token is invalid. Please login again. 
-				There was an internal error while deleting the invalid token.`,
+				`Your token is invalid. Please login again. There was an internal error while deleting the invalid token.`,
 				http.StatusInternalServerError)
 			return
 		}
