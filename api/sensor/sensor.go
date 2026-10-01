@@ -24,7 +24,7 @@ type Device struct {
 }
 
 type DeviceIdParam struct {
-	DeviceId string `log:"deviceid" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+	DeviceId DeviceId `log:"deviceid" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
 }
 
 type Hardware struct {

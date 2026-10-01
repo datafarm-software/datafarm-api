@@ -377,14 +377,18 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 func (a *Api) GetDataBoundary(ctx context.Context, in *data.DataBoundaryRequest) (
 	*data.DataBoundaryResponse, error) {
 	logFromTag(ctx, in)
-	db, err := a.getSensorDataBoundary(ctx, in)
+	db, err := a.getDataBoundary(ctx, *in)
 	if err != nil {
 		if errors.Is(err, sensor.NoData) {
 			return &data.DataBoundaryResponse{Status: http.StatusNoContent}, nil
 		}
 		return nil, err
 	}
-	return &data.DataBoundaryResponse{Status: http.StatusOK, Body: db}, nil
+	if len(db) != 1 {
+		return nil, huma.Error500InternalServerError(
+			"Unexpected internal error while getting DataBoundary.")
+	}
+	return &data.DataBoundaryResponse{Status: http.StatusOK, Body: db[0]}, nil
 }
 
 func (a *Api) BatchGetDataBoundary(ctx context.Context,
@@ -395,31 +399,27 @@ func (a *Api) BatchGetDataBoundary(ctx context.Context,
 		Body data.BatchDataBoundaryResponse
 	}, error) {
 	logFromTag(ctx, in.Body)
-	var qr data.DataBoundaryRequest
-	var dataResp data.DataBoundary
-	var deviceErr data.BatchError
-	var err error
-	errSlice := make([]data.BatchError, 0, len(in.Body.DeviceIds))
-	resultSlice := make([]data.DataBoundary, 0, len(in.Body.DeviceIds))
-	for _, deviceId := range in.Body.DeviceIds {
-		qr = data.DataBoundaryRequest{
-			data.DeviceIdParam{DeviceId: deviceId}, in.Body.Timezone,
+	batch, err := sensor.BatchFactory(ctx, in.Body.DeviceIds,
+		func(d sensor.DeviceId) data.DataBoundaryRequest {
+			return data.DataBoundaryRequest{
+				DeviceIdParam: sensor.DeviceIdParam{DeviceId: d},
+				Timezone:      in.Body.Timezone,
+			}
+		},
+		a.getDataBoundary)
+	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError("Database Disconnected.")
 		}
-		dataResp, err = a.getSensorDataBoundary(ctx, &qr)
-		if err == nil {
-			resultSlice = append(resultSlice, dataResp)
-		} else {
-			deviceErr.DeviceId = deviceId
-			deviceErr.Error = err.Error()
-			errSlice = append(errSlice, deviceErr)
-		}
+		return nil, huma.Error500InternalServerError(
+			"Unexpected internal error while getting DataBoundary.")
 	}
 	return &struct {
 		Body data.BatchDataBoundaryResponse
 	}{
 		Body: data.BatchDataBoundaryResponse{
-			Results: resultSlice,
-			Errors:  errSlice,
+			Results: batch.Results,
+			Errors:  batch.Errors,
 		},
 	}, nil
 }

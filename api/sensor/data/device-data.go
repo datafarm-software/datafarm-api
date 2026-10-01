@@ -197,6 +197,8 @@ type SensorData struct {
 	SensorData map[string]float64 `json:"sensorData"`
 }
 
+type DataBoundarySlice []DataBoundary
+
 type DataBoundary struct {
 	DeviceId string    `json:"deviceId"`
 	Start    time.Time `json:"start"`

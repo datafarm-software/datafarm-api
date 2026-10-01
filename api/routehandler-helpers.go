@@ -307,7 +307,7 @@ func (a *Api) getQueryFields(ctx context.Context, in info.QueryFieldsRequest) (
 }
 
 func (a *Api) deviceInfoIfAccessAndPermission(ctx context.Context,
-	deviceId string, permission authstore.Permission) (
+	deviceId sensor.DeviceId, permission authstore.Permission) (
 	di sensor.Device, err error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
@@ -338,34 +338,34 @@ func (a *Api) user(ctx context.Context) (authstore.UserInfo, error) {
 	return user, nil
 }
 
-func (a *Api) getSensorDataBoundary(ctx context.Context, in *data.DataBoundaryRequest) (
-	db data.DataBoundary, err error) {
+func (a *Api) getDataBoundary(ctx context.Context, in data.DataBoundaryRequest) (
+	data.DataBoundarySlice, error) {
 	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetDataBoundary)
 	if err != nil {
-		return db, err
+		return nil, err
 	}
 	di.Timezone, err = in.Timezone.Location()
 	if err != nil {
-		return db, huma.Error400BadRequest(
+		return nil, huma.Error400BadRequest(
 			"Invalid location. Please try a different IANA Timezone.")
 	}
 	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
 	if !ok {
-		return db, huma.Error500InternalServerError(
+		return nil, huma.Error500InternalServerError(
 			"Internal error while getting request log.")
 	}
-	db, err = a.DataFetcher.GetDataBoundary(di)
+	db, err := a.DataFetcher.GetDataBoundary(di)
 	if err != nil {
 		if errors.Is(err, sensor.NoData) {
-			return db, err
+			return nil, err
 		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getSensorDataBoundary.dataFetcher.getDataBoundary"},
 			"error.message": {err.Error()}})
-		return db, huma.Error500InternalServerError(
+		return nil, huma.Error500InternalServerError(
 			"Internal error getting DataBoundary.")
 	}
-	return
+	return data.DataBoundarySlice{db}, nil
 }
 
 func (a *Api) getLocation(ctx context.Context, in *data.DeviceLocationRequest) (
