@@ -4068,11 +4068,11 @@ func TestBatchGetDataBoundary(t *testing.T) {
 func TestBatchGetLocation(t *testing.T) {
 	tests := map[string]struct {
 		MockApi
-		want       data.BatchLocationResponse
-		req        data.BatchLocationRequest
-		token      string
-		wantStatus int
-		wantErr    bool
+		want                             data.BatchLocationResponse
+		req                              data.BatchLocationRequest
+		token                            string
+		wantStatus                       int
+		wantErr, disconnectedDataFetcher bool
 	}{
 
 		"user get multiple deviceid location": {
@@ -4171,15 +4171,11 @@ func TestBatchGetLocation(t *testing.T) {
 			},
 		},
 
-		"no data for both deviceids": {
-			wantStatus: http.StatusOK,
-			want: data.BatchLocationResponse{
-				Errors: []sensor.BatchError{
-					{DeviceId: RegisteredDeviceId, Error: "No Location"},
-					{DeviceId: AnotherRegisteredDeviceId, Error: "No Location"},
-				},
-				Results: []data.DeviceLocationResponse{},
-			},
+		"no data due to bad connection": {
+			wantStatus:              http.StatusInternalServerError,
+			want:                    data.BatchLocationResponse{},
+			wantErr:                 true,
+			disconnectedDataFetcher: true,
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -4224,6 +4220,104 @@ func TestBatchGetLocation(t *testing.T) {
 			req: data.BatchLocationRequest{
 				Batch: sensor.Batch{
 					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				},
+			},
+		},
+
+		"no data for both deviceids": {
+			wantStatus: http.StatusNoContent,
+			wantErr:    true,
+			want:       data.BatchLocationResponse{},
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []data.SensorData{},
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []sensor.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []sensor.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			token: ValidToken,
+			req: data.BatchLocationRequest{
+				Batch: sensor.Batch{
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				},
+			},
+		},
+
+		"deviceIds not found": {
+			wantStatus: http.StatusNotFound,
+			wantErr:    true,
+			want:       data.BatchLocationResponse{},
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []data.SensorData{},
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []sensor.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []sensor.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			token: ValidToken,
+			req: data.BatchLocationRequest{
+				Batch: sensor.Batch{
+					DeviceIds: sensor.DeviceIds{AnotherRegisteredDeviceId, "device3"},
 				},
 			},
 		},
@@ -4891,6 +4985,12 @@ func TestBatchGetLocation(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			api, closeFunc := tc.MockApi.Setup(t)
 			defer closeFunc()
+			if tc.disconnectedDataFetcher {
+				testFlux, err := data.NewTestingInflux("../../config.yml")
+				require.Nil(t, err)
+				testFlux.BadConnQueryApi()
+				api.DataFetcher = testFlux
+			}
 			humaTest := setupHuma(t, api)
 			route := "/batch/device/location"
 			resp := humaTest.Post(route,

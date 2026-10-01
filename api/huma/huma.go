@@ -81,7 +81,8 @@ type HumaOperator interface {
 			Body data.BatchLocationRequest
 		}) (
 		*struct {
-			Body data.BatchLocationResponse
+			Status int
+			Body   data.BatchLocationResponse
 		}, error)
 }
 
@@ -280,8 +281,16 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Path = "/batch/device/location"
 	op.Summary = "Batch Get DeviceId Location"
 	op.Description = "Clients can use this route to get the Location of multiple DeviceIds."
-	op.Responses["500"] = &huma.Response{}
-	op.Responses["404"] = &huma.Response{}
+	fh = FiveHundredExample()
+	fh.Detail =
+		"Database disconnected."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	op.Responses["404"] = &huma.Response{
+		Description: "No DeviceIds Found.",
+	}
+	op.Responses["204"] = &huma.Response{
+		Description: "No Location for any DeviceId requested.",
+	}
 	huma.Register(api, op, ho.BatchGetLocation)
 
 	op = baseOperation("GET", &allMw)

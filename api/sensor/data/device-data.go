@@ -254,7 +254,7 @@ type Fetcher interface {
 	GetLatestData(metadata sensor.Device) (SensorData, error)
 	//NOTE: could return NoData
 	GetDataBoundary(metadata sensor.Device) (DataBoundary, error)
-	//NOTE: could return NoLocation
+	//NOTE: could return NoLocation, NoConnection
 	GetLocation(metadata sensor.Device) (DeviceLocationResponse, error)
 	Close() error
 }

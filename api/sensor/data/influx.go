@@ -44,7 +44,7 @@ func NewInfluxDatafetcher(opts InfluxOpts) (*InfluxDatafetcher, error) {
 	db := influxdb2.NewClient(opts.Url, opts.Token)
 	ok, err := db.Ping(context.Background())
 	if err != nil {
-		return nil, fmt.Errorf("influx ping error: %v", err)
+		return nil, fmt.Errorf("influx ping error: %w", err)
 	}
 	if !ok {
 		return nil, fmt.Errorf("influx server not running")
@@ -86,11 +86,11 @@ func (i *InfluxDatafetcher) dataRows(ctx context.Context, query string) ([]DataR
 		if strings.Contains(err.Error(), "connect:") {
 			return nil, sensor.NoConnection
 		}
-		return nil, fmt.Errorf("error querying influxdb: %v", err)
+		return nil, fmt.Errorf("error querying influxdb: %w", err)
 	}
 	dataRows, err := i.extractValue(result)
 	if err != nil {
-		return nil, fmt.Errorf("error processing query result: %v", err)
+		return nil, fmt.Errorf("error processing query result: %w", err)
 	}
 	return dataRows, nil
 }
@@ -225,7 +225,7 @@ func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string
 	}
 	if !relativeRange {
 		if _, err := time.Parse(time.RFC3339, stopTime); err != nil {
-			return "", fmt.Errorf("Invalid RFC3339 stop timestamp: %v", err)
+			return "", fmt.Errorf("Invalid RFC3339 stop timestamp: %w", err)
 		}
 		return fmt.Sprintf("start: %s, stop: %s", startTime, stopTime), nil
 	}
@@ -252,7 +252,7 @@ func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo sensor.Device) (
 		  |> sort(columns: ["_time"], desc: false)`)
 	dataRows, err := i.dataRows(pkgCtx, queryBuilder.String())
 	if err != nil {
-		return dataBoundary, fmt.Errorf("error processing query result: %v", err)
+		return dataBoundary, fmt.Errorf("error processing query result: %w", err)
 	}
 	if len(dataRows) < 2 {
 		return dataBoundary, sensor.NoData
@@ -277,7 +277,7 @@ func (i *InfluxDatafetcher) GetLocation(deviceInfo sensor.Device) (
 	fmt.Fprintf(&queryBuilder, `|> yield(name: "last")`)
 	dataRows, err := i.dataRows(pkgCtx, queryBuilder.String())
 	if err != nil {
-		return loc, fmt.Errorf("error processing query result: %v", err)
+		return loc, fmt.Errorf("error processing query result: %w", err)
 	}
 	if len(dataRows) != 2 {
 		return loc, sensor.NoLocation
@@ -356,13 +356,13 @@ func (t *TestingInflux) Close() error {
 	orgApi := t.influx.db.OrganizationsAPI()
 	org, err := orgApi.FindOrganizationByName(pkgCtx, TestOrg)
 	if err != nil {
-		return fmt.Errorf("finding org: %v", err)
+		return fmt.Errorf("finding org: %w", err)
 	}
 	if org == nil {
 		return fmt.Errorf("returned org is nil")
 	}
 	if err = orgApi.DeleteOrganization(pkgCtx, org); err != nil {
-		return fmt.Errorf("deleting org: %v", err)
+		return fmt.Errorf("deleting org: %w", err)
 	}
 	return t.influx.Close()
 }
@@ -378,7 +378,7 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *sensor.Schema, sensorData Sens
 	orgApi := t.influx.db.OrganizationsAPI()
 	org, err := orgApi.CreateOrganizationWithName(pkgCtx, TestOrg)
 	if err != nil {
-		return fmt.Errorf("org api: %v", err)
+		return fmt.Errorf("org api: %w", err)
 	}
 	bucketsApi := t.influx.db.BucketsAPI()
 	uniqueNetworks := make([]string, 0, len(allDevicesInfo.DeviceNetworks))
@@ -396,7 +396,7 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *sensor.Schema, sensorData Sens
 		}
 	}
 	if err != nil {
-		return fmt.Errorf("buckets api: %v", err)
+		return fmt.Errorf("buckets api: %w", err)
 	}
 	var writeApi influxApi.WriteAPI
 	var ok bool

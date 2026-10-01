@@ -444,13 +444,16 @@ func (a *Api) GetLocation(ctx context.Context, in *sensor.DeviceIdParam) (
 	logFromTag(ctx, in)
 	loc, err := a.getLocation(ctx, *in)
 	if err != nil {
-		if !errors.Is(err, sensor.NoLocation) {
+		if errors.Is(err, sensor.NotFound) {
 			return nil, err
 		}
-		return &struct {
-			Status int
-			Body   data.DeviceLocationResponse
-		}{http.StatusNoContent, data.DeviceLocationResponse{}}, nil
+		if errors.Is(err, sensor.NoLocation) {
+			return &struct {
+				Status int
+				Body   data.DeviceLocationResponse
+			}{http.StatusNoContent, data.DeviceLocationResponse{}}, nil
+		}
+		return nil, err
 	}
 	if len(loc) != 1 {
 		return nil, huma.Error500InternalServerError(
@@ -465,7 +468,8 @@ func (a *Api) GetLocation(ctx context.Context, in *sensor.DeviceIdParam) (
 func (a *Api) BatchGetLocation(ctx context.Context, in *struct {
 	Body data.BatchLocationRequest
 }) (*struct {
-	Body data.BatchLocationResponse
+	Status int
+	Body   data.BatchLocationResponse
 }, error) {
 	logFromTag(ctx, in.Body)
 	batch, err := sensor.BatchFactory(ctx, in.Body.DeviceIds,
@@ -474,18 +478,30 @@ func (a *Api) BatchGetLocation(ctx context.Context, in *struct {
 		},
 		a.getLocation)
 	if err != nil {
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("DeviceIds Not Found.")
+		}
 		if errors.Is(err, sensor.NoConnection) {
 			return nil, huma.Error500InternalServerError("Database Disconnected.")
 		}
-		return nil, huma.Error500InternalServerError(
-			"Unexpected internal error while getting Locations.")
+		if !errors.Is(err, sensor.NoLocation) {
+			return nil, huma.Error500InternalServerError(
+				"Unexpected internal error while getting Locations.")
+		}
 	}
-	return &struct {
-		Body data.BatchLocationResponse
+	resp := &struct {
+		Status int
+		Body   data.BatchLocationResponse
 	}{
+		Status: http.StatusOK,
 		Body: data.BatchLocationResponse{
 			Results: batch.Results,
 			Errors:  batch.Errors,
 		},
-	}, nil
+	}
+	if len(batch.Results) < 1 && batch.OnlyDataMissingErrors {
+		resp.Status = http.StatusNoContent
+		resp.Body = data.BatchLocationResponse{}
+	}
+	return resp, nil
 }

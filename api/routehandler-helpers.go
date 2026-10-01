@@ -390,6 +390,9 @@ func (a *Api) getLocation(ctx context.Context, in sensor.DeviceIdParam) (
 	}
 	loc, err := a.DataFetcher.GetLocation(di)
 	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, err
+		}
 		if errors.Is(err, sensor.NoLocation) {
 			return nil, err
 		}
