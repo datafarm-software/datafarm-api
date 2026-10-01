@@ -120,35 +120,21 @@ func (a *Api) BatchGetLatestSensorData(ctx context.Context,
 	Body   *data.BatchSensorDataResponse
 }, error) {
 	logFromTag(ctx, in.Body)
-	var dataReq *data.LatestSensorDataRequest
-	var deviceErr data.SensorDataError
-	var sds data.SensorDataSlice
-	var err error
-	onlyDataMissingErrors := true
-	errSlice := make([]data.SensorDataError, 0, len(in.Body.Hardware))
-	resultSlice := make(data.SensorDataSlice, 0, len(in.Body.Hardware))
-	for _, hw := range in.Body.Hardware {
-		dataReq = &data.LatestSensorDataRequest{
-			Hardware: hw,
-			Timezone: in.Body.Timezone,
-		}
-		sds, err = a.getLatestSensorData(ctx, dataReq)
-		if err == nil {
-			resultSlice = append(resultSlice, sds...)
-		} else {
-			if errors.Is(err, sensor.NoConnection) {
-				break
+	batch, err := sensor.BatchFactory(ctx, in.Body.Hardware,
+		func(hw sensor.Hardware) data.LatestSensorDataRequest {
+			return data.LatestSensorDataRequest{
+				Hardware: hw,
+				Timezone: in.Body.Timezone,
 			}
-			if !errors.Is(err, sensor.NoData) {
-				onlyDataMissingErrors = false
-			}
-			deviceErr.DeviceId = hw.DeviceIdParam.DeviceId
-			deviceErr.Error = err.Error()
-			errSlice = append(errSlice, deviceErr)
+		},
+		a.getLatestSensorData,
+	)
+	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError("Database Disconnected.")
 		}
-	}
-	if errors.Is(err, sensor.NoConnection) {
-		return nil, huma.Error500InternalServerError("Database Disconnected.")
+		return nil, huma.Error500InternalServerError(
+			"Unexpected internal error with batch request.")
 	}
 	resp := &struct {
 		Status int
@@ -156,11 +142,11 @@ func (a *Api) BatchGetLatestSensorData(ctx context.Context,
 	}{
 		Status: http.StatusOK,
 		Body: &data.BatchSensorDataResponse{
-			Results: resultSlice,
-			Errors:  errSlice,
+			Results: batch.Results,
+			Errors:  batch.Errors,
 		},
 	}
-	if len(resultSlice) < 1 && onlyDataMissingErrors {
+	if len(batch.Results) < 1 && batch.OnlyDataMissingErrors {
 		resp.Status = http.StatusNoContent
 		resp.Body = nil
 	}

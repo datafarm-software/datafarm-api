@@ -71,13 +71,13 @@ type BatchResult[T any] struct {
 	OnlyDataMissingErrors bool
 }
 
-func BatchFactory[Item BatchItem, Request, Result any](
+func BatchFactory[Item BatchItem, Request, Result any, Results ~[]Result](
 	ctx context.Context,
 	items []Item, makeRequest func(Item) Request,
-	get func(context.Context, Request) ([]Result, error),
+	get func(context.Context, Request) (Results, error),
 ) (batch BatchResult[Result], err error) {
 	batch = BatchResult[Result]{
-		Results:               make([]Result, 0, len(items)),
+		Results:               make(Results, 0, len(items)),
 		Errors:                make([]BatchError, 0, len(items)),
 		OnlyDataMissingErrors: true,
 	}

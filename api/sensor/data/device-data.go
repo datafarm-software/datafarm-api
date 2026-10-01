@@ -65,14 +65,9 @@ type BatchSensorDataRequest struct {
 	TimeFrame
 }
 
-type SensorDataError struct {
-	DeviceId string `json:"deviceId"`
-	Error    string `json:"error"`
-}
-
 type BatchSensorDataResponse struct {
-	Results SensorDataSlice   `json:"results"`
-	Errors  []SensorDataError `json:"errors"`
+	Results SensorDataSlice     `json:"results"`
+	Errors  []sensor.BatchError `json:"errors"`
 }
 
 func (b *BatchSensorDataResponse) Csv() (csvStr string, err error) {

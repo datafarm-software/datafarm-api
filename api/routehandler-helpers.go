@@ -234,24 +234,24 @@ func (a *Api) getSensorData(
 }
 
 func (a *Api) getLatestSensorData(
-	ctx context.Context, in *data.LatestSensorDataRequest) (
-	sds data.SensorDataSlice, err error) {
+	ctx context.Context, in data.LatestSensorDataRequest) (
+	data.SensorDataSlice, error) {
 	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
 	if !ok {
-		return sds, huma.Error500InternalServerError(
+		return nil, huma.Error500InternalServerError(
 			"Internal error while getting request log.")
 	}
 	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceIdParam.DeviceId,
 		authstore.GetSensorData)
 	if err != nil {
-		return sds, err
+		return nil, err
 	}
 	di.QueryFields = in.Hardware.QueryFields
 	if in.Hardware.QueryFields[0] == "all" {
 		user, _ := a.user(ctx)
 		if !authstore.HasPermission(authstore.Role(user.Role),
 			authstore.GetAllQueryFields) {
-			return sds, huma.Error401Unauthorized(
+			return nil, huma.Error401Unauthorized(
 				"Unauthorized for all QueryFields.")
 		}
 		qf, err := a.DeviceInfo.GetQueryFields(in.Hardware.DeviceIdParam.DeviceId)
@@ -259,30 +259,29 @@ func (a *Api) getLatestSensorData(
 			log.AddMetadata(logging.Metadata{
 				"source":        {"getSensorData.deviceInfo.getQueryFields"},
 				"error.message": {err.Error()}})
-			return sds, huma.Error500InternalServerError(
+			return nil, huma.Error500InternalServerError(
 				"Internal error getting QueryFields.")
 		}
 		di.QueryFields = qf.QueryFields
 	}
 	di.Timezone, err = in.Timezone.Location()
 	if err != nil {
-		return sds, huma.Error400BadRequest(
+		return nil, huma.Error400BadRequest(
 			"Invalid location. Please try a different IANA Timezone.")
 	}
 	sd, err := a.DataFetcher.GetLatestData(di)
 	if err != nil {
 		if errors.Is(err, sensor.NoData) ||
 			errors.Is(err, sensor.NoConnection) {
-			return sds, err
+			return nil, err
 		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getLatestSensorData.dataFetcher.getLatestData"},
 			"error.message": {err.Error()}})
-		return sds, huma.Error500InternalServerError(
+		return nil, huma.Error500InternalServerError(
 			"Internal error getting Latest SensorData.")
 	}
-	sds = append(sds, sd)
-	return
+	return data.SensorDataSlice{sd}, nil
 }
 
 func (a *Api) getQueryFields(ctx context.Context, in *info.QueryFieldsRequest) (
