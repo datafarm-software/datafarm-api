@@ -80,7 +80,6 @@ func (b *BatchSensorDataResponse) Csv() (csvStr string, err error) {
 	return
 }
 
-type DeviceId string
 type Indexes []int
 
 type CsvMarshaller interface {
@@ -89,15 +88,15 @@ type CsvMarshaller interface {
 
 type CsvInfo struct {
 	Headers         []string
-	DeviceIdIndexes map[DeviceId]Indexes
-	DeviceIds       []DeviceId
+	DeviceIdIndexes map[sensor.DeviceId]Indexes
+	DeviceIds       sensor.DeviceIds
 }
 
 type SensorDataSlice []SensorData
 
 func (d SensorDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
 	csvInfo.Headers = make([]string, 0, len(d))
-	csvInfo.DeviceIdIndexes = make(map[DeviceId]Indexes)
+	csvInfo.DeviceIdIndexes = make(map[sensor.DeviceId]Indexes)
 	if len(d) < 1 {
 		return csvInfo, EmptySensorData
 	}
@@ -106,12 +105,12 @@ func (d SensorDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
 	slices.SortFunc(sorted, func(a, b SensorData) int {
 		return a.Timestamp.Compare(b.Timestamp)
 	})
-	var id DeviceId
-	idSeen := make(map[DeviceId]bool)
+	var id sensor.DeviceId
+	idSeen := make(map[sensor.DeviceId]bool)
 	for i, dd := range sorted {
-		id = DeviceId(dd.DeviceID)
+		id = sensor.DeviceId(dd.DeviceID)
 		csvInfo.DeviceIdIndexes[id] = append(
-			csvInfo.DeviceIdIndexes[DeviceId(dd.DeviceID)], i)
+			csvInfo.DeviceIdIndexes[sensor.DeviceId(dd.DeviceID)], i)
 		if !idSeen[id] {
 			csvInfo.DeviceIds = append(csvInfo.DeviceIds, id)
 			idSeen[id] = true

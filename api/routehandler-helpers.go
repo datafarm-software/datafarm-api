@@ -284,26 +284,26 @@ func (a *Api) getLatestSensorData(
 	return data.SensorDataSlice{sd}, nil
 }
 
-func (a *Api) getQueryFields(ctx context.Context, in *info.QueryFieldsRequest) (
-	qf info.QueryFields, err error) {
-	_, err = a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetAllQueryFields)
+func (a *Api) getQueryFields(ctx context.Context, in info.QueryFieldsRequest) (
+	info.QueryFieldSlice, error) {
+	_, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetAllQueryFields)
 	if err != nil {
-		return
+		return nil, err
 	}
 	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
 	if !ok {
-		return qf, huma.Error500InternalServerError(
+		return nil, huma.Error500InternalServerError(
 			"Internal error while getting request log.")
 	}
-	qf, err = a.DeviceInfo.GetQueryFields(in.DeviceId)
+	qf, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
 	if err != nil {
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getQueryFields.deviceInfo.getQueryFields"},
 			"error.message": {err.Error()}})
-		return qf, huma.Error500InternalServerError(
+		return nil, huma.Error500InternalServerError(
 			"Internal error while getting QueryFields.")
 	}
-	return
+	return info.QueryFieldSlice{qf}, nil
 }
 
 func (a *Api) deviceInfoIfAccessAndPermission(ctx context.Context,

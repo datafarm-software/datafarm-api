@@ -10,6 +10,12 @@ var NoData = errors.New("No Data")
 var NoConnection = errors.New("No Connection")
 var NoLocation = errors.New("No Location")
 
+type DeviceId string
+
+func (d DeviceId) DeviceId() string { return string(d) }
+
+type DeviceIds []DeviceId
+
 type Device struct {
 	QueryFields                []string
 	Timezone                   *time.Location
@@ -52,7 +58,7 @@ type DeviceToQueryFields struct {
 }
 
 type Batch struct {
-	DeviceIds []string `log:"deviceids" json:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$" minItems:"2" maxItems:"5"`
+	DeviceIds DeviceIds `log:"deviceids" json:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$" minItems:"2" maxItems:"5"`
 }
 
 // NOTE: this is exactly the same as deviceinfo.QueryFieldsError struct

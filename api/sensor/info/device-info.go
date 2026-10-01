@@ -36,10 +36,7 @@ type QueryFieldsRequest struct {
 
 type BatchQueryFieldsRequest struct{ Body sensor.Batch }
 
-type QueryFieldsError struct {
-	DeviceId string `json:"deviceId"`
-	Error    string `json:"error"`
-}
+type QueryFieldSlice []QueryFields
 
 type QueryFields struct {
 	DeviceId    string   `json:"deviceId"`
@@ -47,8 +44,8 @@ type QueryFields struct {
 }
 
 type BatchQueryFieldsResponse struct {
-	Results []QueryFields      `json:"results"`
-	Errors  []QueryFieldsError `json:"errors"`
+	Results []QueryFields       `json:"results"`
+	Errors  []sensor.BatchError `json:"errors"`
 }
 
 type DeviceIdsResponse struct {

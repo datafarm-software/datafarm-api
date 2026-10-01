@@ -277,11 +277,15 @@ func (a *Api) Login(ctx context.Context,
 func (a *Api) GetQueryFields(ctx context.Context, in *info.QueryFieldsRequest) (
 	*info.QueryFieldsResponse, error) {
 	logFromTag(ctx, in)
-	queryFields, err := a.getQueryFields(ctx, in)
+	queryFields, err := a.getQueryFields(ctx, *in)
 	if err != nil {
 		return nil, err
 	}
-	return &info.QueryFieldsResponse{Body: queryFields}, nil
+	if len(queryFields) != 1 {
+		return nil, huma.Error500InternalServerError(
+			"Internal error while getting QueryFields")
+	}
+	return &info.QueryFieldsResponse{Body: queryFields[0]}, nil
 }
 
 func (a *Api) BatchGetQueryFields(ctx context.Context,
@@ -289,33 +293,32 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 	Body info.BatchQueryFieldsResponse
 }, error) {
 	logFromTag(ctx, in)
-	var qr info.QueryFieldsRequest
-	var dataResp info.QueryFields
-	var deviceErr info.QueryFieldsError
-	var err error
-	errSlice := make([]info.QueryFieldsError, 0, len(in.Body.DeviceIds))
-	resultSlice := make([]info.QueryFields, 0, len(in.Body.DeviceIds))
-	for _, deviceId := range in.Body.DeviceIds {
-		qr = info.QueryFieldsRequest{
-			DeviceId: deviceId,
+	batch, err := sensor.BatchFactory(ctx, in.Body.DeviceIds,
+		func(d sensor.DeviceId) info.QueryFieldsRequest {
+			return info.QueryFieldsRequest{DeviceId: d.DeviceId()}
+		},
+		a.getQueryFields,
+	)
+	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError("Database Disconnected.")
 		}
-		dataResp, err = a.getQueryFields(ctx, &qr)
-		if err == nil {
-			resultSlice = append(resultSlice, dataResp)
-		} else {
-			deviceErr.DeviceId = deviceId
-			deviceErr.Error = err.Error()
-			errSlice = append(errSlice, deviceErr)
-		}
+		return nil, huma.Error500InternalServerError(
+			"Unexpected internal error while getting SensorData.")
 	}
 	return &struct {
 		Body info.BatchQueryFieldsResponse
 	}{
 		Body: info.BatchQueryFieldsResponse{
-			Results: resultSlice,
-			Errors:  errSlice,
+			Results: batch.Results,
+			Errors:  batch.Errors,
 		},
 	}, nil
+	// if len(batch.Results) < 1 && batch.OnlyDataMissingErrors {
+	// 	resp.Status = http.StatusNoContent
+	// 	resp.Body = nil
+	// }
+	// return resp, nil
 }
 
 func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
