@@ -396,6 +396,9 @@ func (a *Api) getLocation(ctx context.Context, in sensor.DeviceIdParam) (
 		if errors.Is(err, sensor.NoLocation) {
 			return nil, err
 		}
+		if errors.Is(err, sensor.NotFound) {
+			return nil, err
+		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getLocation.dataFetcher.getLocation"},
 			"error.message": {err.Error()}})

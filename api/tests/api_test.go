@@ -2368,11 +2368,11 @@ func TestMakeQueryParams(t *testing.T) {
 func TestGetQueryFields(t *testing.T) {
 	tests := map[string]struct {
 		MockApi
-		want       info.QueryFields
-		deviceId   string
-		token      string
-		wantStatus int
-		wantErr    bool
+		want                            info.QueryFields
+		deviceId                        string
+		token                           string
+		wantStatus                      int
+		wantErr, disconnectedDeviceInfo bool
 	}{
 
 		"successfully get queryfields": {
@@ -2384,6 +2384,89 @@ func TestGetQueryFields(t *testing.T) {
 				QueryFields: append(info.GeneralQueryFields, RegisteredQueryField),
 			},
 			token: ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []sensor.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []sensor.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+			},
+		},
+
+		"deviceId not found": {
+			wantErr:    true,
+			wantStatus: http.StatusNotFound,
+			deviceId:   AnotherRegisteredDeviceId,
+			want:       info.QueryFields{},
+			token:      ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []sensor.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []sensor.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+			},
+		},
+
+		"bad connection": {
+			wantErr:                true,
+			disconnectedDeviceInfo: true,
+			wantStatus:             http.StatusInternalServerError,
+			deviceId:               RegisteredDeviceId,
+			want:                   info.QueryFields{},
+			token:                  ValidToken,
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -2517,6 +2600,11 @@ func TestGetQueryFields(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			api, closeFunc := tc.MockApi.Setup(t)
 			defer closeFunc()
+			if tc.disconnectedDeviceInfo {
+				err := api.DeviceInfo.Close()
+				require.Nil(t, err)
+				api.DeviceInfo = &info.BadConnFetcher{}
+			}
 			humaTest := setupHuma(t, api)
 			route := "/device/" + tc.deviceId + "/queryfields"
 			resp := humaTest.Get(route,
@@ -3488,13 +3576,14 @@ func TestCsvGetSensorData(t *testing.T) {
 
 func TestGetLocation(t *testing.T) {
 	tests := map[string]struct {
-		MockApi
-		GetSensorDataTest
-		want data.DeviceLocationResponse
+		mockApi                 MockApi
+		gsdt                    GetSensorDataTest
+		want                    data.DeviceLocationResponse
+		disconnectedDataFetcher bool
 	}{
 
 		"successfully retrieve device location information": {
-			MockApi{
+			mockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -3537,12 +3626,12 @@ func TestGetLocation(t *testing.T) {
 					ValidToken: true,
 				},
 			},
-			GetSensorDataTest{
+			gsdt: GetSensorDataTest{
 				wantStatus: http.StatusOK,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 			},
-			data.DeviceLocationResponse{
+			want: data.DeviceLocationResponse{
 				DeviceId: RegisteredDeviceId,
 				Time:     InsideTimeRange,
 				Latitude: Latitude, Longitude: Longitude,
@@ -3550,7 +3639,13 @@ func TestGetLocation(t *testing.T) {
 		},
 
 		"device no location information so no content": {
-			MockApi{
+			gsdt: GetSensorDataTest{
+				wantStatus: http.StatusNoContent,
+				token:      ValidToken,
+				deviceId:   RegisteredDeviceId,
+			},
+			want: data.DeviceLocationResponse{},
+			mockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -3590,16 +3685,16 @@ func TestGetLocation(t *testing.T) {
 					ValidToken: true,
 				},
 			},
-			GetSensorDataTest{
-				wantStatus: http.StatusNoContent,
-				token:      ValidToken,
-				deviceId:   RegisteredDeviceId,
-			},
-			data.DeviceLocationResponse{},
 		},
 
 		"device not found": {
-			MockApi{
+			gsdt: GetSensorDataTest{
+				wantStatus: http.StatusNotFound,
+				token:      ValidToken,
+				deviceId:   AnotherRegisteredDeviceId,
+			},
+			want: data.DeviceLocationResponse{},
+			mockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -3642,16 +3737,63 @@ func TestGetLocation(t *testing.T) {
 					ValidToken: true,
 				},
 			},
-			GetSensorDataTest{
-				wantStatus: http.StatusNotFound,
+		},
+
+		"bad connection": {
+			gsdt: GetSensorDataTest{
+				wantStatus: http.StatusInternalServerError,
 				token:      ValidToken,
-				deviceId:   AnotherRegisteredDeviceId,
+				deviceId:   RegisteredDeviceId,
 			},
-			data.DeviceLocationResponse{},
+			want:                    data.DeviceLocationResponse{},
+			disconnectedDataFetcher: true,
+			mockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []data.SensorData{
+					{
+						DeviceID:  RegisteredDeviceId,
+						Timestamp: InsideTimeRange,
+						SensorData: map[string]float64{
+							"latitude":  Latitude,
+							"longitude": Longitude,
+						},
+					},
+				},
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []sensor.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []sensor.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
 		},
 
 		"device no access": {
-			MockApi{
+			mockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
 						{
@@ -3694,29 +3836,35 @@ func TestGetLocation(t *testing.T) {
 					ValidToken: true,
 				},
 			},
-			GetSensorDataTest{
+			gsdt: GetSensorDataTest{
 				wantStatus: http.StatusUnauthorized,
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 			},
-			data.DeviceLocationResponse{},
+			want: data.DeviceLocationResponse{},
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			api, closeFunc := tc.MockApi.Setup(t)
+			api, closeFunc := tc.mockApi.Setup(t)
 			defer closeFunc()
+			if tc.disconnectedDataFetcher {
+				testFlux, err := data.NewTestingInflux("../../config.yml")
+				require.Nil(t, err)
+				testFlux.BadConnQueryApi()
+				api.DataFetcher = testFlux
+			}
 			humaTest := setupHuma(t, api)
-			route := "/device/" + tc.deviceId + "/location"
+			route := "/device/" + tc.gsdt.deviceId + "/location"
 			resp := humaTest.Get(route,
-				fmt.Sprintf(`Authorization: Bearer %s`, tc.token),
+				fmt.Sprintf(`Authorization: Bearer %s`, tc.gsdt.token),
 			)
-			if resp.Code != tc.wantStatus {
-				t.Fatalf("wantStatus: %d, response status: %d", tc.wantStatus, resp.Code)
+			if resp.Code != tc.gsdt.wantStatus {
+				t.Fatalf("wantStatus: %d, response status: %d", tc.gsdt.wantStatus, resp.Code)
 			}
 			defer resp.Result().Body.Close()
-			if !tc.wantErr && tc.wantStatus != http.StatusNoContent {
+			if !tc.gsdt.wantErr && tc.gsdt.wantStatus != http.StatusNoContent {
 				var location data.DeviceLocationResponse
 				err := json.Unmarshal(resp.Body.Bytes(), &location)
 				require.Nil(t, err)

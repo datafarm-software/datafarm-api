@@ -23,6 +23,9 @@ func (a *Api) GetSensorData(ctx context.Context,
 	logFromTag(ctx, in)
 	sensorData, err := a.getSensorData(ctx, *in)
 	if err != nil {
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("Not Found.")
+		}
 		if errors.Is(err, sensor.NoData) {
 			return &data.SensorDataResponse{Status: http.StatusNoContent}, nil
 		}
@@ -44,7 +47,7 @@ func (a *Api) GetLatestSensorData(ctx context.Context,
 	sensorData, err := a.getLatestSensorData(ctx, *in)
 	if err != nil {
 		if errors.Is(err, sensor.NotFound) {
-			return nil, err
+			return nil, huma.Error404NotFound("Not Found.")
 		}
 		if errors.Is(err, sensor.NoData) {
 			return &data.LatestSensorDataResponse{
@@ -288,6 +291,13 @@ func (a *Api) GetQueryFields(ctx context.Context, in *sensor.DeviceIdParam) (
 	logFromTag(ctx, in)
 	queryFields, err := a.getQueryFields(ctx, *in)
 	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError(
+				"Database Disconnected.")
+		}
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("Not Found.")
+		}
 		return nil, err
 	}
 	if len(queryFields) != 1 {
@@ -391,6 +401,10 @@ func (a *Api) GetDataBoundary(ctx context.Context, in *data.DataBoundaryRequest)
 	logFromTag(ctx, in)
 	db, err := a.getDataBoundary(ctx, *in)
 	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError(
+				"Database Disconnected.")
+		}
 		if errors.Is(err, sensor.NoData) {
 			return &data.DataBoundaryResponse{Status: http.StatusNoContent}, nil
 		}
@@ -444,8 +458,12 @@ func (a *Api) GetLocation(ctx context.Context, in *sensor.DeviceIdParam) (
 	logFromTag(ctx, in)
 	loc, err := a.getLocation(ctx, *in)
 	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError(
+				"Database Disconnected.")
+		}
 		if errors.Is(err, sensor.NotFound) {
-			return nil, err
+			return nil, huma.Error404NotFound("Not Found.")
 		}
 		if errors.Is(err, sensor.NoLocation) {
 			return &struct {
