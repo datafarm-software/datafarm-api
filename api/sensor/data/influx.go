@@ -160,7 +160,7 @@ func (i *InfluxDatafetcher) extractValue(result *influxApi.QueryTableResult) ([]
 		dataRow := DataRow{
 			Time:     result.Record().Time(),
 			Value:    result.Record().Value(),
-			DeviceID: result.Record().ValueByKey("deviceID").(sensor.DeviceId),
+			DeviceID: sensor.DeviceId(result.Record().ValueByKey("deviceID").(string)),
 			Field:    result.Record().Field(),
 		}
 		records = append(records, dataRow)

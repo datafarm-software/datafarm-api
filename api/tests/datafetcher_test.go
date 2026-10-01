@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/datafarm-software/datafarm-api/api/sensor"
 	"github.com/datafarm-software/datafarm-api/api/sensor/data"
 	"github.com/google/go-cmp/cmp"
 )
@@ -19,10 +20,10 @@ func TestSensorDataSliceCsvInfo(t *testing.T) {
 		"single deviceid, single queryfield to csv info": {
 			want: data.CsvInfo{
 				Headers: []string{RegisteredQueryField},
-				DeviceIdIndexes: map[data.DeviceId]data.Indexes{
+				DeviceIdIndexes: map[sensor.DeviceId]data.Indexes{
 					RegisteredDeviceId: {0, 1},
 				},
-				DeviceIds: []data.DeviceId{RegisteredDeviceId},
+				DeviceIds: []sensor.DeviceId{RegisteredDeviceId},
 			},
 			input: data.SensorDataSlice{
 				{
@@ -41,10 +42,10 @@ func TestSensorDataSliceCsvInfo(t *testing.T) {
 		"single deviceid, multiple queryfields to csv info": {
 			want: data.CsvInfo{
 				Headers: []string{AnotherRegisteredQueryField, RegisteredQueryField},
-				DeviceIdIndexes: map[data.DeviceId]data.Indexes{
+				DeviceIdIndexes: map[sensor.DeviceId]data.Indexes{
 					RegisteredDeviceId: {0, 1},
 				},
-				DeviceIds: []data.DeviceId{RegisteredDeviceId},
+				DeviceIds: []sensor.DeviceId{RegisteredDeviceId},
 			},
 			input: data.SensorDataSlice{
 				{
@@ -63,11 +64,11 @@ func TestSensorDataSliceCsvInfo(t *testing.T) {
 		"multiple deviceids but same queryfields": {
 			want: data.CsvInfo{
 				Headers: []string{RegisteredQueryField},
-				DeviceIdIndexes: map[data.DeviceId]data.Indexes{
+				DeviceIdIndexes: map[sensor.DeviceId]data.Indexes{
 					RegisteredDeviceId:        {0},
 					AnotherRegisteredDeviceId: {1},
 				},
-				DeviceIds: []data.DeviceId{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				DeviceIds: []sensor.DeviceId{RegisteredDeviceId, AnotherRegisteredDeviceId},
 			},
 			input: data.SensorDataSlice{
 				{
@@ -86,11 +87,11 @@ func TestSensorDataSliceCsvInfo(t *testing.T) {
 		"multiple deviceids multiple queryfields": {
 			want: data.CsvInfo{
 				Headers: []string{AnotherRegisteredQueryField, RegisteredQueryField},
-				DeviceIdIndexes: map[data.DeviceId]data.Indexes{
+				DeviceIdIndexes: map[sensor.DeviceId]data.Indexes{
 					RegisteredDeviceId:        {0},
 					AnotherRegisteredDeviceId: {1},
 				},
-				DeviceIds: []data.DeviceId{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				DeviceIds: []sensor.DeviceId{RegisteredDeviceId, AnotherRegisteredDeviceId},
 			},
 			input: data.SensorDataSlice{
 				{

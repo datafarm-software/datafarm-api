@@ -124,7 +124,7 @@ func (m MockApi) Setup(t *testing.T) (*api.Api, CloseFunc) {
 		if a.DataFetcher != nil {
 			err = a.DataFetcher.Close()
 			if err != nil {
-				t.Logf("device/data close: %v", err)
+				t.Logf("datafetcher close: %v", err)
 			}
 		}
 	}

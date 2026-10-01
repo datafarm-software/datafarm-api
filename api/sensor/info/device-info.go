@@ -65,7 +65,8 @@ type Fetcher interface {
 
 type BadConnFetcher struct{}
 
-func (b *BadConnFetcher) Close() error { return nil }
+func (b *BadConnFetcher) PrepareDeviceInfo(sensor.Schema) error { return nil }
+func (b *BadConnFetcher) Close() error                          { return nil }
 func (b *BadConnFetcher) GetQueryFields(deviceId sensor.DeviceId) (QueryFields, error) {
 	return QueryFields{}, sensor.NoConnection
 }

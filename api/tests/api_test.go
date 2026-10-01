@@ -162,7 +162,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{
+					Hardware: sensor.Hardware{
 						QueryFields: []string{RegisteredQueryField},
 					},
 					TimeFrame: data.TimeFrame{
@@ -230,7 +230,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start:    RelativeStart,
 						Timezone: data.Timezone{Timezone: "Africa/Johannesburg"},
@@ -289,7 +289,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start:    RelativeStart,
 						Timezone: data.Timezone{Timezone: InvalidTimezone},
@@ -390,7 +390,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{
+					Hardware: sensor.Hardware{
 						QueryFields: []string{
 							RegisteredQueryField,
 							AnotherRegisteredQueryField,
@@ -485,7 +485,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{"all"}},
+					Hardware: sensor.Hardware{QueryFields: []string{"all"}},
 					TimeFrame: data.TimeFrame{
 						Start: RelativeStart,
 					},
@@ -556,7 +556,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{"all"}},
+					Hardware: sensor.Hardware{QueryFields: []string{"all"}},
 					TimeFrame: data.TimeFrame{
 						Start: RelativeStart,
 					},
@@ -627,7 +627,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{"all"}},
+					Hardware: sensor.Hardware{QueryFields: []string{"all"}},
 					TimeFrame: data.TimeFrame{
 						Start: RelativeStart,
 					},
@@ -643,7 +643,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      InvalidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: RelativeStart,
 					},
@@ -659,7 +659,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: FutureStart,
 						Stop:  Stop,
@@ -695,7 +695,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: StartGreaterThanStop,
 						Stop:  Stop,
@@ -795,7 +795,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: Start,
 						Stop:  StopInFuture,
@@ -831,7 +831,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: RelativeMoreThanNinetyDays,
 					},
@@ -866,7 +866,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: MoreThanNinetyDays,
 						Stop:  Stop,
@@ -947,7 +947,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: RelativeStart,
 					},
@@ -1031,7 +1031,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{
+					Hardware: sensor.Hardware{
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
@@ -1120,7 +1120,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: RelativeStart,
 					},
@@ -1207,7 +1207,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: RelativeStart,
 					},
@@ -1265,7 +1265,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: "-1h",
 					},
@@ -1323,7 +1323,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   UnregisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: "-1h",
 					},
@@ -1381,7 +1381,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: RelativeStart,
 					},
@@ -1447,7 +1447,7 @@ func TestGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: RelativeStart,
 					},
@@ -1551,7 +1551,7 @@ func TestGetLatestSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				LatestSensorDataRequest: &data.LatestSensorDataRequest{
-					Hardware: data.Hardware{
+					Hardware: sensor.Hardware{
 						QueryFields: []string{RegisteredQueryField},
 					},
 				},
@@ -1621,7 +1621,7 @@ func TestGetLatestSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				LatestSensorDataRequest: &data.LatestSensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					Timezone: data.Timezone{Timezone: "Africa/Johannesburg"},
 				},
 			},
@@ -1677,7 +1677,7 @@ func TestGetLatestSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				LatestSensorDataRequest: &data.LatestSensorDataRequest{
-					Hardware: data.Hardware{
+					Hardware: sensor.Hardware{
 						QueryFields: []string{RegisteredQueryField}},
 					Timezone: data.Timezone{Timezone: InvalidTimezone},
 				},
@@ -1776,7 +1776,7 @@ func TestGetLatestSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				LatestSensorDataRequest: &data.LatestSensorDataRequest{
-					Hardware: data.Hardware{
+					Hardware: sensor.Hardware{
 						QueryFields: []string{
 							RegisteredQueryField,
 							AnotherRegisteredQueryField,
@@ -1873,7 +1873,7 @@ func TestGetLatestSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				LatestSensorDataRequest: &data.LatestSensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{"all"}},
+					Hardware: sensor.Hardware{QueryFields: []string{"all"}},
 				},
 			},
 		},
@@ -1946,7 +1946,7 @@ func TestGetLatestSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				LatestSensorDataRequest: &data.LatestSensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{"all"}},
+					Hardware: sensor.Hardware{QueryFields: []string{"all"}},
 				},
 			},
 		},
@@ -2019,7 +2019,7 @@ func TestGetLatestSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				LatestSensorDataRequest: &data.LatestSensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{"all"}},
+					Hardware: sensor.Hardware{QueryFields: []string{"all"}},
 				},
 			},
 		},
@@ -2032,7 +2032,7 @@ func TestGetLatestSensorData(t *testing.T) {
 				token:      InvalidToken,
 				deviceId:   RegisteredDeviceId,
 				LatestSensorDataRequest: &data.LatestSensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 				},
 			},
 		},
@@ -2079,7 +2079,7 @@ func TestGetLatestSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				LatestSensorDataRequest: &data.LatestSensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 				},
 			},
 		},
@@ -2134,7 +2134,7 @@ func TestGetLatestSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   UnregisteredDeviceId,
 				LatestSensorDataRequest: &data.LatestSensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 				},
 			},
 		},
@@ -2189,7 +2189,7 @@ func TestGetLatestSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				LatestSensorDataRequest: &data.LatestSensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 				},
 			},
 		},
@@ -2256,7 +2256,7 @@ func TestGetLatestSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				LatestSensorDataRequest: &data.LatestSensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 				},
 			},
 		},
@@ -2296,7 +2296,7 @@ func TestMakeQueryParams(t *testing.T) {
 
 		"sensordatarequest using relative time": {
 			input: &data.SensorDataRequest{
-				Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+				Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 				TimeFrame: data.TimeFrame{
 					Start:    RelativeStart,
 					Timezone: data.Timezone{Timezone: ValidTimezone},
@@ -2308,7 +2308,7 @@ func TestMakeQueryParams(t *testing.T) {
 
 		"sensordatarequest using multiple queryfields": {
 			input: &data.SensorDataRequest{
-				Hardware: data.Hardware{QueryFields: []string{
+				Hardware: sensor.Hardware{QueryFields: []string{
 					RegisteredQueryField, AnotherRegisteredQueryField}},
 				TimeFrame: data.TimeFrame{
 					Start:    RelativeStart,
@@ -2322,7 +2322,7 @@ func TestMakeQueryParams(t *testing.T) {
 
 		"sensordatarequest using absolute time": {
 			input: &data.SensorDataRequest{
-				Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+				Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 				TimeFrame: data.TimeFrame{
 					Start:    Start,
 					Stop:     Stop,
@@ -2336,7 +2336,7 @@ func TestMakeQueryParams(t *testing.T) {
 
 		"lastsensordatarequest with single queryField": {
 			input: &data.LatestSensorDataRequest{
-				Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+				Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 				Timezone: data.Timezone{Timezone: ValidTimezone},
 			},
 			want: fmt.Sprintf(`?queryField=%s&timezone-return=%s`,
@@ -2345,7 +2345,7 @@ func TestMakeQueryParams(t *testing.T) {
 
 		"lastsensordatarequest with multiple queryField": {
 			input: &data.LatestSensorDataRequest{
-				Hardware: data.Hardware{QueryFields: []string{
+				Hardware: sensor.Hardware{QueryFields: []string{
 					RegisteredQueryField, AnotherRegisteredQueryField}},
 				Timezone: data.Timezone{Timezone: ValidTimezone},
 			},
@@ -2852,7 +2852,7 @@ func TestGetDataBoundary(t *testing.T) {
 				},
 			},
 			req: data.DataBoundaryRequest{
-				DeviceIdParam: data.DeviceIdParam{DeviceId: RegisteredDeviceId},
+				DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 			},
 		},
 
@@ -2917,7 +2917,7 @@ func TestGetDataBoundary(t *testing.T) {
 				},
 			},
 			req: data.DataBoundaryRequest{
-				DeviceIdParam: data.DeviceIdParam{DeviceId: RegisteredDeviceId},
+				DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 				Timezone:      data.Timezone{Timezone: "Africa/Johannesburg"},
 			},
 		},
@@ -2983,7 +2983,7 @@ func TestGetDataBoundary(t *testing.T) {
 				},
 			},
 			req: data.DataBoundaryRequest{
-				DeviceIdParam: data.DeviceIdParam{DeviceId: RegisteredDeviceId},
+				DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 			},
 		},
 
@@ -3048,7 +3048,7 @@ func TestGetDataBoundary(t *testing.T) {
 				},
 			},
 			req: data.DataBoundaryRequest{
-				DeviceIdParam: data.DeviceIdParam{DeviceId: RegisteredDeviceId},
+				DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 			},
 		},
 
@@ -3091,7 +3091,7 @@ func TestGetDataBoundary(t *testing.T) {
 				},
 			},
 			req: data.DataBoundaryRequest{
-				DeviceIdParam: data.DeviceIdParam{DeviceId: RegisteredDeviceId},
+				DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 			},
 		},
 
@@ -3101,7 +3101,7 @@ func TestGetDataBoundary(t *testing.T) {
 			token:      InvalidToken,
 			want:       data.DataBoundary{},
 			req: data.DataBoundaryRequest{
-				DeviceIdParam: data.DeviceIdParam{DeviceId: RegisteredDeviceId},
+				DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 			},
 		},
 	}
@@ -3110,7 +3110,7 @@ func TestGetDataBoundary(t *testing.T) {
 			api, closeFunc := tc.MockApi.Setup(t)
 			defer closeFunc()
 			humaTest := setupHuma(t, api)
-			route := "/device/" + tc.req.DeviceId + "/databoundary"
+			route := "/device/" + tc.req.DeviceId.String() + "/databoundary"
 			route += fmt.Sprintf(`?timezone-return=%s`, tc.req.Timezone.Timezone)
 			resp := humaTest.Get(route,
 				fmt.Sprintf(`Authorization: Bearer %s`, tc.token))
@@ -3189,7 +3189,7 @@ func TestCsvGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: RelativeStart,
 					},
@@ -3248,7 +3248,7 @@ func TestCsvGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{RegisteredQueryField}},
+					Hardware: sensor.Hardware{QueryFields: []string{RegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start:    RelativeStart,
 						Timezone: data.Timezone{Timezone: "Africa/Johannesburg"},
@@ -3309,7 +3309,7 @@ func TestCsvGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{
+					Hardware: sensor.Hardware{QueryFields: []string{
 						RegisteredQueryField, AnotherRegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: RelativeStart,
@@ -3379,7 +3379,7 @@ func TestCsvGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{
+					Hardware: sensor.Hardware{QueryFields: []string{
 						RegisteredQueryField, AnotherRegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: RelativeStart,
@@ -3447,7 +3447,7 @@ func TestCsvGetSensorData(t *testing.T) {
 				token:      ValidToken,
 				deviceId:   RegisteredDeviceId,
 				SensorDataRequest: &data.SensorDataRequest{
-					Hardware: data.Hardware{QueryFields: []string{
+					Hardware: sensor.Hardware{QueryFields: []string{
 						RegisteredQueryField, AnotherRegisteredQueryField}},
 					TimeFrame: data.TimeFrame{
 						Start: RelativeStart,

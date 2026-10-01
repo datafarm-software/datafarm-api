@@ -15,6 +15,16 @@ type DeviceId string
 func (d DeviceId) DeviceId() DeviceId { return d }
 func (d DeviceId) String() string     { return string(d) }
 
+func (d DeviceId) MarshalBinary() ([]byte, error) {
+	return []byte(d), nil
+}
+
+func (d *DeviceId) UnmarshalBinary(data []byte) error {
+	str := string(data)
+	*d = DeviceId(str)
+	return nil
+}
+
 type DeviceIds []DeviceId
 
 type Device struct {

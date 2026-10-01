@@ -17,13 +17,13 @@ import (
 
 func DefaultBatchRequest() data.BatchSensorDataRequest {
 	return data.BatchSensorDataRequest{
-		Hardware: []data.Hardware{
+		Hardware: []sensor.Hardware{
 			{
-				DeviceIdParam: data.DeviceIdParam{DeviceId: RegisteredDeviceId},
+				DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 				QueryFields:   []string{RegisteredQueryField, AnotherRegisteredQueryField},
 			},
 			{
-				DeviceIdParam: data.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
+				DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 				QueryFields:   []string{RegisteredQueryField, AnotherRegisteredQueryField},
 			},
 		},
@@ -48,7 +48,7 @@ func TestBatchGetSensorData(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
@@ -132,7 +132,7 @@ func TestBatchGetSensorData(t *testing.T) {
 		"get multiple deviceIds' data in different timezone": {
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
@@ -211,18 +211,18 @@ func TestBatchGetSensorData(t *testing.T) {
 			},
 			token: ValidToken,
 			deviceRequests: data.BatchSensorDataRequest{
-				Hardware: []data.Hardware{
+				Hardware: []sensor.Hardware{
 					{
-						DeviceIdParam: data.DeviceIdParam{DeviceId: RegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 						QueryFields:   []string{RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 						QueryFields:   []string{RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 				},
 				TimeFrame: data.TimeFrame{
-					Timezone: data.Timezone{ValidTimezone},
+					Timezone: data.Timezone{Timezone: ValidTimezone},
 					Start:    RelativeStart,
 				},
 			},
@@ -278,7 +278,7 @@ func TestBatchGetSensorData(t *testing.T) {
 		"no data on one of the deviceids requested": {
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{
+				Errors: []sensor.BatchError{
 					{DeviceId: AnotherRegisteredDeviceId, Error: "No Data"},
 				},
 				Results: []data.SensorData{
@@ -406,7 +406,7 @@ func TestBatchGetSensorData(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
@@ -491,7 +491,7 @@ func TestBatchGetSensorData(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
@@ -576,7 +576,7 @@ func TestBatchGetSensorData(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
@@ -661,7 +661,7 @@ func TestBatchGetSensorData(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{
+				Errors: []sensor.BatchError{
 					{
 						DeviceId: RegisteredDeviceId,
 						Error:    "Unauthorized access to this sensor.",
@@ -738,7 +738,7 @@ func TestBatchGetSensorData(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{
+				Errors: []sensor.BatchError{
 					{
 						DeviceId: RegisteredDeviceId,
 						Error:    "Unauthorized access to this sensor.",
@@ -815,7 +815,7 @@ func TestBatchGetSensorData(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{
+				Errors: []sensor.BatchError{
 					{
 						DeviceId: AnotherRegisteredDeviceId,
 						Error:    "Unauthorized access to this sensor.",
@@ -897,7 +897,7 @@ func TestBatchGetSensorData(t *testing.T) {
 			wantErr:    true,
 			wantStatus: http.StatusUnprocessableEntity,
 			want: data.BatchSensorDataResponse{
-				Errors:  []data.SensorDataError{},
+				Errors:  []sensor.BatchError{},
 				Results: []data.SensorData{},
 			},
 			MockApi: MockApi{
@@ -978,29 +978,29 @@ func TestBatchGetSensorData(t *testing.T) {
 			},
 			token: ValidToken,
 			deviceRequests: data.BatchSensorDataRequest{
-				Hardware: []data.Hardware{
+				Hardware: []sensor.Hardware{
 					{
-						DeviceIdParam: data.DeviceIdParam{RegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 						QueryFields:   []string{"all"},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 						QueryFields:   []string{"all"},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{"device3"},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: "device3"},
 						QueryFields:   []string{"all"},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{"device4"},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: "device4"},
 						QueryFields:   []string{"all"},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{"device5"},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: "device5"},
 						QueryFields:   []string{"all"},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{"device6"},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: "device6"},
 						QueryFields:   []string{"all"},
 					},
 				},
@@ -1063,7 +1063,7 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 		"get multiple deviceIds' latest data": {
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
@@ -1160,14 +1160,14 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			},
 			token: ValidToken,
 			deviceRequests: data.BatchLatestSensorDataRequest{
-				Hardware: []data.Hardware{
+				Hardware: []sensor.Hardware{
 					{
-						DeviceIdParam: data.DeviceIdParam{RegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
@@ -1178,7 +1178,7 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 		"get multiple deviceIds' latest data in different timezone": {
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
@@ -1276,14 +1276,14 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			token: ValidToken,
 			deviceRequests: data.BatchLatestSensorDataRequest{
 				Timezone: data.Timezone{Timezone: ValidTimezone},
-				Hardware: []data.Hardware{
+				Hardware: []sensor.Hardware{
 					{
-						DeviceIdParam: data.DeviceIdParam{RegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
@@ -1340,14 +1340,14 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			},
 			token: ValidToken,
 			deviceRequests: data.BatchLatestSensorDataRequest{
-				Hardware: []data.Hardware{
+				Hardware: []sensor.Hardware{
 					{
-						DeviceIdParam: data.DeviceIdParam{RegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
@@ -1402,14 +1402,14 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			},
 			token: ValidToken,
 			deviceRequests: data.BatchLatestSensorDataRequest{
-				Hardware: []data.Hardware{
+				Hardware: []sensor.Hardware{
 					{
-						DeviceIdParam: data.DeviceIdParam{RegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
@@ -1420,7 +1420,7 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 		"no data on one of the deviceids requested": {
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{
+				Errors: []sensor.BatchError{
 					{DeviceId: AnotherRegisteredDeviceId, Error: "No Data"},
 				},
 				Results: []data.SensorData{
@@ -1495,14 +1495,14 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			},
 			token: ValidToken,
 			deviceRequests: data.BatchLatestSensorDataRequest{
-				Hardware: []data.Hardware{
+				Hardware: []sensor.Hardware{
 					{
-						DeviceIdParam: data.DeviceIdParam{RegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
@@ -1513,7 +1513,7 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 		"admin user can get latest sensor data from any company": {
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
@@ -1610,14 +1610,14 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			},
 			token: ValidToken,
 			deviceRequests: data.BatchLatestSensorDataRequest{
-				Hardware: []data.Hardware{
+				Hardware: []sensor.Hardware{
 					{
-						DeviceIdParam: data.DeviceIdParam{DeviceId: RegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
@@ -1628,7 +1628,7 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 		"admin user can get latest sensor data from any network": {
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
@@ -1725,14 +1725,14 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			},
 			token: ValidToken,
 			deviceRequests: data.BatchLatestSensorDataRequest{
-				Hardware: []data.Hardware{
+				Hardware: []sensor.Hardware{
 					{
-						DeviceIdParam: data.DeviceIdParam{DeviceId: RegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
@@ -1743,7 +1743,7 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 		"network user can get any sensor data from within network": {
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.SensorData{
 					{
 						DeviceID:  RegisteredDeviceId,
@@ -1840,14 +1840,14 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			},
 			token: ValidToken,
 			deviceRequests: data.BatchLatestSensorDataRequest{
-				Hardware: []data.Hardware{
+				Hardware: []sensor.Hardware{
 					{
-						DeviceIdParam: data.DeviceIdParam{DeviceId: RegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
@@ -1859,7 +1859,7 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{
+				Errors: []sensor.BatchError{
 					{
 						DeviceId: RegisteredDeviceId,
 						Error:    "Unauthorized access to this sensor.",
@@ -1932,14 +1932,14 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			},
 			token: ValidToken,
 			deviceRequests: data.BatchLatestSensorDataRequest{
-				Hardware: []data.Hardware{
+				Hardware: []sensor.Hardware{
 					{
-						DeviceIdParam: data.DeviceIdParam{DeviceId: RegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
@@ -1951,7 +1951,7 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{
+				Errors: []sensor.BatchError{
 					{
 						DeviceId: RegisteredDeviceId,
 						Error:    "Unauthorized access to this sensor.",
@@ -2024,14 +2024,14 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			},
 			token: ValidToken,
 			deviceRequests: data.BatchLatestSensorDataRequest{
-				Hardware: []data.Hardware{
+				Hardware: []sensor.Hardware{
 					{
-						DeviceIdParam: data.DeviceIdParam{DeviceId: RegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
@@ -2043,7 +2043,7 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchSensorDataResponse{
-				Errors: []data.SensorDataError{
+				Errors: []sensor.BatchError{
 					{
 						DeviceId: AnotherRegisteredDeviceId,
 						Error:    "Unauthorized access to this sensor.",
@@ -2129,14 +2129,14 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			},
 			token: ValidToken,
 			deviceRequests: data.BatchLatestSensorDataRequest{
-				Hardware: []data.Hardware{
+				Hardware: []sensor.Hardware{
 					{
-						DeviceIdParam: data.DeviceIdParam{DeviceId: RegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
@@ -2148,7 +2148,7 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			wantErr:    true,
 			wantStatus: http.StatusUnprocessableEntity,
 			want: data.BatchSensorDataResponse{
-				Errors:  []data.SensorDataError{},
+				Errors:  []sensor.BatchError{},
 				Results: []data.SensorData{},
 			},
 			MockApi: MockApi{
@@ -2229,29 +2229,29 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			},
 			token: ValidToken,
 			deviceRequests: data.BatchLatestSensorDataRequest{
-				Hardware: []data.Hardware{
+				Hardware: []sensor.Hardware{
 					{
-						DeviceIdParam: data.DeviceIdParam{RegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 						QueryFields:   []string{"all"},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 						QueryFields:   []string{"all"},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{"device3"},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: "device3"},
 						QueryFields:   []string{"all"},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{"device4"},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: "device4"},
 						QueryFields:   []string{"all"},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{"device5"},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: "device5"},
 						QueryFields:   []string{"all"},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{"device6"},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: "device6"},
 						QueryFields:   []string{"all"},
 					},
 				},
@@ -2264,14 +2264,14 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			token:      InvalidToken,
 			want:       data.BatchSensorDataResponse{},
 			deviceRequests: data.BatchLatestSensorDataRequest{
-				Hardware: []data.Hardware{
+				Hardware: []sensor.Hardware{
 					{
-						DeviceIdParam: data.DeviceIdParam{DeviceId: RegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
 					{
-						DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 						QueryFields: []string{
 							RegisteredQueryField, AnotherRegisteredQueryField},
 					},
@@ -2325,7 +2325,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: info.BatchQueryFieldsResponse{
-				Errors: []info.QueryFieldsError{},
+				Errors: []sensor.BatchError{},
 				Results: []info.QueryFields{
 					{
 						DeviceId:    RegisteredDeviceId,
@@ -2380,7 +2380,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			token: ValidToken,
 			queryFieldRequests: info.BatchQueryFieldsRequest{
 				Body: sensor.Batch{
-					DeviceIds: []string{
+					DeviceIds: sensor.DeviceIds{
 						RegisteredDeviceId,
 						AnotherRegisteredDeviceId,
 					},
@@ -2428,7 +2428,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			token: ValidToken,
 			queryFieldRequests: info.BatchQueryFieldsRequest{
 				Body: sensor.Batch{
-					DeviceIds: []string{
+					DeviceIds: sensor.DeviceIds{
 						AnotherRegisteredDeviceId,
 						"Device3",
 					},
@@ -2477,7 +2477,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			token: ValidToken,
 			queryFieldRequests: info.BatchQueryFieldsRequest{
 				Body: sensor.Batch{
-					DeviceIds: []string{
+					DeviceIds: sensor.DeviceIds{
 						RegisteredDeviceId,
 					},
 				},
@@ -2488,7 +2488,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: info.BatchQueryFieldsResponse{
-				Errors: []info.QueryFieldsError{},
+				Errors: []sensor.BatchError{},
 				Results: []info.QueryFields{
 					{
 						DeviceId:    RegisteredDeviceId,
@@ -2543,7 +2543,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			token: ValidToken,
 			queryFieldRequests: info.BatchQueryFieldsRequest{
 				Body: sensor.Batch{
-					DeviceIds: []string{
+					DeviceIds: sensor.DeviceIds{
 						RegisteredDeviceId,
 						AnotherRegisteredDeviceId,
 					},
@@ -2555,7 +2555,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: info.BatchQueryFieldsResponse{
-				Errors: []info.QueryFieldsError{},
+				Errors: []sensor.BatchError{},
 				Results: []info.QueryFields{
 					{
 						DeviceId:    RegisteredDeviceId,
@@ -2610,7 +2610,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			token: ValidToken,
 			queryFieldRequests: info.BatchQueryFieldsRequest{
 				Body: sensor.Batch{
-					DeviceIds: []string{
+					DeviceIds: sensor.DeviceIds{
 						RegisteredDeviceId,
 						AnotherRegisteredDeviceId,
 					},
@@ -2622,7 +2622,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: info.BatchQueryFieldsResponse{
-				Errors: []info.QueryFieldsError{},
+				Errors: []sensor.BatchError{},
 				Results: []info.QueryFields{
 					{
 						DeviceId:    RegisteredDeviceId,
@@ -2677,7 +2677,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			token: ValidToken,
 			queryFieldRequests: info.BatchQueryFieldsRequest{
 				Body: sensor.Batch{
-					DeviceIds: []string{
+					DeviceIds: sensor.DeviceIds{
 						RegisteredDeviceId,
 						AnotherRegisteredDeviceId,
 					},
@@ -2689,7 +2689,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: info.BatchQueryFieldsResponse{
-				Errors: []info.QueryFieldsError{
+				Errors: []sensor.BatchError{
 					{
 						DeviceId: RegisteredDeviceId,
 						Error:    "Unauthorized access to this sensor.",
@@ -2743,7 +2743,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			token: ValidToken,
 			queryFieldRequests: info.BatchQueryFieldsRequest{
 				Body: sensor.Batch{
-					DeviceIds: []string{
+					DeviceIds: sensor.DeviceIds{
 						RegisteredDeviceId,
 						AnotherRegisteredDeviceId,
 					},
@@ -2755,7 +2755,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: info.BatchQueryFieldsResponse{
-				Errors: []info.QueryFieldsError{
+				Errors: []sensor.BatchError{
 					{
 						DeviceId: RegisteredDeviceId,
 						Error:    "Unauthorized access to this sensor.",
@@ -2809,7 +2809,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			token: ValidToken,
 			queryFieldRequests: info.BatchQueryFieldsRequest{
 				Body: sensor.Batch{
-					DeviceIds: []string{
+					DeviceIds: sensor.DeviceIds{
 						RegisteredDeviceId,
 						AnotherRegisteredDeviceId,
 					},
@@ -2821,7 +2821,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: info.BatchQueryFieldsResponse{
-				Errors: []info.QueryFieldsError{
+				Errors: []sensor.BatchError{
 					{
 						DeviceId: AnotherRegisteredDeviceId,
 						Error:    "Unauthorized access to this sensor.",
@@ -2877,7 +2877,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			token: ValidToken,
 			queryFieldRequests: info.BatchQueryFieldsRequest{
 				Body: sensor.Batch{
-					DeviceIds: []string{
+					DeviceIds: sensor.DeviceIds{
 						RegisteredDeviceId, AnotherRegisteredDeviceId,
 					},
 				},
@@ -2930,7 +2930,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			token: ValidToken,
 			queryFieldRequests: info.BatchQueryFieldsRequest{
 				Body: sensor.Batch{
-					DeviceIds: []string{
+					DeviceIds: sensor.DeviceIds{
 						RegisteredDeviceId, InvalidDeviceId,
 					},
 				},
@@ -2944,7 +2944,7 @@ func TestBatchGetQueryFields(t *testing.T) {
 			want:       info.BatchQueryFieldsResponse{},
 			queryFieldRequests: info.BatchQueryFieldsRequest{
 				Body: sensor.Batch{
-					DeviceIds: []string{
+					DeviceIds: sensor.DeviceIds{
 						RegisteredDeviceId, AnotherRegisteredDeviceId,
 					},
 				},
@@ -2957,10 +2957,9 @@ func TestBatchGetQueryFields(t *testing.T) {
 			api, closeFunc := tc.MockApi.Setup(t)
 			defer closeFunc()
 			if tc.disconnectedDeviceInfo {
-				testFlux, err := data.NewTestingInflux("../../config.yml")
+				err := api.DeviceInfo.Close()
 				require.Nil(t, err)
-				testFlux.BadConnQueryApi()
-				api.DataFetcher = testFlux
+				api.DeviceInfo = &info.BadConnFetcher{}
 			}
 			humaTest := setupHuma(t, api)
 			route := "/batch/device/queryfields"
@@ -2997,7 +2996,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchDataBoundaryResponse{
-				Errors: []data.BatchError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.DataBoundary{
 					{
 						DeviceId: RegisteredDeviceId,
@@ -3087,7 +3086,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchDataBoundaryRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -3095,7 +3094,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 		"no data for both deviceids": {
 			wantStatus: http.StatusOK,
 			want: data.BatchDataBoundaryResponse{
-				Errors: []data.BatchError{
+				Errors: []sensor.BatchError{
 					{DeviceId: RegisteredDeviceId, Error: "No Data"},
 					{DeviceId: AnotherRegisteredDeviceId, Error: "No Data"},
 				},
@@ -3144,7 +3143,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchDataBoundaryRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -3152,7 +3151,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 		"no data for one of the deviceids request": {
 			wantStatus: http.StatusOK,
 			want: data.BatchDataBoundaryResponse{
-				Errors: []data.BatchError{
+				Errors: []sensor.BatchError{
 					{DeviceId: AnotherRegisteredDeviceId, Error: "No Data"},
 				},
 				Results: []data.DataBoundary{
@@ -3223,7 +3222,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchDataBoundaryRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -3232,7 +3231,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchDataBoundaryResponse{
-				Errors: []data.BatchError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.DataBoundary{
 					{
 						DeviceId: RegisteredDeviceId,
@@ -3322,7 +3321,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchDataBoundaryRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 				Timezone: data.Timezone{Timezone: "Africa/Johannesburg"},
 			},
@@ -3332,7 +3331,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchDataBoundaryResponse{
-				Errors: []data.BatchError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.DataBoundary{
 					{
 						DeviceId: RegisteredDeviceId,
@@ -3422,7 +3421,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchDataBoundaryRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -3431,7 +3430,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchDataBoundaryResponse{
-				Errors: []data.BatchError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.DataBoundary{
 					{
 						DeviceId: RegisteredDeviceId,
@@ -3521,7 +3520,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchDataBoundaryRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -3530,7 +3529,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchDataBoundaryResponse{
-				Errors: []data.BatchError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.DataBoundary{
 					{
 						DeviceId: RegisteredDeviceId,
@@ -3620,7 +3619,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchDataBoundaryRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -3630,7 +3629,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			wantStatus: http.StatusOK,
 			want: data.BatchDataBoundaryResponse{
 				Results: []data.DataBoundary{},
-				Errors: []data.BatchError{
+				Errors: []sensor.BatchError{
 					{
 						DeviceId: RegisteredDeviceId,
 						Error:    "Unauthorized access to this sensor.",
@@ -3717,7 +3716,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchDataBoundaryRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -3727,7 +3726,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			wantStatus: http.StatusOK,
 			want: data.BatchDataBoundaryResponse{
 				Results: []data.DataBoundary{},
-				Errors: []data.BatchError{
+				Errors: []sensor.BatchError{
 					{
 						DeviceId: RegisteredDeviceId,
 						Error:    "Unauthorized access to this sensor.",
@@ -3814,7 +3813,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchDataBoundaryRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -3830,7 +3829,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 						Stop:     AlsoInsideTimeRange,
 					},
 				},
-				Errors: []data.BatchError{
+				Errors: []sensor.BatchError{
 					{
 						DeviceId: AnotherRegisteredDeviceId,
 						Error:    "Unauthorized access to this sensor.",
@@ -3913,7 +3912,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchDataBoundaryRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -3925,7 +3924,7 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			want:       data.BatchDataBoundaryResponse{},
 			req: data.BatchDataBoundaryRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -3968,7 +3967,7 @@ func TestBatchGetLocation(t *testing.T) {
 		"user get multiple deviceid location": {
 			wantStatus: http.StatusOK,
 			want: data.BatchLocationResponse{
-				Errors: []data.BatchError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.DeviceLocationResponse{
 					{
 						DeviceId:  RegisteredDeviceId,
@@ -4056,7 +4055,7 @@ func TestBatchGetLocation(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchLocationRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -4064,7 +4063,7 @@ func TestBatchGetLocation(t *testing.T) {
 		"no data for both deviceids": {
 			wantStatus: http.StatusOK,
 			want: data.BatchLocationResponse{
-				Errors: []data.BatchError{
+				Errors: []sensor.BatchError{
 					{DeviceId: RegisteredDeviceId, Error: "No Location"},
 					{DeviceId: AnotherRegisteredDeviceId, Error: "No Location"},
 				},
@@ -4113,7 +4112,7 @@ func TestBatchGetLocation(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchLocationRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -4121,7 +4120,7 @@ func TestBatchGetLocation(t *testing.T) {
 		"no data for one of the deviceids": {
 			wantStatus: http.StatusOK,
 			want: data.BatchLocationResponse{
-				Errors: []data.BatchError{
+				Errors: []sensor.BatchError{
 					{DeviceId: AnotherRegisteredDeviceId, Error: "No Location"},
 				},
 				Results: []data.DeviceLocationResponse{
@@ -4191,7 +4190,7 @@ func TestBatchGetLocation(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchLocationRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -4200,7 +4199,7 @@ func TestBatchGetLocation(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchLocationResponse{
-				Errors: []data.BatchError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.DeviceLocationResponse{
 					{
 						DeviceId:  RegisteredDeviceId,
@@ -4288,7 +4287,7 @@ func TestBatchGetLocation(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchLocationRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -4297,7 +4296,7 @@ func TestBatchGetLocation(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchLocationResponse{
-				Errors: []data.BatchError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.DeviceLocationResponse{
 					{
 						DeviceId: RegisteredDeviceId,
@@ -4383,7 +4382,7 @@ func TestBatchGetLocation(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchLocationRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -4392,7 +4391,7 @@ func TestBatchGetLocation(t *testing.T) {
 			wantErr:    false,
 			wantStatus: http.StatusOK,
 			want: data.BatchLocationResponse{
-				Errors: []data.BatchError{},
+				Errors: []sensor.BatchError{},
 				Results: []data.DeviceLocationResponse{
 					{
 						DeviceId: RegisteredDeviceId,
@@ -4478,7 +4477,7 @@ func TestBatchGetLocation(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchLocationRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -4488,7 +4487,7 @@ func TestBatchGetLocation(t *testing.T) {
 			wantStatus: http.StatusOK,
 			want: data.BatchLocationResponse{
 				Results: []data.DeviceLocationResponse{},
-				Errors: []data.BatchError{
+				Errors: []sensor.BatchError{
 					{
 						DeviceId: RegisteredDeviceId,
 						Error:    "Unauthorized access to this sensor.",
@@ -4571,7 +4570,7 @@ func TestBatchGetLocation(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchLocationRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -4581,7 +4580,7 @@ func TestBatchGetLocation(t *testing.T) {
 			wantStatus: http.StatusOK,
 			want: data.BatchLocationResponse{
 				Results: []data.DeviceLocationResponse{},
-				Errors: []data.BatchError{
+				Errors: []sensor.BatchError{
 					{
 						DeviceId: RegisteredDeviceId,
 						Error:    "Unauthorized access to this sensor.",
@@ -4664,7 +4663,7 @@ func TestBatchGetLocation(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchLocationRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -4680,7 +4679,7 @@ func TestBatchGetLocation(t *testing.T) {
 						Latitude: Latitude, Longitude: Longitude,
 					},
 				},
-				Errors: []data.BatchError{
+				Errors: []sensor.BatchError{
 					{
 						DeviceId: AnotherRegisteredDeviceId,
 						Error:    "Unauthorized access to this sensor.",
@@ -4759,7 +4758,7 @@ func TestBatchGetLocation(t *testing.T) {
 			token: ValidToken,
 			req: data.BatchLocationRequest{
 				Batch: sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -4770,8 +4769,8 @@ func TestBatchGetLocation(t *testing.T) {
 			token:      InvalidToken,
 			want:       data.BatchLocationResponse{},
 			req: data.BatchLocationRequest{
-				sensor.Batch{
-					DeviceIds: []string{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				Batch: sensor.Batch{
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
 				},
 			},
 		},
@@ -4874,13 +4873,13 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				wantStatus: http.StatusOK,
 				token:      ValidToken,
 				BatchSensorDataRequest: &data.BatchSensorDataRequest{
-					Hardware: []data.Hardware{
+					Hardware: []sensor.Hardware{
 						{
-							DeviceIdParam: data.DeviceIdParam{RegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 							QueryFields:   []string{RegisteredQueryField},
 						},
 						{
-							DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 							QueryFields:   []string{RegisteredQueryField},
 						},
 					},
@@ -4956,13 +4955,13 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				wantStatus: http.StatusOK,
 				token:      ValidToken,
 				BatchSensorDataRequest: &data.BatchSensorDataRequest{
-					Hardware: []data.Hardware{
+					Hardware: []sensor.Hardware{
 						{
-							DeviceIdParam: data.DeviceIdParam{RegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 							QueryFields:   []string{RegisteredQueryField},
 						},
 						{
-							DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 							QueryFields:   []string{RegisteredQueryField},
 						},
 					},
@@ -5041,14 +5040,14 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				wantStatus: http.StatusOK,
 				token:      ValidToken,
 				BatchSensorDataRequest: &data.BatchSensorDataRequest{
-					Hardware: []data.Hardware{
+					Hardware: []sensor.Hardware{
 						{
-							DeviceIdParam: data.DeviceIdParam{RegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 							QueryFields: []string{
 								RegisteredQueryField, AnotherRegisteredQueryField},
 						},
 						{
-							DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 							QueryFields: []string{
 								RegisteredQueryField, AnotherRegisteredQueryField},
 						},
@@ -5125,14 +5124,14 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				wantStatus: http.StatusOK,
 				token:      ValidToken,
 				BatchSensorDataRequest: &data.BatchSensorDataRequest{
-					Hardware: []data.Hardware{
+					Hardware: []sensor.Hardware{
 						{
-							DeviceIdParam: data.DeviceIdParam{RegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 							QueryFields: []string{
 								RegisteredQueryField, AnotherRegisteredQueryField},
 						},
 						{
-							DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 							QueryFields: []string{
 								RegisteredQueryField, AnotherRegisteredQueryField},
 						},
@@ -5206,13 +5205,13 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				wantStatus: http.StatusOK,
 				token:      ValidToken,
 				BatchSensorDataRequest: &data.BatchSensorDataRequest{
-					Hardware: []data.Hardware{
+					Hardware: []sensor.Hardware{
 						{
-							DeviceIdParam: data.DeviceIdParam{RegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 							QueryFields:   []string{RegisteredQueryField},
 						},
 						{
-							DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 							QueryFields:   []string{RegisteredQueryField},
 						},
 					},
@@ -5287,13 +5286,13 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				wantStatus: http.StatusOK,
 				token:      ValidToken,
 				BatchSensorDataRequest: &data.BatchSensorDataRequest{
-					Hardware: []data.Hardware{
+					Hardware: []sensor.Hardware{
 						{
-							DeviceIdParam: data.DeviceIdParam{RegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 							QueryFields:   []string{RegisteredQueryField},
 						},
 						{
-							DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 							QueryFields:   []string{RegisteredQueryField},
 						},
 					},
@@ -5369,14 +5368,14 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				wantStatus: http.StatusOK,
 				token:      ValidToken,
 				BatchSensorDataRequest: &data.BatchSensorDataRequest{
-					Hardware: []data.Hardware{
+					Hardware: []sensor.Hardware{
 						{
-							DeviceIdParam: data.DeviceIdParam{RegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 							QueryFields: []string{
 								RegisteredQueryField, AnotherRegisteredQueryField},
 						},
 						{
-							DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 							QueryFields:   []string{RegisteredQueryField},
 						},
 					},
@@ -5452,14 +5451,14 @@ func TestBatchCsvGetSensorData(t *testing.T) {
 				wantStatus: http.StatusOK,
 				token:      ValidToken,
 				BatchSensorDataRequest: &data.BatchSensorDataRequest{
-					Hardware: []data.Hardware{
+					Hardware: []sensor.Hardware{
 						{
-							DeviceIdParam: data.DeviceIdParam{RegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
 							QueryFields: []string{
 								RegisteredQueryField, AnotherRegisteredQueryField},
 						},
 						{
-							DeviceIdParam: data.DeviceIdParam{AnotherRegisteredDeviceId},
+							DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
 							QueryFields:   []string{RegisteredQueryField},
 						},
 					},
