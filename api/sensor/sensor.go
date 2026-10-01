@@ -13,14 +13,16 @@ var NoLocation = errors.New("No Location")
 type DeviceId string
 
 func (d DeviceId) DeviceId() DeviceId { return d }
+func (d DeviceId) String() string     { return string(d) }
 
 type DeviceIds []DeviceId
 
 type Device struct {
-	QueryFields                []string
-	Timezone                   *time.Location
-	DeviceId, Company, Network string
-	Start, Stop                string
+	QueryFields      []string
+	Timezone         *time.Location
+	DeviceId         DeviceId
+	Company, Network string
+	Start, Stop      string
 }
 
 type DeviceIdParam struct {
@@ -43,17 +45,17 @@ type Schema struct {
 }
 
 type DeviceToCompany struct {
-	DeviceId string
+	DeviceId DeviceId
 	Company  string
 }
 
 type DeviceToNetwork struct {
-	DeviceId string
+	DeviceId DeviceId
 	Network  string
 }
 
 type DeviceToQueryFields struct {
-	DeviceId    string
+	DeviceId    DeviceId
 	QueryFields []string
 }
 

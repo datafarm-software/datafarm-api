@@ -35,8 +35,8 @@ type BatchQueryFieldsRequest struct{ Body sensor.Batch }
 type QueryFieldSlice []QueryFields
 
 type QueryFields struct {
-	DeviceId    string   `json:"deviceId"`
-	QueryFields []string `json:"queryFields"`
+	DeviceId    sensor.DeviceId `json:"deviceId"`
+	QueryFields []string        `json:"queryFields"`
 }
 
 type BatchQueryFieldsResponse struct {
@@ -66,15 +66,15 @@ type Fetcher interface {
 type BadConnFetcher struct{}
 
 func (b *BadConnFetcher) Close() error { return nil }
-func (b *BadConnFetcher) GetQueryFields(deviceId string) (QueryFields, error) {
+func (b *BadConnFetcher) GetQueryFields(deviceId sensor.DeviceId) (QueryFields, error) {
 	return QueryFields{}, sensor.NoConnection
 }
 
-func (b *BadConnFetcher) GetCompany(deviceId string) (string, error) {
+func (b *BadConnFetcher) GetCompany(deviceId sensor.DeviceId) (string, error) {
 	return "", sensor.NoConnection
 }
 
-func (b *BadConnFetcher) GetNetwork(deviceId string) (string, error) {
+func (b *BadConnFetcher) GetNetwork(deviceId sensor.DeviceId) (string, error) {
 	return "", sensor.NoConnection
 }
 

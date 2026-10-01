@@ -23,7 +23,7 @@ const TestOrg = "test-org"
 var pkgCtx context.Context
 
 type DataRow struct {
-	DeviceID string
+	DeviceID sensor.DeviceId
 	Field    string
 	Time     time.Time
 	Value    any
@@ -160,7 +160,7 @@ func (i *InfluxDatafetcher) extractValue(result *influxApi.QueryTableResult) ([]
 		dataRow := DataRow{
 			Time:     result.Record().Time(),
 			Value:    result.Record().Value(),
-			DeviceID: result.Record().ValueByKey("deviceID").(string),
+			DeviceID: result.Record().ValueByKey("deviceID").(sensor.DeviceId),
 			Field:    result.Record().Field(),
 		}
 		records = append(records, dataRow)
@@ -415,7 +415,7 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *sensor.Schema, sensorData Sens
 		p := influxdb2.NewPoint(
 			deviceInfo.Company,
 			map[string]string{
-				"deviceID": sd.DeviceID,
+				"deviceID": sd.DeviceID.String(),
 			},
 			fields,
 			sd.Timestamp,
@@ -433,8 +433,8 @@ func (t *TestingInflux) BadConnQueryApi() {
 	t.influx.queryApi = &BadConnQueryApi{QueryAPI: t.influx.queryApi}
 }
 
-func deviceInfoMap(allDevicesInfo *sensor.Schema) map[string]sensor.Device {
-	deviceInfoMap := make(map[string]sensor.Device)
+func deviceInfoMap(allDevicesInfo *sensor.Schema) map[sensor.DeviceId]sensor.Device {
+	deviceInfoMap := make(map[sensor.DeviceId]sensor.Device)
 	var di sensor.Device
 	for _, dd := range allDevicesInfo.DeviceNetworks {
 		di = deviceInfoMap[dd.DeviceId]

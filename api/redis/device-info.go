@@ -14,10 +14,10 @@ func (r *Redis) PrepareDeviceInfo(sensor.Schema) error {
 	return nil
 }
 
-func (r *Redis) GetQueryFields(deviceId string) (info.QueryFields, error) {
+func (r *Redis) GetQueryFields(deviceId sensor.DeviceId) (info.QueryFields, error) {
 	var qf []string
 	var err error
-	qf, err = r.db.SMembers(ctx, "queryFields:"+deviceId).Result()
+	qf, err = r.db.SMembers(ctx, "queryFields:"+string(deviceId)).Result()
 	if err != nil {
 		err = fmt.Errorf("redis smembers: %v", err)
 	}
@@ -27,8 +27,8 @@ func (r *Redis) GetQueryFields(deviceId string) (info.QueryFields, error) {
 	}, err
 }
 
-func (r *Redis) GetCompany(deviceId string) (string, error) {
-	company, err := r.db.HGet(ctx, "fieldUnit:"+deviceId, "company").Result()
+func (r *Redis) GetCompany(deviceId sensor.DeviceId) (string, error) {
+	company, err := r.db.HGet(ctx, "fieldUnit:"+string(deviceId), "company").Result()
 	if err != nil {
 		if err == redis.Nil {
 			return "", info.NotFound
@@ -38,8 +38,8 @@ func (r *Redis) GetCompany(deviceId string) (string, error) {
 	return company, nil
 }
 
-func (r *Redis) GetNetwork(deviceId string) (string, error) {
-	network, err := r.db.HGet(ctx, "fieldUnit:"+deviceId, "network").Result()
+func (r *Redis) GetNetwork(deviceId sensor.DeviceId) (string, error) {
+	network, err := r.db.HGet(ctx, "fieldUnit:"+string(deviceId), "network").Result()
 	if err != nil {
 		return "", err
 	}

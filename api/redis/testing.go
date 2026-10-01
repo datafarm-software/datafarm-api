@@ -119,18 +119,18 @@ func (t *TestingRedis) PrepareDeviceInfo(schema sensor.Schema) error {
 			pipe.SAdd(ctx, "allDevices", d.DeviceId)
 			pipe.SAdd(ctx, "companyDevices:"+d.Company, d.DeviceId)
 			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
-			pipe.HSet(ctx, "fieldUnit:"+d.DeviceId, "company", d.Company)
+			pipe.HSet(ctx, "fieldUnit:"+d.DeviceId.String(), "company", d.Company)
 		}
 		for _, d := range schema.DeviceNetworks {
 			pipe.SAdd(ctx, "allDevices", d.DeviceId)
 			pipe.SAdd(ctx, "networkIds:"+d.Network, d.DeviceId)
 			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
-			pipe.HSet(ctx, "fieldUnit:"+d.DeviceId, "network", d.Network)
+			pipe.HSet(ctx, "fieldUnit:"+d.DeviceId.String(), "network", d.Network)
 		}
 		for _, d := range schema.DeviceToQF {
 			pipe.SAdd(ctx, "allDevices", d.DeviceId)
 			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
-			pipe.SAdd(ctx, "queryFields:"+d.DeviceId, d.QueryFields)
+			pipe.SAdd(ctx, "queryFields:"+d.DeviceId.String(), d.QueryFields)
 		}
 		return nil
 	}
@@ -165,13 +165,13 @@ func (t *TestingRedis) GetSnapshot() *sensor.Schema {
 	for _, id := range deviceIds {
 		company = getStringCmd(cmdVec[id]["company"])
 		schema.DeviceCompanies = append(schema.DeviceCompanies,
-			sensor.DeviceToCompany{DeviceId: id, Company: company})
+			sensor.DeviceToCompany{DeviceId: sensor.DeviceId(id), Company: company})
 		network = getStringCmd(cmdVec[id]["network"])
 		schema.DeviceNetworks = append(schema.DeviceNetworks,
-			sensor.DeviceToNetwork{DeviceId: id, Network: network})
+			sensor.DeviceToNetwork{DeviceId: sensor.DeviceId(id), Network: network})
 		queryFields = getStringSliceCmd(cmdVec[id]["queryFields"])
 		schema.DeviceToQF = append(schema.DeviceToQF,
-			sensor.DeviceToQueryFields{DeviceId: id, QueryFields: queryFields})
+			sensor.DeviceToQueryFields{DeviceId: sensor.DeviceId(id), QueryFields: queryFields})
 	}
 
 	return schema
@@ -197,15 +197,15 @@ func getStringSliceCmd(cmd any) []string {
 	return slice
 }
 
-func (t *TestingRedis) GetQueryFields(deviceId string) (info.QueryFields, error) {
+func (t *TestingRedis) GetQueryFields(deviceId sensor.DeviceId) (info.QueryFields, error) {
 	return t.redis.GetQueryFields(deviceId)
 }
 
-func (t *TestingRedis) GetCompany(deviceId string) (string, error) {
+func (t *TestingRedis) GetCompany(deviceId sensor.DeviceId) (string, error) {
 	return t.redis.GetCompany(deviceId)
 }
 
-func (t *TestingRedis) GetNetwork(deviceId string) (string, error) {
+func (t *TestingRedis) GetNetwork(deviceId sensor.DeviceId) (string, error) {
 	return t.redis.GetNetwork(deviceId)
 }
 

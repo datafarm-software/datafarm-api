@@ -135,7 +135,7 @@ func formatTimestamp(in *data.SensorDataRequest) (err error) {
 	return nil
 }
 
-func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, deviceId string) (
+func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, deviceId sensor.DeviceId) (
 	di sensor.Device, err error) {
 	di = sensor.Device{DeviceId: deviceId}
 	deviceCompany, err := a.DeviceInfo.GetCompany(deviceId)
@@ -368,7 +368,7 @@ func (a *Api) getDataBoundary(ctx context.Context, in data.DataBoundaryRequest) 
 	return data.DataBoundarySlice{db}, nil
 }
 
-func (a *Api) getLocation(ctx context.Context, in data.DeviceLocationRequest) (
+func (a *Api) getLocation(ctx context.Context, in sensor.DeviceIdParam) (
 	data.DeviceLocationResponseSlice, error) {
 	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetDataBoundary)
 	if err != nil {

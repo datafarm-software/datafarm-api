@@ -192,7 +192,7 @@ func writeDataRow(queryFieldColumns []string, sensorData SensorData, writer *csv
 }
 
 type SensorData struct {
-	DeviceID   string             `json:"deviceId"`
+	DeviceID   sensor.DeviceId    `json:"deviceId"`
 	Timestamp  time.Time          `json:"timestamp" doc:"Timestamp will be in RFC3339 Format. Default timezone is UTC."`
 	SensorData map[string]float64 `json:"sensorData"`
 }
@@ -200,9 +200,9 @@ type SensorData struct {
 type DataBoundarySlice []DataBoundary
 
 type DataBoundary struct {
-	DeviceId string    `json:"deviceId"`
-	Start    time.Time `json:"start"`
-	Stop     time.Time `json:"stop"`
+	DeviceId sensor.DeviceId `json:"deviceId"`
+	Start    time.Time       `json:"start"`
+	Stop     time.Time       `json:"stop"`
 }
 
 type DataBoundaryRequest struct {
@@ -227,10 +227,10 @@ type BatchDataBoundaryResponse struct {
 type DeviceLocationResponseSlice []DeviceLocationResponse
 
 type DeviceLocationResponse struct {
-	DeviceId  string    `json:"deviceId"`
-	Time      time.Time `json:"time" doc:"Time the latest Location was reported."`
-	Latitude  float64   `log:"latitude" json:"latitude"`
-	Longitude float64   `log:"longitude" json:"longitude"`
+	DeviceId  sensor.DeviceId `json:"deviceId"`
+	Time      time.Time       `json:"time" doc:"Time the latest Location was reported."`
+	Latitude  float64         `log:"latitude" json:"latitude"`
+	Longitude float64         `log:"longitude" json:"longitude"`
 }
 
 type BatchLocationRequest struct {
