@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
 	"github.com/datafarm-software/datafarm-api/api/sensor/data"
 	"github.com/datafarm-software/datafarm-api/api/sensor/info"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
@@ -51,7 +52,7 @@ type HumaOperator interface {
 	}, error)
 	Login(context.Context, *tokenprovider.LoginRequest) (
 		*tokenprovider.LoginResponse, error)
-	GetQueryFields(context.Context, *info.QueryFieldsRequest) (
+	GetQueryFields(context.Context, *sensor.DeviceIdParam) (
 		*info.QueryFieldsResponse, error)
 	BatchGetQueryFields(context.Context, *info.BatchQueryFieldsRequest) (
 		*struct {
@@ -70,7 +71,7 @@ type HumaOperator interface {
 		*struct {
 			Body data.BatchDataBoundaryResponse
 		}, error)
-	GetLocation(context.Context, *data.DeviceLocationRequest) (
+	GetLocation(context.Context, *sensor.DeviceIdParam) (
 		*struct {
 			Status int
 			Body   data.DeviceLocationResponse

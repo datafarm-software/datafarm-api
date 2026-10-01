@@ -224,10 +224,6 @@ type BatchDataBoundaryResponse struct {
 	Errors  []sensor.BatchError `json:"errors"`
 }
 
-type DeviceLocationRequest struct {
-	sensor.DeviceIdParam
-}
-
 type DeviceLocationResponseSlice []DeviceLocationResponse
 
 type DeviceLocationResponse struct {

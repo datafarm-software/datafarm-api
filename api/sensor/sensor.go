@@ -32,7 +32,7 @@ type Hardware struct {
 	QueryFields []string `log:"queryfields" query:"queryField,explode" json:"queryFields" required:"true" minItems:"1" maxItems:"20" uniqueItems:"true" doc:"One or more QueryFields to return. Specify \"all\" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField=\"temperature\"&queryField=\"humidity\""`
 }
 
-func (h Hardware) DeviceId() string {
+func (h Hardware) DeviceId() DeviceId {
 	return h.DeviceIdParam.DeviceId
 }
 

@@ -424,7 +424,7 @@ func (a *Api) BatchGetDataBoundary(ctx context.Context,
 	}, nil
 }
 
-func (a *Api) GetLocation(ctx context.Context, in *data.DeviceLocationRequest) (
+func (a *Api) GetLocation(ctx context.Context, in *sensor.DeviceIdParam) (
 	*struct {
 		Status int
 		Body   data.DeviceLocationResponse
@@ -457,10 +457,8 @@ func (a *Api) BatchGetLocation(ctx context.Context, in *struct {
 }, error) {
 	logFromTag(ctx, in.Body)
 	batch, err := sensor.BatchFactory(ctx, in.Body.DeviceIds,
-		func(d sensor.DeviceId) data.DeviceLocationRequest {
-			return data.DeviceLocationRequest{
-				DeviceIdParam: sensor.DeviceIdParam{DeviceId: d},
-			}
+		func(d sensor.DeviceId) sensor.DeviceIdParam {
+			return sensor.DeviceIdParam{DeviceId: d}
 		},
 		a.getLocation)
 	if err != nil {
