@@ -368,6 +368,9 @@ func (a *Api) getDataBoundary(ctx context.Context, in data.DataBoundaryRequest) 
 		if errors.Is(err, sensor.NoData) {
 			return nil, err
 		}
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, err
+		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getSensorDataBoundary.dataFetcher.getDataBoundary"},
 			"error.message": {err.Error()}})

@@ -408,6 +408,9 @@ func (a *Api) GetDataBoundary(ctx context.Context, in *data.DataBoundaryRequest)
 		if errors.Is(err, sensor.NoData) {
 			return &data.DataBoundaryResponse{Status: http.StatusNoContent}, nil
 		}
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("Not Found.")
+		}
 		return nil, err
 	}
 	if len(db) != 1 {

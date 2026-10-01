@@ -2872,11 +2872,11 @@ func TestCheckOlderThanNinetyDays(t *testing.T) {
 func TestGetDataBoundary(t *testing.T) {
 	tests := map[string]struct {
 		MockApi
-		want       data.DataBoundary
-		req        data.DataBoundaryRequest
-		token      string
-		wantStatus int
-		wantErr    bool
+		want                             data.DataBoundary
+		req                              data.DataBoundaryRequest
+		token                            string
+		wantStatus                       int
+		wantErr, disconnectedDataFetcher bool
 	}{
 
 		"user get deviceid data boundary": {
@@ -3141,6 +3141,7 @@ func TestGetDataBoundary(t *testing.T) {
 		},
 
 		"no data": {
+			wantErr:    true,
 			wantStatus: http.StatusNoContent,
 			want:       data.DataBoundary{},
 			token:      ValidToken,
@@ -3183,6 +3184,93 @@ func TestGetDataBoundary(t *testing.T) {
 			},
 		},
 
+		"bad connection": {
+			wantStatus:              http.StatusInternalServerError,
+			disconnectedDataFetcher: true,
+			want:                    data.DataBoundary{},
+			token:                   ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []data.SensorData{},
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []sensor.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []sensor.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			req: data.DataBoundaryRequest{
+				DeviceIdParam: sensor.DeviceIdParam{DeviceId: RegisteredDeviceId},
+			},
+		},
+
+		"deviceId not found": {
+			wantStatus: http.StatusNotFound,
+			want:       data.DataBoundary{},
+			token:      ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []data.SensorData{},
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []sensor.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []sensor.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			req: data.DataBoundaryRequest{
+				DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
+			},
+		},
+
 		"unknown token": {
 			wantErr:    true,
 			wantStatus: http.StatusUnauthorized,
@@ -3197,6 +3285,12 @@ func TestGetDataBoundary(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			api, closeFunc := tc.MockApi.Setup(t)
 			defer closeFunc()
+			if tc.disconnectedDataFetcher {
+				testFlux, err := data.NewTestingInflux("../../config.yml")
+				require.Nil(t, err)
+				testFlux.BadConnQueryApi()
+				api.DataFetcher = testFlux
+			}
 			humaTest := setupHuma(t, api)
 			route := "/device/" + tc.req.DeviceId.String() + "/databoundary"
 			route += fmt.Sprintf(`?timezone-return=%s`, tc.req.Timezone.Timezone)
