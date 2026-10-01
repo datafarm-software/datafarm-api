@@ -41,7 +41,7 @@ func (a *Api) GetLatestSensorData(ctx context.Context,
 	in *data.LatestSensorDataRequest) (
 	out *data.LatestSensorDataResponse, err error) {
 	logFromTag(ctx, in)
-	sensorData, err := a.getLatestSensorData(ctx, in)
+	sensorData, err := a.getLatestSensorData(ctx, *in)
 	if err != nil {
 		if errors.Is(err, sensor.NoData) {
 			return &data.LatestSensorDataResponse{
@@ -50,9 +50,13 @@ func (a *Api) GetLatestSensorData(ctx context.Context,
 		}
 		return nil, err
 	}
+	if len(sensorData) != 1 {
+		return nil, huma.Error500InternalServerError(
+			"Unexpected error while getting Latest SensorData.")
+	}
 	return &data.LatestSensorDataResponse{
 		Status: http.StatusOK,
-		Body:   sensorData,
+		Body:   sensorData[0],
 	}, nil
 }
 
@@ -64,33 +68,24 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 	Body   *data.BatchSensorDataResponse
 }, error) {
 	logFromTag(ctx, in.Body)
-	var dataReq *data.SensorDataRequest
-	var deviceErr data.SensorDataError
-	var sds data.SensorDataSlice
-	var err error
-	var onlyDataMissingErrors = true
-	errSlice := make([]data.SensorDataError, 0, len(in.Body.Hardware))
-	resultSlice := make(data.SensorDataSlice, 0, len(in.Body.Hardware))
-	for _, hw := range in.Body.Hardware {
-		dataReq = &data.SensorDataRequest{
-			Hardware:  hw,
-			TimeFrame: in.Body.TimeFrame,
-		}
-		sds, err = a.getSensorData(ctx, dataReq)
-		if err == nil {
-			resultSlice = append(resultSlice, sds...)
-		} else {
-			if !errors.Is(err, sensor.NoData) {
-				onlyDataMissingErrors = false
-				if errors.Is(err, sensor.NoConnection) {
-					break
-				}
+	batch, err := sensor.BatchFactory(ctx, in.Body.Hardware,
+		func(hw sensor.Hardware) data.SensorDataRequest {
+			return data.SensorDataRequest{
+				Hardware: hw, TimeFrame: data.TimeFrame{
+					Start:    in.Body.Start,
+					Stop:     in.Body.Stop,
+					Timezone: in.Body.Timezone,
+				},
 			}
-			deviceErr.DeviceId = hw.DeviceIdParam.DeviceId
-			deviceErr.Error = err.Error()
-			errSlice = append(errSlice, deviceErr)
+		},
+		a.getSensorData,
+	)
+	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError("Database Disconnected.")
 		}
-		err = nil
+		return nil, huma.Error500InternalServerError(
+			"Unexpected internal error while getting SensorData.")
 	}
 	resp := &struct {
 		Status int
@@ -98,14 +93,11 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 	}{
 		Status: http.StatusOK,
 		Body: &data.BatchSensorDataResponse{
-			Results: resultSlice,
-			Errors:  errSlice,
+			Results: batch.Results,
+			Errors:  batch.Errors,
 		},
 	}
-	if errors.Is(err, sensor.NoConnection) {
-		return nil, huma.Error500InternalServerError("Database Disconnected.")
-	}
-	if len(resultSlice) < 1 && onlyDataMissingErrors {
+	if len(batch.Results) < 1 && batch.OnlyDataMissingErrors {
 		resp.Status = http.StatusNoContent
 		resp.Body = nil
 	}

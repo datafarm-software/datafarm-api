@@ -177,9 +177,9 @@ func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, d
 }
 
 func (a *Api) getSensorData(
-	ctx context.Context, in *data.SensorDataRequest) (
+	ctx context.Context, in data.SensorDataRequest) (
 	sensorData data.SensorDataSlice, err error) {
-	if err = formatTimestamp(in); err != nil {
+	if err = formatTimestamp(&in); err != nil {
 		return nil, err
 	}
 	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceIdParam.DeviceId,
