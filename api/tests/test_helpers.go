@@ -101,14 +101,16 @@ func (m MockApi) Setup(t *testing.T) (*api.Api, CloseFunc) {
 	require.Nil(t, err)
 	a.DeviceInfo = testingRedis
 	a.AuthStore = testingRedis
-	a.DataFetcher, err = data.NewTestingInflux("../../config.yml")
-	require.Nil(t, err)
-	err = a.DataFetcher.PrepareDb(&m.mockDeviceInfo, m.mockDataFetcher)
-	require.Nil(t, err)
 	err = testingRedis.PrepareDeviceInfo(m.mockDeviceInfo)
 	require.Nil(t, err)
 	err = testingRedis.PrepareAuthStore(m.mockAuthStore)
 	require.Nil(t, err)
+	if m.mockDataFetcher != nil {
+		a.DataFetcher, err = data.NewTestingInflux("../../config.yml")
+		require.Nil(t, err)
+		err = a.DataFetcher.PrepareDb(&m.mockDeviceInfo, m.mockDataFetcher)
+		require.Nil(t, err)
+	}
 	return a, func() {
 		db.Close()
 		if a.TokenProvider != nil {

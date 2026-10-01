@@ -255,8 +255,13 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Summary = "Batch Get DeviceId QueryFields"
 	op.Description =
 		"Clients can use this route to request QueryFields from multiple DeviceIds."
-	op.Responses["500"] = &huma.Response{}
-	op.Responses["404"] = &huma.Response{}
+	fh = FiveHundredExample()
+	fh.Detail =
+		"Database disconnected."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	op.Responses["404"] = &huma.Response{
+		Description: "No DeviceIds Found.",
+	}
 	huma.Register(api, op, ho.BatchGetQueryFields)
 
 	op = baseOperation("POST", &allMw)

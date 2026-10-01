@@ -3,12 +3,14 @@ package sensor
 import (
 	"context"
 	"errors"
+	"log"
 	"time"
 )
 
 var NoData = errors.New("No Data")
 var NoConnection = errors.New("No Connection")
 var NoLocation = errors.New("No Location")
+var NotFound = errors.New("Not Found")
 
 type DeviceId string
 
@@ -108,7 +110,11 @@ func BatchFactory[Item BatchItem, Request, Result any, Results ~[]Result](
 			batch.Results = append(batch.Results, results...)
 			continue
 		}
+		log.Printf("err: %v, NotFound: %v", err, errors.Is(err, NotFound))
 		if errors.Is(err, NoConnection) {
+			return BatchResult[Result]{}, err
+		}
+		if errors.Is(err, NotFound) {
 			return BatchResult[Result]{}, err
 		}
 		if !errors.Is(err, NoData) {

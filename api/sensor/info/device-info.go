@@ -1,8 +1,6 @@
 package info
 
 import (
-	"errors"
-
 	"github.com/datafarm-software/datafarm-api/api/sensor"
 )
 
@@ -17,8 +15,6 @@ const (
 	DevicesInNetwork
 	AllDevices
 )
-
-var NotFound = errors.New("not found")
 
 type ScopeRestriction struct {
 	Scope   Scope
@@ -55,6 +51,7 @@ type TestingDeviceInfoFetcher interface {
 type Fetcher interface {
 	TestingDeviceInfoFetcher
 	Close() error
+	//NOTE: could return err: NotFound
 	GetQueryFields(sensor.DeviceId) (QueryFields, error)
 	//NOTE: could return err: NotFound
 	GetCompany(sensor.DeviceId) (string, error)

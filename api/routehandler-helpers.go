@@ -140,8 +140,8 @@ func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, d
 	di = sensor.Device{DeviceId: deviceId}
 	deviceCompany, err := a.DeviceInfo.GetCompany(deviceId)
 	if err != nil {
-		if errors.Is(err, info.NotFound) {
-			return di, huma.Error404NotFound("Device Not Found.")
+		if errors.Is(err, sensor.NotFound) {
+			return di, err
 		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"checkAccess.deviceInfo.getCompany"},
@@ -157,8 +157,8 @@ func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, d
 	}
 	deviceNetwork, err := a.DeviceInfo.GetNetwork(deviceId)
 	if err != nil {
-		if errors.Is(err, info.NotFound) {
-			return di, huma.Error404NotFound("Device Not Found.")
+		if errors.Is(err, sensor.NotFound) {
+			return di, err
 		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"checkAccess.deviceInfo.getNetwork"},
@@ -204,6 +204,9 @@ func (a *Api) getSensorData(
 		}
 		qf, err := a.DeviceInfo.GetQueryFields(in.Hardware.DeviceIdParam.DeviceId)
 		if err != nil {
+			if errors.Is(err, sensor.NotFound) {
+				return nil, err
+			}
 			log.AddMetadata(logging.Metadata{
 				"source":        {"getSensorData.deviceInfo.getQueryFields"},
 				"error.message": {err.Error()}})
@@ -256,6 +259,9 @@ func (a *Api) getLatestSensorData(
 		}
 		qf, err := a.DeviceInfo.GetQueryFields(in.Hardware.DeviceIdParam.DeviceId)
 		if err != nil {
+			if errors.Is(err, sensor.NotFound) {
+				return nil, err
+			}
 			log.AddMetadata(logging.Metadata{
 				"source":        {"getSensorData.deviceInfo.getQueryFields"},
 				"error.message": {err.Error()}})
@@ -297,6 +303,9 @@ func (a *Api) getQueryFields(ctx context.Context, in sensor.DeviceIdParam) (
 	}
 	qf, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
 	if err != nil {
+		if errors.Is(err, sensor.NotFound) {
+			return nil, err
+		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getQueryFields.deviceInfo.getQueryFields"},
 			"error.message": {err.Error()}})

@@ -303,6 +303,9 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 		if errors.Is(err, sensor.NoConnection) {
 			return nil, huma.Error500InternalServerError("Database Disconnected.")
 		}
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("DeviceIds Not Found.")
+		}
 		return nil, huma.Error500InternalServerError(
 			"Unexpected internal error while getting SensorData.")
 	}

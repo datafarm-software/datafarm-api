@@ -19,7 +19,13 @@ func (r *Redis) GetQueryFields(deviceId sensor.DeviceId) (info.QueryFields, erro
 	var err error
 	qf, err = r.db.SMembers(ctx, "queryFields:"+string(deviceId)).Result()
 	if err != nil {
+		if err == redis.Nil {
+			return info.QueryFields{}, sensor.NotFound
+		}
 		err = fmt.Errorf("redis smembers: %v", err)
+	}
+	if len(qf) < 1 {
+		err = sensor.NotFound
 	}
 	return info.QueryFields{
 		DeviceId:    deviceId,
@@ -31,19 +37,20 @@ func (r *Redis) GetCompany(deviceId sensor.DeviceId) (string, error) {
 	company, err := r.db.HGet(ctx, "fieldUnit:"+string(deviceId), "company").Result()
 	if err != nil {
 		if err == redis.Nil {
-			return "", info.NotFound
+			return "", sensor.NotFound
 		}
-		return "", err
 	}
-	return company, nil
+	return company, err
 }
 
 func (r *Redis) GetNetwork(deviceId sensor.DeviceId) (string, error) {
 	network, err := r.db.HGet(ctx, "fieldUnit:"+string(deviceId), "network").Result()
 	if err != nil {
-		return "", err
+		if err == redis.Nil {
+			return "", sensor.NotFound
+		}
 	}
-	return network, nil
+	return network, err
 }
 
 func (r *Redis) GetDevices(sr info.ScopeRestriction) ([]string, error) {
