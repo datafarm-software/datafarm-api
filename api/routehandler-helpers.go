@@ -368,27 +368,27 @@ func (a *Api) getDataBoundary(ctx context.Context, in data.DataBoundaryRequest) 
 	return data.DataBoundarySlice{db}, nil
 }
 
-func (a *Api) getLocation(ctx context.Context, in *data.DeviceLocationRequest) (
-	loc data.DeviceLocationResponse, err error) {
+func (a *Api) getLocation(ctx context.Context, in data.DeviceLocationRequest) (
+	data.DeviceLocationResponseSlice, error) {
 	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetDataBoundary)
 	if err != nil {
-		return loc, err
+		return nil, err
 	}
 	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
 	if !ok {
-		return loc, huma.Error500InternalServerError(
+		return nil, huma.Error500InternalServerError(
 			"Internal error while getting request log.")
 	}
-	loc, err = a.DataFetcher.GetLocation(di)
+	loc, err := a.DataFetcher.GetLocation(di)
 	if err != nil {
 		if errors.Is(err, sensor.NoLocation) {
-			return loc, err
+			return nil, err
 		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getLocation.dataFetcher.getLocation"},
 			"error.message": {err.Error()}})
-		return loc, huma.Error500InternalServerError(
+		return nil, huma.Error500InternalServerError(
 			"Internal error getting Location.")
 	}
-	return
+	return data.DeviceLocationResponseSlice{loc}, nil
 }

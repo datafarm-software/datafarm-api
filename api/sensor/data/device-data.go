@@ -228,6 +228,8 @@ type DeviceLocationRequest struct {
 	sensor.DeviceIdParam
 }
 
+type DeviceLocationResponseSlice []DeviceLocationResponse
+
 type DeviceLocationResponse struct {
 	DeviceId  string    `json:"deviceId"`
 	Time      time.Time `json:"time" doc:"Time the latest Location was reported."`

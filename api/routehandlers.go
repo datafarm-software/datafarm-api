@@ -21,7 +21,7 @@ import (
 func (a *Api) GetSensorData(ctx context.Context,
 	in *data.SensorDataRequest) (out *data.SensorDataResponse, err error) {
 	logFromTag(ctx, in)
-	sensorData, err := a.getSensorData(ctx, in)
+	sensorData, err := a.getSensorData(ctx, *in)
 	if err != nil {
 		if errors.Is(err, sensor.NoData) {
 			return &data.SensorDataResponse{Status: http.StatusNoContent}, nil
@@ -430,7 +430,7 @@ func (a *Api) GetLocation(ctx context.Context, in *data.DeviceLocationRequest) (
 		Body   data.DeviceLocationResponse
 	}, error) {
 	logFromTag(ctx, in)
-	loc, err := a.getLocation(ctx, in)
+	loc, err := a.getLocation(ctx, *in)
 	if err != nil {
 		if !errors.Is(err, sensor.NoLocation) {
 			return nil, err
@@ -440,10 +440,14 @@ func (a *Api) GetLocation(ctx context.Context, in *data.DeviceLocationRequest) (
 			Body   data.DeviceLocationResponse
 		}{http.StatusNoContent, data.DeviceLocationResponse{}}, nil
 	}
+	if len(loc) != 1 {
+		return nil, huma.Error500InternalServerError(
+			"Unexpected internal error while getting Location.")
+	}
 	return &struct {
 		Status int
 		Body   data.DeviceLocationResponse
-	}{http.StatusOK, loc}, nil
+	}{http.StatusOK, loc[0]}, nil
 }
 
 func (a *Api) BatchGetLocation(ctx context.Context, in *struct {
@@ -452,29 +456,26 @@ func (a *Api) BatchGetLocation(ctx context.Context, in *struct {
 	Body data.BatchLocationResponse
 }, error) {
 	logFromTag(ctx, in.Body)
-	var lr data.DeviceLocationRequest
-	var dataResp data.DeviceLocationResponse
-	var deviceErr data.BatchError
-	var err error
-	errSlice := make([]data.BatchError, 0, len(in.Body.DeviceIds))
-	resultSlice := make([]data.DeviceLocationResponse, 0, len(in.Body.DeviceIds))
-	for _, deviceId := range in.Body.DeviceIds {
-		lr.DeviceId = deviceId
-		dataResp, err = a.getLocation(ctx, &lr)
-		if err == nil {
-			resultSlice = append(resultSlice, dataResp)
-		} else {
-			deviceErr.DeviceId = deviceId
-			deviceErr.Error = err.Error()
-			errSlice = append(errSlice, deviceErr)
+	batch, err := sensor.BatchFactory(ctx, in.Body.DeviceIds,
+		func(d sensor.DeviceId) data.DeviceLocationRequest {
+			return data.DeviceLocationRequest{
+				DeviceIdParam: sensor.DeviceIdParam{DeviceId: d},
+			}
+		},
+		a.getLocation)
+	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError("Database Disconnected.")
 		}
+		return nil, huma.Error500InternalServerError(
+			"Unexpected internal error while getting Locations.")
 	}
 	return &struct {
 		Body data.BatchLocationResponse
 	}{
 		Body: data.BatchLocationResponse{
-			Results: resultSlice,
-			Errors:  errSlice,
+			Results: batch.Results,
+			Errors:  batch.Errors,
 		},
 	}, nil
 }
