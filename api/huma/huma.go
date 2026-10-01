@@ -230,7 +230,9 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	fh.Detail =
 		"Database disconnected."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
-	op.Responses["404"] = &huma.Response{}
+	op.Responses["404"] = &huma.Response{
+		Description: "No DeviceIds Found.",
+	}
 	op.Responses["204"] = &huma.Response{
 		Description: "No SensorData for any DeviceId requested in the time period.",
 	}

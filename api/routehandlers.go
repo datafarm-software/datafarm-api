@@ -84,6 +84,9 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 		a.getSensorData,
 	)
 	if err != nil {
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("No DeviceIds Found.")
+		}
 		if errors.Is(err, sensor.NoConnection) {
 			return nil, huma.Error500InternalServerError("Database Disconnected.")
 		}
