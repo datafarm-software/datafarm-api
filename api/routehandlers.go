@@ -43,6 +43,9 @@ func (a *Api) GetLatestSensorData(ctx context.Context,
 	logFromTag(ctx, in)
 	sensorData, err := a.getLatestSensorData(ctx, *in)
 	if err != nil {
+		if errors.Is(err, sensor.NotFound) {
+			return nil, err
+		}
 		if errors.Is(err, sensor.NoData) {
 			return &data.LatestSensorDataResponse{
 				Status: http.StatusNoContent,
@@ -122,6 +125,9 @@ func (a *Api) BatchGetLatestSensorData(ctx context.Context,
 		a.getLatestSensorData,
 	)
 	if err != nil {
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("No DeviceIds Found.")
+		}
 		if errors.Is(err, sensor.NoConnection) {
 			return nil, huma.Error500InternalServerError("Database Disconnected.")
 		}

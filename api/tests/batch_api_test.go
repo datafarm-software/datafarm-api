@@ -1355,6 +1355,62 @@ func TestBatchGetLatestSensorData(t *testing.T) {
 			},
 		},
 
+		"no deviceIds found": {
+			wantErr:    true,
+			wantStatus: http.StatusNotFound,
+			want:       data.BatchSensorDataResponse{},
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDataFetcher: []data.SensorData{},
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []sensor.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []sensor.DeviceToQueryFields{
+						{
+							DeviceId: RegisteredDeviceId,
+							QueryFields: []string{
+								RegisteredQueryField, AnotherRegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+			token: ValidToken,
+			deviceRequests: data.BatchLatestSensorDataRequest{
+				Hardware: []sensor.Hardware{
+					{
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: AnotherRegisteredDeviceId},
+						QueryFields: []string{
+							RegisteredQueryField, AnotherRegisteredQueryField},
+					},
+					{
+						DeviceIdParam: sensor.DeviceIdParam{DeviceId: "device3"},
+						QueryFields: []string{
+							RegisteredQueryField, AnotherRegisteredQueryField},
+					},
+				},
+			},
+		},
+
 		"no data on all deviceids requested": {
 			wantStatus: http.StatusNoContent,
 			want:       data.BatchSensorDataResponse{},
