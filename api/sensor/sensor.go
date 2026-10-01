@@ -12,7 +12,7 @@ var NoLocation = errors.New("No Location")
 
 type DeviceId string
 
-func (d DeviceId) DeviceId() string { return string(d) }
+func (d DeviceId) DeviceId() DeviceId { return d }
 
 type DeviceIds []DeviceId
 
@@ -63,12 +63,12 @@ type Batch struct {
 
 // NOTE: this is exactly the same as deviceinfo.QueryFieldsError struct
 type BatchError struct {
-	DeviceId string `json:"deviceId"`
-	Error    string `json:"error"`
+	DeviceId DeviceId `json:"deviceId"`
+	Error    string   `json:"error"`
 }
 
 type BatchItem interface {
-	DeviceId() string
+	DeviceId() DeviceId
 }
 
 type BatchResult[T any] struct {

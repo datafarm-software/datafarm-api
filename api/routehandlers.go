@@ -274,7 +274,7 @@ func (a *Api) Login(ctx context.Context,
 	return &tokenprovider.LoginResponse{Body: ut.Token}, nil
 }
 
-func (a *Api) GetQueryFields(ctx context.Context, in *info.QueryFieldsRequest) (
+func (a *Api) GetQueryFields(ctx context.Context, in *sensor.DeviceIdParam) (
 	*info.QueryFieldsResponse, error) {
 	logFromTag(ctx, in)
 	queryFields, err := a.getQueryFields(ctx, *in)
@@ -294,8 +294,8 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 }, error) {
 	logFromTag(ctx, in)
 	batch, err := sensor.BatchFactory(ctx, in.Body.DeviceIds,
-		func(d sensor.DeviceId) info.QueryFieldsRequest {
-			return info.QueryFieldsRequest{DeviceId: d.DeviceId()}
+		func(d sensor.DeviceId) sensor.DeviceIdParam {
+			return sensor.DeviceIdParam{DeviceId: d}
 		},
 		a.getQueryFields,
 	)

@@ -284,7 +284,7 @@ func (a *Api) getLatestSensorData(
 	return data.SensorDataSlice{sd}, nil
 }
 
-func (a *Api) getQueryFields(ctx context.Context, in info.QueryFieldsRequest) (
+func (a *Api) getQueryFields(ctx context.Context, in sensor.DeviceIdParam) (
 	info.QueryFieldSlice, error) {
 	_, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetAllQueryFields)
 	if err != nil {

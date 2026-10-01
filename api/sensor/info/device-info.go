@@ -30,10 +30,6 @@ type QueryFieldsResponse struct {
 	Body QueryFields
 }
 
-type QueryFieldsRequest struct {
-	DeviceId string `log:"deviceid" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-}
-
 type BatchQueryFieldsRequest struct{ Body sensor.Batch }
 
 type QueryFieldSlice []QueryFields
@@ -59,11 +55,11 @@ type TestingDeviceInfoFetcher interface {
 type Fetcher interface {
 	TestingDeviceInfoFetcher
 	Close() error
-	GetQueryFields(deviceId string) (QueryFields, error)
+	GetQueryFields(sensor.DeviceId) (QueryFields, error)
 	//NOTE: could return err: NotFound
-	GetCompany(deviceId string) (string, error)
+	GetCompany(sensor.DeviceId) (string, error)
 	//NOTE: could return err: NotFound
-	GetNetwork(deviceId string) (string, error)
+	GetNetwork(sensor.DeviceId) (string, error)
 	GetDevices(ScopeRestriction) ([]string, error)
 }
 
