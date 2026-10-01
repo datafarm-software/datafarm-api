@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/datafarm-software/datafarm-api/api/device"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
 	cfy "github.com/geraud22/config-from-yaml"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxApi "github.com/influxdata/influxdb-client-go/v2/api"
@@ -60,7 +60,7 @@ func (i *InfluxDatafetcher) Close() error {
 	return nil
 }
 
-func (i *InfluxDatafetcher) GetData(metadata device.Device) (
+func (i *InfluxDatafetcher) GetData(metadata sensor.Device) (
 	sd SensorDataSlice, err error) {
 	if metadata.Timezone == nil {
 		return SensorDataSlice{}, fmt.Errorf("nil timezone")
@@ -75,7 +75,7 @@ func (i *InfluxDatafetcher) GetData(metadata device.Device) (
 		return sd, fmt.Errorf("query: %w", err)
 	}
 	if len(sd) < 1 {
-		return sd, device.NoData
+		return sd, sensor.NoData
 	}
 	return sd, nil
 }
@@ -84,7 +84,7 @@ func (i *InfluxDatafetcher) dataRows(ctx context.Context, query string) ([]DataR
 	result, err := i.queryApi.Query(ctx, query)
 	if err != nil {
 		if strings.Contains(err.Error(), "connect:") {
-			return nil, device.NoConnection
+			return nil, sensor.NoConnection
 		}
 		return nil, fmt.Errorf("error querying influxdb: %v", err)
 	}
@@ -109,7 +109,7 @@ func (i *InfluxDatafetcher) sensorDataSlice(
 	return
 }
 
-func (i *InfluxDatafetcher) GetLatestData(metadata device.Device) (
+func (i *InfluxDatafetcher) GetLatestData(metadata sensor.Device) (
 	sd SensorData, err error) {
 	qb := strings.Builder{}
 	fmt.Fprintf(&qb, `from(bucket: "%s")`, metadata.Network)
@@ -131,12 +131,12 @@ func (i *InfluxDatafetcher) GetLatestData(metadata device.Device) (
 		return sd, err
 	}
 	if len(sdSlice) < 1 {
-		return sd, device.NoData
+		return sd, sensor.NoData
 	}
 	return sdSlice[0], nil
 }
 
-func (i *InfluxDatafetcher) generateFluxQuery(metadata device.Device, queryRange string) string {
+func (i *InfluxDatafetcher) generateFluxQuery(metadata sensor.Device, queryRange string) string {
 	var queryBuilder strings.Builder
 	fmt.Fprintf(&queryBuilder, `from(bucket: "%s")`, metadata.Network)
 	fmt.Fprintf(&queryBuilder, ` |> range(%s)`, queryRange)
@@ -232,7 +232,7 @@ func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string
 	return fmt.Sprintf("start: %s", startTime), nil
 }
 
-func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo device.Device) (
+func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo sensor.Device) (
 	DataBoundary, error) {
 	dataBoundary := DataBoundary{DeviceId: deviceInfo.DeviceId}
 	if deviceInfo.Timezone == nil {
@@ -255,14 +255,14 @@ func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo device.Device) (
 		return dataBoundary, fmt.Errorf("error processing query result: %v", err)
 	}
 	if len(dataRows) < 2 {
-		return dataBoundary, device.NoData
+		return dataBoundary, sensor.NoData
 	}
 	dataBoundary.Start = dataRows[0].Time.In(deviceInfo.Timezone)
 	dataBoundary.Stop = dataRows[1].Time.In(deviceInfo.Timezone)
 	return dataBoundary, nil
 }
 
-func (i *InfluxDatafetcher) GetLocation(deviceInfo device.Device) (
+func (i *InfluxDatafetcher) GetLocation(deviceInfo sensor.Device) (
 	loc DeviceLocationResponse, err error) {
 	queryBuilder := strings.Builder{}
 	fmt.Fprintf(&queryBuilder, `data = from(bucket: "%s") `, deviceInfo.Network)
@@ -280,7 +280,7 @@ func (i *InfluxDatafetcher) GetLocation(deviceInfo device.Device) (
 		return loc, fmt.Errorf("error processing query result: %v", err)
 	}
 	if len(dataRows) != 2 {
-		return loc, device.NoLocation
+		return loc, sensor.NoLocation
 	}
 	var ok bool
 	if strings.Contains(dataRows[0].Field, "latitude") {
@@ -291,14 +291,14 @@ func (i *InfluxDatafetcher) GetLocation(deviceInfo device.Device) (
 		loc.Longitude, ok = dataRows[0].Value.(float64)
 	}
 	if !ok {
-		err = device.NoLocation
+		err = sensor.NoLocation
 	}
 	loc.DeviceId = deviceInfo.DeviceId
 	loc.Time = dataRows[0].Time
 	return
 }
 
-func (i *InfluxDatafetcher) PrepareDb(*device.Schema, SensorDataSlice) error {
+func (i *InfluxDatafetcher) PrepareDb(*sensor.Schema, SensorDataSlice) error {
 	return nil
 }
 
@@ -367,7 +367,7 @@ func (t *TestingInflux) Close() error {
 	return t.influx.Close()
 }
 
-func (t *TestingInflux) PrepareDb(allDevicesInfo *device.Schema, sensorData SensorDataSlice) error {
+func (t *TestingInflux) PrepareDb(allDevicesInfo *sensor.Schema, sensorData SensorDataSlice) error {
 	if allDevicesInfo == nil {
 		return nil
 	}
@@ -400,7 +400,7 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *device.Schema, sensorData Sens
 	}
 	var writeApi influxApi.WriteAPI
 	var ok bool
-	var deviceInfo device.Device
+	var deviceInfo sensor.Device
 	for _, sd := range sensorData {
 		fields := make(map[string]any, len(sd.SensorData))
 		for key, value := range sd.SensorData {
@@ -433,9 +433,9 @@ func (t *TestingInflux) BadConnQueryApi() {
 	t.influx.queryApi = &BadConnQueryApi{QueryAPI: t.influx.queryApi}
 }
 
-func deviceInfoMap(allDevicesInfo *device.Schema) map[string]device.Device {
-	deviceInfoMap := make(map[string]device.Device)
-	var di device.Device
+func deviceInfoMap(allDevicesInfo *sensor.Schema) map[string]sensor.Device {
+	deviceInfoMap := make(map[string]sensor.Device)
+	var di sensor.Device
 	for _, dd := range allDevicesInfo.DeviceNetworks {
 		di = deviceInfoMap[dd.DeviceId]
 		di.Network = dd.Network
@@ -449,22 +449,22 @@ func deviceInfoMap(allDevicesInfo *device.Schema) map[string]device.Device {
 	return deviceInfoMap
 }
 
-func (t *TestingInflux) GetData(metadata device.Device) (
+func (t *TestingInflux) GetData(metadata sensor.Device) (
 	SensorDataSlice, error) {
 	return t.influx.GetData(metadata)
 }
 
-func (t *TestingInflux) GetLatestData(metadata device.Device) (
+func (t *TestingInflux) GetLatestData(metadata sensor.Device) (
 	SensorData, error) {
 	return t.influx.GetLatestData(metadata)
 }
 
-func (t *TestingInflux) GetDataBoundary(deviceInfo device.Device) (
+func (t *TestingInflux) GetDataBoundary(deviceInfo sensor.Device) (
 	DataBoundary, error) {
 	return t.influx.GetDataBoundary(deviceInfo)
 }
 
-func (t *TestingInflux) GetLocation(deviceInfo device.Device) (
+func (t *TestingInflux) GetLocation(deviceInfo sensor.Device) (
 	DeviceLocationResponse, error) {
 	return t.influx.GetLocation(deviceInfo)
 }

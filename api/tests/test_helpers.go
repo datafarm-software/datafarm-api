@@ -13,10 +13,10 @@ import (
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/datafarm-software/datafarm-api/api"
 	"github.com/datafarm-software/datafarm-api/api/authstore"
-	"github.com/datafarm-software/datafarm-api/api/device"
-	"github.com/datafarm-software/datafarm-api/api/device/data"
 	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
 	"github.com/datafarm-software/datafarm-api/api/redis"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
+	"github.com/datafarm-software/datafarm-api/api/sensor/data"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 	"github.com/datafarm-software/telemetry/logging"
 	"github.com/datafarm-software/telemetry/metering"
@@ -72,7 +72,7 @@ var considerTimeZone = cmp.Comparer(func(x, y time.Time) bool {
 var cmpOpts = []cmp.Option{considerTimeZone}
 
 type MockApi struct {
-	mockDeviceInfo  device.Schema
+	mockDeviceInfo  sensor.Schema
 	mockAuthStore   authstore.Schema
 	mockDataFetcher []data.SensorData
 	mockTokens      map[string]bool

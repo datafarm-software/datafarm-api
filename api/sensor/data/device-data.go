@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/datafarm-software/datafarm-api/api/device"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
 )
 
 var EmptySensorData = errors.New("empty sensor data")
@@ -234,7 +234,7 @@ type BatchError struct {
 }
 
 type BatchDataBoundaryRequest struct {
-	device.Batch
+	sensor.Batch
 	Timezone
 }
 
@@ -255,7 +255,7 @@ type DeviceLocationResponse struct {
 }
 
 type BatchLocationRequest struct {
-	device.Batch
+	sensor.Batch
 }
 
 type BatchLocationResponse struct {
@@ -264,18 +264,18 @@ type BatchLocationResponse struct {
 }
 
 type TestingDataFetcher interface {
-	PrepareDb(*device.Schema, SensorDataSlice) error
+	PrepareDb(*sensor.Schema, SensorDataSlice) error
 }
 
 type Fetcher interface {
 	TestingDataFetcher
 	//NOTE: could return NoData, NoConnection
-	GetData(metadata device.Device) (SensorDataSlice, error)
+	GetData(metadata sensor.Device) (SensorDataSlice, error)
 	//NOTE: could return NoData, NoConnection
-	GetLatestData(metadata device.Device) (SensorData, error)
+	GetLatestData(metadata sensor.Device) (SensorData, error)
 	//NOTE: could return NoData
-	GetDataBoundary(metadata device.Device) (DataBoundary, error)
+	GetDataBoundary(metadata sensor.Device) (DataBoundary, error)
 	//NOTE: could return NoLocation
-	GetLocation(metadata device.Device) (DeviceLocationResponse, error)
+	GetLocation(metadata sensor.Device) (DeviceLocationResponse, error)
 	Close() error
 }

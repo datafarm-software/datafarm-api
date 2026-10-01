@@ -3,14 +3,14 @@ package redis
 import (
 	"fmt"
 
-	"github.com/datafarm-software/datafarm-api/api/device"
-	"github.com/datafarm-software/datafarm-api/api/device/info"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
+	"github.com/datafarm-software/datafarm-api/api/sensor/info"
 	"github.com/redis/go-redis/v9"
 )
 
 const TestingDb = 13
 
-func (r *Redis) PrepareDeviceInfo(device.Schema) error {
+func (r *Redis) PrepareDeviceInfo(sensor.Schema) error {
 	return nil
 }
 

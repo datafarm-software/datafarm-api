@@ -12,9 +12,9 @@ import (
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/datafarm-software/datafarm-api/api"
 	"github.com/datafarm-software/datafarm-api/api/authstore"
-	"github.com/datafarm-software/datafarm-api/api/device"
-	"github.com/datafarm-software/datafarm-api/api/device/data"
-	"github.com/datafarm-software/datafarm-api/api/device/info"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
+	"github.com/datafarm-software/datafarm-api/api/sensor/data"
+	"github.com/datafarm-software/datafarm-api/api/sensor/info"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 )
@@ -138,14 +138,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -206,14 +206,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -265,14 +265,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -344,14 +344,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId: RegisteredDeviceId,
 							QueryFields: []string{
@@ -458,14 +458,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId: RegisteredDeviceId,
 							QueryFields: []string{
@@ -529,14 +529,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId: RegisteredDeviceId,
 							QueryFields: []string{
@@ -600,14 +600,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId: RegisteredDeviceId,
 							QueryFields: []string{
@@ -771,14 +771,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -923,14 +923,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -1007,14 +1007,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
@@ -1096,14 +1096,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -1183,14 +1183,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -1241,14 +1241,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -1299,14 +1299,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -1357,14 +1357,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -1423,14 +1423,14 @@ func TestGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -1528,14 +1528,14 @@ func TestGetLatestSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -1597,14 +1597,14 @@ func TestGetLatestSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -1653,14 +1653,14 @@ func TestGetLatestSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -1730,14 +1730,14 @@ func TestGetLatestSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId: RegisteredDeviceId,
 							QueryFields: []string{
@@ -1847,14 +1847,14 @@ func TestGetLatestSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId: RegisteredDeviceId,
 							QueryFields: []string{
@@ -1920,14 +1920,14 @@ func TestGetLatestSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId: RegisteredDeviceId,
 							QueryFields: []string{
@@ -1993,14 +1993,14 @@ func TestGetLatestSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId: RegisteredDeviceId,
 							QueryFields: []string{
@@ -2055,14 +2055,14 @@ func TestGetLatestSensorData(t *testing.T) {
 					},
 				},
 				mockDataFetcher: []data.SensorData{},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -2110,14 +2110,14 @@ func TestGetLatestSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -2165,14 +2165,14 @@ func TestGetLatestSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -2233,14 +2233,14 @@ func TestGetLatestSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -2402,14 +2402,14 @@ func TestGetQueryFields(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -2443,14 +2443,14 @@ func TestGetQueryFields(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -2487,14 +2487,14 @@ func TestGetQueryFields(t *testing.T) {
 				mockTokens: map[string]bool{
 					ValidToken: true,
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -2567,16 +2567,16 @@ func TestGetDeviceIds(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 						{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 						{DeviceId: AnotherRegisteredDeviceId, Network: AnotherRegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -2612,14 +2612,14 @@ func TestGetDeviceIds(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -2653,16 +2653,16 @@ func TestGetDeviceIds(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 						{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 						{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -2700,16 +2700,16 @@ func TestGetDeviceIds(t *testing.T) {
 						{Username: RegisteredUsername, Token: ValidToken},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 						{DeviceId: AnotherRegisteredDeviceId, Company: AnotherRegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 						{DeviceId: AnotherRegisteredDeviceId, Network: AnotherRegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -2833,14 +2833,14 @@ func TestGetDataBoundary(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -2898,14 +2898,14 @@ func TestGetDataBoundary(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -2964,14 +2964,14 @@ func TestGetDataBoundary(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -3029,14 +3029,14 @@ func TestGetDataBoundary(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -3072,14 +3072,14 @@ func TestGetDataBoundary(t *testing.T) {
 					},
 				},
 				mockDataFetcher: []data.SensorData{},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -3166,14 +3166,14 @@ func TestCsvGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -3225,14 +3225,14 @@ func TestCsvGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -3286,14 +3286,14 @@ func TestCsvGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
@@ -3356,14 +3356,14 @@ func TestCsvGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
@@ -3424,14 +3424,14 @@ func TestCsvGetSensorData(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField, AnotherRegisteredQueryField},
@@ -3519,14 +3519,14 @@ func TestGetLocation(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -3572,14 +3572,14 @@ func TestGetLocation(t *testing.T) {
 						SensorData: map[string]float64{},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -3624,14 +3624,14 @@ func TestGetLocation(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},
@@ -3676,14 +3676,14 @@ func TestGetLocation(t *testing.T) {
 						},
 					},
 				},
-				mockDeviceInfo: device.Schema{
-					DeviceCompanies: []device.DeviceToCompany{
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
 						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
 					},
-					DeviceNetworks: []device.DeviceToNetwork{
+					DeviceNetworks: []sensor.DeviceToNetwork{
 						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
 					},
-					DeviceToQF: []device.DeviceToQueryFields{
+					DeviceToQF: []sensor.DeviceToQueryFields{
 						{
 							DeviceId:    RegisteredDeviceId,
 							QueryFields: []string{RegisteredQueryField},

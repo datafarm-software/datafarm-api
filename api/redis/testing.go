@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/datafarm-software/datafarm-api/api/authstore"
-	"github.com/datafarm-software/datafarm-api/api/device"
-	"github.com/datafarm-software/datafarm-api/api/device/info"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
+	"github.com/datafarm-software/datafarm-api/api/sensor/info"
 	cfy "github.com/geraud22/config-from-yaml"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
@@ -113,7 +113,7 @@ func (t *TestingRedis) PrepareAuthStore(mockDb authstore.Schema) error {
 	return nil
 }
 
-func (t *TestingRedis) PrepareDeviceInfo(schema device.Schema) error {
+func (t *TestingRedis) PrepareDeviceInfo(schema sensor.Schema) error {
 	pfn := func(pipe redis.Pipeliner) error {
 		for _, d := range schema.DeviceCompanies {
 			pipe.SAdd(ctx, "allDevices", d.DeviceId)
@@ -140,8 +140,8 @@ func (t *TestingRedis) PrepareDeviceInfo(schema device.Schema) error {
 	return nil
 }
 
-func (t *TestingRedis) GetSnapshot() *device.Schema {
-	schema := &device.Schema{}
+func (t *TestingRedis) GetSnapshot() *sensor.Schema {
+	schema := &sensor.Schema{}
 	deviceIds, err := t.redis.db.SMembers(ctx, "deviceIds").Result()
 	if err != nil {
 		log.Printf("getting deviceIds: %v", err)
@@ -165,13 +165,13 @@ func (t *TestingRedis) GetSnapshot() *device.Schema {
 	for _, id := range deviceIds {
 		company = getStringCmd(cmdVec[id]["company"])
 		schema.DeviceCompanies = append(schema.DeviceCompanies,
-			device.DeviceToCompany{DeviceId: id, Company: company})
+			sensor.DeviceToCompany{DeviceId: id, Company: company})
 		network = getStringCmd(cmdVec[id]["network"])
 		schema.DeviceNetworks = append(schema.DeviceNetworks,
-			device.DeviceToNetwork{DeviceId: id, Network: network})
+			sensor.DeviceToNetwork{DeviceId: id, Network: network})
 		queryFields = getStringSliceCmd(cmdVec[id]["queryFields"])
 		schema.DeviceToQF = append(schema.DeviceToQF,
-			device.DeviceToQueryFields{DeviceId: id, QueryFields: queryFields})
+			sensor.DeviceToQueryFields{DeviceId: id, QueryFields: queryFields})
 	}
 
 	return schema

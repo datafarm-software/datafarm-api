@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/datafarm-software/datafarm-api/api/device/data"
+	"github.com/datafarm-software/datafarm-api/api/sensor/data"
 	"github.com/google/go-cmp/cmp"
 )
 

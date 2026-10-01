@@ -11,9 +11,9 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/datafarm-software/datafarm-api/api/authstore"
-	"github.com/datafarm-software/datafarm-api/api/device"
-	"github.com/datafarm-software/datafarm-api/api/device/data"
-	"github.com/datafarm-software/datafarm-api/api/device/info"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
+	"github.com/datafarm-software/datafarm-api/api/sensor/data"
+	"github.com/datafarm-software/datafarm-api/api/sensor/info"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 	"github.com/datafarm-software/telemetry/logging"
 )
@@ -23,7 +23,7 @@ func (a *Api) GetSensorData(ctx context.Context,
 	logFromTag(ctx, in)
 	sensorData, err := a.getSensorData(ctx, in)
 	if err != nil {
-		if errors.Is(err, device.NoData) {
+		if errors.Is(err, sensor.NoData) {
 			return &data.SensorDataResponse{Status: http.StatusNoContent}, nil
 		}
 		return nil, err
@@ -43,7 +43,7 @@ func (a *Api) GetLatestSensorData(ctx context.Context,
 	logFromTag(ctx, in)
 	sensorData, err := a.getLatestSensorData(ctx, in)
 	if err != nil {
-		if errors.Is(err, device.NoData) {
+		if errors.Is(err, sensor.NoData) {
 			return &data.LatestSensorDataResponse{
 				Status: http.StatusNoContent,
 			}, nil
@@ -80,9 +80,9 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 		if err == nil {
 			resultSlice = append(resultSlice, sds...)
 		} else {
-			if !errors.Is(err, device.NoData) {
+			if !errors.Is(err, sensor.NoData) {
 				onlyDataMissingErrors = false
-				if errors.Is(err, device.NoConnection) {
+				if errors.Is(err, sensor.NoConnection) {
 					break
 				}
 			}
@@ -102,7 +102,7 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 			Errors:  errSlice,
 		},
 	}
-	if errors.Is(err, device.NoConnection) {
+	if errors.Is(err, sensor.NoConnection) {
 		return nil, huma.Error500InternalServerError("Database Disconnected.")
 	}
 	if len(resultSlice) < 1 && onlyDataMissingErrors {
@@ -136,10 +136,10 @@ func (a *Api) BatchGetLatestSensorData(ctx context.Context,
 		if err == nil {
 			resultSlice = append(resultSlice, sds)
 		} else {
-			if errors.Is(err, device.NoConnection) {
+			if errors.Is(err, sensor.NoConnection) {
 				break
 			}
-			if !errors.Is(err, device.NoData) {
+			if !errors.Is(err, sensor.NoData) {
 				onlyDataMissingErrors = false
 			}
 			deviceErr.DeviceId = hw.DeviceId
@@ -147,7 +147,7 @@ func (a *Api) BatchGetLatestSensorData(ctx context.Context,
 			errSlice = append(errSlice, deviceErr)
 		}
 	}
-	if errors.Is(err, device.NoConnection) {
+	if errors.Is(err, sensor.NoConnection) {
 		return nil, huma.Error500InternalServerError("Database Disconnected.")
 	}
 	resp := &struct {
@@ -398,7 +398,7 @@ func (a *Api) GetDataBoundary(ctx context.Context, in *data.DataBoundaryRequest)
 	logFromTag(ctx, in)
 	db, err := a.getSensorDataBoundary(ctx, in)
 	if err != nil {
-		if errors.Is(err, device.NoData) {
+		if errors.Is(err, sensor.NoData) {
 			return &data.DataBoundaryResponse{Status: http.StatusNoContent}, nil
 		}
 		return nil, err
@@ -451,7 +451,7 @@ func (a *Api) GetLocation(ctx context.Context, in *data.DeviceLocationRequest) (
 	logFromTag(ctx, in)
 	loc, err := a.getLocation(ctx, in)
 	if err != nil {
-		if !errors.Is(err, device.NoLocation) {
+		if !errors.Is(err, sensor.NoLocation) {
 			return nil, err
 		}
 		return &struct {

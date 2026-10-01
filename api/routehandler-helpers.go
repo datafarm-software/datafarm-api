@@ -12,9 +12,9 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/datafarm-software/datafarm-api/api/authstore"
-	"github.com/datafarm-software/datafarm-api/api/device"
-	"github.com/datafarm-software/datafarm-api/api/device/data"
-	"github.com/datafarm-software/datafarm-api/api/device/info"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
+	"github.com/datafarm-software/datafarm-api/api/sensor/data"
+	"github.com/datafarm-software/datafarm-api/api/sensor/info"
 	"github.com/datafarm-software/telemetry/logging"
 )
 
@@ -136,8 +136,8 @@ func formatTimestamp(in *data.SensorDataRequest) (err error) {
 }
 
 func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, deviceId string) (
-	di device.Device, err error) {
-	di = device.Device{DeviceId: deviceId}
+	di sensor.Device, err error) {
+	di = sensor.Device{DeviceId: deviceId}
 	deviceCompany, err := a.DeviceInfo.GetCompany(deviceId)
 	if err != nil {
 		if errors.Is(err, info.NotFound) {
@@ -152,7 +152,7 @@ func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, d
 	if user.Company != deviceCompany {
 		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyCompany) {
 			return di, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
+				"Unauthorized access to this sensor.")
 		}
 	}
 	deviceNetwork, err := a.DeviceInfo.GetNetwork(deviceId)
@@ -168,7 +168,7 @@ func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, d
 	}
 	if user.Network != deviceNetwork {
 		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyNetwork) {
-			return di, huma.Error401Unauthorized("Unauthorized access to this device.")
+			return di, huma.Error401Unauthorized("Unauthorized access to this sensor.")
 		}
 	}
 	di.Company = deviceCompany
@@ -218,8 +218,8 @@ func (a *Api) getSensorData(
 	}
 	sensorData, err = a.DataFetcher.GetData(di)
 	if err != nil {
-		if errors.Is(err, device.NoData) ||
-			errors.Is(err, device.NoConnection) {
+		if errors.Is(err, sensor.NoData) ||
+			errors.Is(err, sensor.NoConnection) {
 			return sensorData, err
 		}
 		log.AddMetadata(logging.Metadata{
@@ -269,8 +269,8 @@ func (a *Api) getLatestSensorData(
 	}
 	sd, err = a.DataFetcher.GetLatestData(di)
 	if err != nil {
-		if errors.Is(err, device.NoData) ||
-			errors.Is(err, device.NoConnection) {
+		if errors.Is(err, sensor.NoData) ||
+			errors.Is(err, sensor.NoConnection) {
 			return sd, err
 		}
 		log.AddMetadata(logging.Metadata{
@@ -306,7 +306,7 @@ func (a *Api) getQueryFields(ctx context.Context, in *info.QueryFieldsRequest) (
 
 func (a *Api) deviceInfoIfAccessAndPermission(ctx context.Context,
 	deviceId string, permission authstore.Permission) (
-	di device.Device, err error) {
+	di sensor.Device, err error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
 		return di, huma.Error500InternalServerError(
@@ -354,7 +354,7 @@ func (a *Api) getSensorDataBoundary(ctx context.Context, in *data.DataBoundaryRe
 	}
 	db, err = a.DataFetcher.GetDataBoundary(di)
 	if err != nil {
-		if errors.Is(err, device.NoData) {
+		if errors.Is(err, sensor.NoData) {
 			return db, err
 		}
 		log.AddMetadata(logging.Metadata{
@@ -379,7 +379,7 @@ func (a *Api) getLocation(ctx context.Context, in *data.DeviceLocationRequest) (
 	}
 	loc, err = a.DataFetcher.GetLocation(di)
 	if err != nil {
-		if errors.Is(err, device.NoLocation) {
+		if errors.Is(err, sensor.NoLocation) {
 			return loc, err
 		}
 		log.AddMetadata(logging.Metadata{

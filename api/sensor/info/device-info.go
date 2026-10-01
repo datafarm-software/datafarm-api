@@ -3,7 +3,7 @@ package info
 import (
 	"errors"
 
-	"github.com/datafarm-software/datafarm-api/api/device"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
 )
 
 var GeneralQueryFields = []string{
@@ -34,7 +34,7 @@ type QueryFieldsRequest struct {
 	DeviceId string `log:"deviceid" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
 }
 
-type BatchQueryFieldsRequest struct{ Body device.Batch }
+type BatchQueryFieldsRequest struct{ Body sensor.Batch }
 
 type QueryFieldsError struct {
 	DeviceId string `json:"deviceId"`
@@ -56,7 +56,7 @@ type DeviceIdsResponse struct {
 }
 
 type TestingDeviceInfoFetcher interface {
-	PrepareDeviceInfo(device.Schema) error
+	PrepareDeviceInfo(sensor.Schema) error
 }
 
 type Fetcher interface {
@@ -74,17 +74,17 @@ type BadConnFetcher struct{}
 
 func (b *BadConnFetcher) Close() error { return nil }
 func (b *BadConnFetcher) GetQueryFields(deviceId string) (QueryFields, error) {
-	return QueryFields{}, device.NoConnection
+	return QueryFields{}, sensor.NoConnection
 }
 
 func (b *BadConnFetcher) GetCompany(deviceId string) (string, error) {
-	return "", device.NoConnection
+	return "", sensor.NoConnection
 }
 
 func (b *BadConnFetcher) GetNetwork(deviceId string) (string, error) {
-	return "", device.NoConnection
+	return "", sensor.NoConnection
 }
 
 func (b *BadConnFetcher) GetDevices(ScopeRestriction) ([]string, error) {
-	return nil, device.NoConnection
+	return nil, sensor.NoConnection
 }
