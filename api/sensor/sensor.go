@@ -17,6 +17,19 @@ type Device struct {
 	Start, Stop                string
 }
 
+type DeviceIdParam struct {
+	DeviceId string `log:"deviceid" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+}
+
+type Hardware struct {
+	DeviceIdParam
+	QueryFields []string `log:"queryfields" query:"queryField,explode" json:"queryFields" required:"true" minItems:"1" maxItems:"20" uniqueItems:"true" doc:"One or more QueryFields to return. Specify \"all\" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField=\"temperature\"&queryField=\"humidity\""`
+}
+
+func (h Hardware) DeviceId() string {
+	return h.DeviceIdParam.DeviceId
+}
+
 type Schema struct {
 	DeviceCompanies []DeviceToCompany
 	DeviceNetworks  []DeviceToNetwork

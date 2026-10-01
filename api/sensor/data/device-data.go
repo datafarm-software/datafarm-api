@@ -24,11 +24,6 @@ type LatestSensorDataResponse struct {
 	Body   SensorData
 }
 
-type Hardware struct {
-	DeviceIdParam
-	QueryFields []string `log:"queryfields" query:"queryField,explode" json:"queryFields" required:"true" minItems:"1" maxItems:"20" uniqueItems:"true" doc:"One or more QueryFields to return. Specify \"all\" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField=\"temperature\"&queryField=\"humidity\""`
-}
-
 type Timezone struct {
 	Timezone string `log:"timezone" query:"timezone-return" json:"timezone-return" required:"false" pattern:"^(|[a-zA-Z]+/[a-zA-Z]+)$" doc:"Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg"`
 }
@@ -51,22 +46,22 @@ type TimeFrame struct {
 }
 
 type SensorDataRequest struct {
-	Hardware
+	sensor.Hardware
 	TimeFrame
 }
 
 type LatestSensorDataRequest struct {
-	Hardware
+	sensor.Hardware
 	Timezone
 }
 
 type BatchLatestSensorDataRequest struct {
-	Hardware []Hardware `json:"hardware" required:"true" minItems:"2" maxItems:"5"`
+	Hardware []sensor.Hardware `json:"hardware" required:"true" minItems:"2" maxItems:"5"`
 	Timezone
 }
 
 type BatchSensorDataRequest struct {
-	Hardware []Hardware `json:"hardware" required:"true" minItems:"2" maxItems:"5"`
+	Hardware []sensor.Hardware `json:"hardware" required:"true" minItems:"2" maxItems:"5"`
 	TimeFrame
 }
 
@@ -214,12 +209,8 @@ type DataBoundary struct {
 	Stop     time.Time `json:"stop"`
 }
 
-type DeviceIdParam struct {
-	DeviceId string `log:"deviceid" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-}
-
 type DataBoundaryRequest struct {
-	DeviceIdParam
+	sensor.DeviceIdParam
 	Timezone
 }
 type DataBoundaryResponse struct {
@@ -238,7 +229,7 @@ type BatchDataBoundaryResponse struct {
 }
 
 type DeviceLocationRequest struct {
-	DeviceIdParam
+	sensor.DeviceIdParam
 }
 
 type DeviceLocationResponse struct {
