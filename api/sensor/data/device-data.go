@@ -227,20 +227,14 @@ type DataBoundaryResponse struct {
 	Body   DataBoundary
 }
 
-// NOTE: this is exactly the same as deviceinfo.QueryFieldsError struct
-type BatchError struct {
-	DeviceId string `json:"deviceId"`
-	Error    string `json:"error"`
-}
-
 type BatchDataBoundaryRequest struct {
 	sensor.Batch
 	Timezone
 }
 
 type BatchDataBoundaryResponse struct {
-	Results []DataBoundary `json:"results"`
-	Errors  []BatchError   `json:"errors"`
+	Results []DataBoundary      `json:"results"`
+	Errors  []sensor.BatchError `json:"errors"`
 }
 
 type DeviceLocationRequest struct {
@@ -260,7 +254,7 @@ type BatchLocationRequest struct {
 
 type BatchLocationResponse struct {
 	Results []DeviceLocationResponse `json:"results"`
-	Errors  []BatchError             `json:"errors"`
+	Errors  []sensor.BatchError      `json:"errors"`
 }
 
 type TestingDataFetcher interface {
