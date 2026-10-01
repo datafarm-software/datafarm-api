@@ -429,7 +429,8 @@ func (a *Api) BatchGetDataBoundary(ctx context.Context,
 		Body data.BatchDataBoundaryRequest
 	}) (
 	*struct {
-		Body data.BatchDataBoundaryResponse
+		Status int
+		Body   data.BatchDataBoundaryResponse
 	}, error) {
 	logFromTag(ctx, in.Body)
 	batch, err := sensor.BatchFactory(ctx, in.Body.DeviceIds,
@@ -444,17 +445,29 @@ func (a *Api) BatchGetDataBoundary(ctx context.Context,
 		if errors.Is(err, sensor.NoConnection) {
 			return nil, huma.Error500InternalServerError("Database Disconnected.")
 		}
-		return nil, huma.Error500InternalServerError(
-			"Unexpected internal error while getting DataBoundary.")
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("Not Found.")
+		}
+		if !errors.Is(err, sensor.NoData) {
+			return nil, huma.Error500InternalServerError(
+				"Unexpected internal error while getting DataBoundary.")
+		}
 	}
-	return &struct {
-		Body data.BatchDataBoundaryResponse
+	resp := &struct {
+		Status int
+		Body   data.BatchDataBoundaryResponse
 	}{
+		Status: http.StatusOK,
 		Body: data.BatchDataBoundaryResponse{
 			Results: batch.Results,
 			Errors:  batch.Errors,
 		},
-	}, nil
+	}
+	if len(batch.Results) < 1 && batch.OnlyDataMissingErrors {
+		resp.Status = http.StatusNoContent
+		resp.Body = data.BatchDataBoundaryResponse{}
+	}
+	return resp, nil
 }
 
 func (a *Api) GetLocation(ctx context.Context, in *sensor.DeviceIdParam) (

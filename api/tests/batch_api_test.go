@@ -3096,11 +3096,11 @@ func TestBatchGetQueryFields(t *testing.T) {
 func TestBatchGetDataBoundary(t *testing.T) {
 	tests := map[string]struct {
 		MockApi
-		want       data.BatchDataBoundaryResponse
-		req        data.BatchDataBoundaryRequest
-		token      string
-		wantStatus int
-		wantErr    bool
+		want                             data.BatchDataBoundaryResponse
+		req                              data.BatchDataBoundaryRequest
+		token                            string
+		wantStatus                       int
+		wantErr, disconnectedDataFetcher bool
 	}{
 
 		"user get multiple deviceid data boundary": {
@@ -3202,15 +3202,63 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			},
 		},
 
-		"no data for both deviceids": {
-			wantStatus: http.StatusOK,
-			want: data.BatchDataBoundaryResponse{
-				Errors: []sensor.BatchError{
-					{DeviceId: RegisteredDeviceId, Error: "No Data"},
-					{DeviceId: AnotherRegisteredDeviceId, Error: "No Data"},
+		"bad connection": {
+			wantErr:                 true,
+			disconnectedDataFetcher: true,
+			wantStatus:              http.StatusInternalServerError,
+			want:                    data.BatchDataBoundaryResponse{},
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  RegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
 				},
-				Results: []data.DataBoundary{},
+				mockDataFetcher: []data.SensorData{},
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+						{DeviceId: AnotherRegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []sensor.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+						{DeviceId: AnotherRegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []sensor.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+						{
+							DeviceId:    AnotherRegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
 			},
+			token: ValidToken,
+			req: data.BatchDataBoundaryRequest{
+				Batch: sensor.Batch{
+					DeviceIds: sensor.DeviceIds{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				},
+			},
+		},
+
+		"no data for both deviceids": {
+			wantErr:    true,
+			wantStatus: http.StatusNoContent,
+			want:       data.BatchDataBoundaryResponse{},
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -4040,10 +4088,17 @@ func TestBatchGetDataBoundary(t *testing.T) {
 			},
 		},
 	}
+
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			api, closeFunc := tc.MockApi.Setup(t)
 			defer closeFunc()
+			if tc.disconnectedDataFetcher {
+				testFlux, err := data.NewTestingInflux("../../config.yml")
+				require.Nil(t, err)
+				testFlux.BadConnQueryApi()
+				api.DataFetcher = testFlux
+			}
 			humaTest := setupHuma(t, api)
 			route := "/batch/device/databoundary"
 			resp := humaTest.Post(route,

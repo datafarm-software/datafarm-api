@@ -69,7 +69,8 @@ type HumaOperator interface {
 			Body data.BatchDataBoundaryRequest
 		}) (
 		*struct {
-			Body data.BatchDataBoundaryResponse
+			Status int
+			Body   data.BatchDataBoundaryResponse
 		}, error)
 	GetLocation(context.Context, *sensor.DeviceIdParam) (
 		*struct {
@@ -273,8 +274,16 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Path = "/batch/device/databoundary"
 	op.Summary = "Batch Get DeviceId DataBoundary"
 	op.Description = "Clients can use this route to get the DataBoundary of multiple DeviceIds."
-	op.Responses["500"] = &huma.Response{}
-	op.Responses["404"] = &huma.Response{}
+	fh = FiveHundredExample()
+	fh.Detail =
+		"Database disconnected."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	op.Responses["404"] = &huma.Response{
+		Description: "No DeviceIds Found.",
+	}
+	op.Responses["204"] = &huma.Response{
+		Description: "No Data for DeviceIds.",
+	}
 	huma.Register(api, op, ho.BatchGetDataBoundary)
 
 	op = baseOperation("POST", &allMw)
