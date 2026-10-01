@@ -2,6 +2,7 @@ package redis
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/datafarm-software/datafarm-api/api/sensor"
 	"github.com/datafarm-software/datafarm-api/api/sensor/info"
@@ -19,6 +20,9 @@ func (r *Redis) GetQueryFields(deviceId sensor.DeviceId) (info.QueryFields, erro
 	var err error
 	qf, err = r.db.SMembers(ctx, "queryFields:"+string(deviceId)).Result()
 	if err != nil {
+		if strings.Contains(err.Error(), "connect:") {
+			return info.QueryFields{}, sensor.NoConnection
+		}
 		if err == redis.Nil {
 			return info.QueryFields{}, sensor.NotFound
 		}
@@ -36,6 +40,9 @@ func (r *Redis) GetQueryFields(deviceId sensor.DeviceId) (info.QueryFields, erro
 func (r *Redis) GetCompany(deviceId sensor.DeviceId) (string, error) {
 	company, err := r.db.HGet(ctx, "fieldUnit:"+string(deviceId), "company").Result()
 	if err != nil {
+		if strings.Contains(err.Error(), "connect:") {
+			return "", sensor.NoConnection
+		}
 		if err == redis.Nil {
 			return "", sensor.NotFound
 		}
@@ -46,6 +53,9 @@ func (r *Redis) GetCompany(deviceId sensor.DeviceId) (string, error) {
 func (r *Redis) GetNetwork(deviceId sensor.DeviceId) (string, error) {
 	network, err := r.db.HGet(ctx, "fieldUnit:"+string(deviceId), "network").Result()
 	if err != nil {
+		if strings.Contains(err.Error(), "connect:") {
+			return "", sensor.NoConnection
+		}
 		if err == redis.Nil {
 			return "", sensor.NotFound
 		}
@@ -63,5 +73,11 @@ func (r *Redis) GetDevices(sr info.ScopeRestriction) ([]string, error) {
 	case info.AllDevices:
 		key = "allDevices"
 	}
-	return r.db.SMembers(ctx, key).Result()
+	sc, err := r.db.SMembers(ctx, key).Result()
+	if err != nil {
+		if strings.Contains(err.Error(), "connect:") {
+			return nil, sensor.NoConnection
+		}
+	}
+	return sc, nil
 }

@@ -377,6 +377,10 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	}
 	userDevices, err := a.DeviceInfo.GetDevices(sr)
 	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError(
+				"Database disconnected.")
+		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getDeviceIds.deviceInfo.getDevices"},
 			"error.message": {err.Error()}})

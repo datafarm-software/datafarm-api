@@ -2629,10 +2629,10 @@ func TestGetQueryFields(t *testing.T) {
 func TestGetDeviceIds(t *testing.T) {
 	tests := map[string]struct {
 		MockApi
-		want       info.DeviceIdsResponse
-		token      string
-		wantStatus int
-		wantErr    bool
+		want                            info.DeviceIdsResponse
+		token                           string
+		wantStatus                      int
+		wantErr, disconnectedDeviceInfo bool
 	}{
 
 		"user gets deviceIds only in company, in network": {
@@ -2685,6 +2685,47 @@ func TestGetDeviceIds(t *testing.T) {
 			wantStatus: http.StatusNoContent,
 			want:       info.DeviceIdsResponse{DeviceIds: []string{}},
 			token:      ValidToken,
+			MockApi: MockApi{
+				mockAuthStore: authstore.Schema{
+					UserInfo: []authstore.UserInfo{
+						{
+							Username: RegisteredUsername,
+							Company:  AnotherRegisteredCompany,
+							Role:     int(authstore.User),
+							Password: RegisteredPassword,
+							Network:  RegisteredNetwork,
+						},
+					},
+					UserTokens: []authstore.UserToken{
+						{Username: RegisteredUsername, Token: ValidToken},
+					},
+				},
+				mockDeviceInfo: sensor.Schema{
+					DeviceCompanies: []sensor.DeviceToCompany{
+						{DeviceId: RegisteredDeviceId, Company: RegisteredCompany},
+					},
+					DeviceNetworks: []sensor.DeviceToNetwork{
+						{DeviceId: RegisteredDeviceId, Network: RegisteredNetwork},
+					},
+					DeviceToQF: []sensor.DeviceToQueryFields{
+						{
+							DeviceId:    RegisteredDeviceId,
+							QueryFields: []string{RegisteredQueryField},
+						},
+					},
+				},
+				mockTokens: map[string]bool{
+					ValidToken: true,
+				},
+			},
+		},
+
+		"bad connection": {
+			wantErr:                true,
+			wantStatus:             http.StatusInternalServerError,
+			disconnectedDeviceInfo: true,
+			want:                   info.DeviceIdsResponse{DeviceIds: []string{}},
+			token:                  ValidToken,
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -2818,6 +2859,11 @@ func TestGetDeviceIds(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			api, closeFunc := tc.MockApi.Setup(t)
 			defer closeFunc()
+			if tc.disconnectedDeviceInfo {
+				err := api.DeviceInfo.Close()
+				require.Nil(t, err)
+				api.DeviceInfo = &info.BadConnFetcher{}
+			}
 			humaTest := setupHuma(t, api)
 			route := "/device/ids"
 			resp := humaTest.Get(route,

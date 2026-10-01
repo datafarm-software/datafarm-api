@@ -51,12 +51,13 @@ type TestingDeviceInfoFetcher interface {
 type Fetcher interface {
 	TestingDeviceInfoFetcher
 	Close() error
-	//NOTE: could return err: NotFound
+	//NOTE: could return err: NotFound, NoConnection
 	GetQueryFields(sensor.DeviceId) (QueryFields, error)
-	//NOTE: could return err: NotFound
+	//NOTE: could return err: NotFound, NoConnection
 	GetCompany(sensor.DeviceId) (string, error)
-	//NOTE: could return err: NotFound
+	//NOTE: could return err: NotFound, NoConnection
 	GetNetwork(sensor.DeviceId) (string, error)
+	//NOTE: could return err: NoConnection
 	GetDevices(ScopeRestriction) ([]string, error)
 }
 
