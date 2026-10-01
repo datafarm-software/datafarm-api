@@ -13,8 +13,8 @@ import (
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/datafarm-software/datafarm-api/api"
 	"github.com/datafarm-software/datafarm-api/api/authstore"
-	"github.com/datafarm-software/datafarm-api/api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/device"
+	"github.com/datafarm-software/datafarm-api/api/device/data"
 	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
 	"github.com/datafarm-software/datafarm-api/api/redis"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
@@ -72,9 +72,9 @@ var considerTimeZone = cmp.Comparer(func(x, y time.Time) bool {
 var cmpOpts = []cmp.Option{considerTimeZone}
 
 type MockApi struct {
-	mockDeviceInfo  deviceinfo.Schema
+	mockDeviceInfo  device.Schema
 	mockAuthStore   authstore.Schema
-	mockDataFetcher []datafetcher.SensorData
+	mockDataFetcher []data.SensorData
 	mockTokens      map[string]bool
 }
 
@@ -101,7 +101,7 @@ func (m MockApi) Setup(t *testing.T) (*api.Api, CloseFunc) {
 	require.Nil(t, err)
 	a.DeviceInfo = testingRedis
 	a.AuthStore = testingRedis
-	a.DataFetcher, err = datafetcher.NewTestingInflux("../../config.yml")
+	a.DataFetcher, err = data.NewTestingInflux("../../config.yml")
 	require.Nil(t, err)
 	err = a.DataFetcher.PrepareDb(&m.mockDeviceInfo, m.mockDataFetcher)
 	require.Nil(t, err)
@@ -124,7 +124,7 @@ func (m MockApi) Setup(t *testing.T) (*api.Api, CloseFunc) {
 		if a.DataFetcher != nil {
 			err = a.DataFetcher.Close()
 			if err != nil {
-				t.Logf("datafetcher close: %v", err)
+				t.Logf("device/data close: %v", err)
 			}
 		}
 	}
@@ -133,9 +133,9 @@ func (m MockApi) Setup(t *testing.T) (*api.Api, CloseFunc) {
 type GetSensorDataTest struct {
 	token    string
 	deviceId string
-	*datafetcher.LatestSensorDataRequest
-	*datafetcher.SensorDataRequest
-	*datafetcher.BatchSensorDataRequest
+	*data.LatestSensorDataRequest
+	*data.SensorDataRequest
+	*data.BatchSensorDataRequest
 	wantStatus int
 	wantErr    bool
 }
