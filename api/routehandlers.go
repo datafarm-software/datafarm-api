@@ -86,7 +86,7 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 					break
 				}
 			}
-			deviceErr.DeviceId = hw.DeviceId
+			deviceErr.DeviceId = hw.DeviceIdParam.DeviceId
 			deviceErr.Error = err.Error()
 			errSlice = append(errSlice, deviceErr)
 		}
@@ -122,7 +122,7 @@ func (a *Api) BatchGetLatestSensorData(ctx context.Context,
 	logFromTag(ctx, in.Body)
 	var dataReq *data.LatestSensorDataRequest
 	var deviceErr data.SensorDataError
-	var sds data.SensorData
+	var sds data.SensorDataSlice
 	var err error
 	onlyDataMissingErrors := true
 	errSlice := make([]data.SensorDataError, 0, len(in.Body.Hardware))
@@ -134,7 +134,7 @@ func (a *Api) BatchGetLatestSensorData(ctx context.Context,
 		}
 		sds, err = a.getLatestSensorData(ctx, dataReq)
 		if err == nil {
-			resultSlice = append(resultSlice, sds)
+			resultSlice = append(resultSlice, sds...)
 		} else {
 			if errors.Is(err, sensor.NoConnection) {
 				break
@@ -142,7 +142,7 @@ func (a *Api) BatchGetLatestSensorData(ctx context.Context,
 			if !errors.Is(err, sensor.NoData) {
 				onlyDataMissingErrors = false
 			}
-			deviceErr.DeviceId = hw.DeviceId
+			deviceErr.DeviceId = hw.DeviceIdParam.DeviceId
 			deviceErr.Error = err.Error()
 			errSlice = append(errSlice, deviceErr)
 		}
