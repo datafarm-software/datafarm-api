@@ -6,4 +6,4 @@ This API is used to make SensorData available to DataFarm clients. With this pro
 
 If you are interested in contributing, a good starting point would be the api/tests folder.
 
-Any further questions are welcome at this [inbox][mailto:geraud@datafarm.co.za?subject=DataFarm%20API%20Contributing].
+Any further questions are welcome at this [inbox](mailto:geraud@datafarm.co.za?subject=DataFarm%20API%20Contributing).
