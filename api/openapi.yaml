@@ -2008,7 +2008,7 @@ components:
             type: object
             additionalProperties: false
             properties:
-                DeviceId:
+                deviceId:
                     type: string
                     pattern: ^[a-zA-Z0-9]{1,30}$
                 queryFields:
@@ -2021,7 +2021,7 @@ components:
                     uniqueItems: true
             required:
                 - queryFields
-                - DeviceId
+                - deviceId
         QueryFields:
             type: object
             additionalProperties: false
