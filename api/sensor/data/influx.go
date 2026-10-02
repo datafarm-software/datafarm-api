@@ -41,6 +41,7 @@ type InfluxDatafetcher struct {
 }
 
 func NewInfluxDatafetcher(opts InfluxOpts) (*InfluxDatafetcher, error) {
+	pkgCtx = context.Background()
 	db := influxdb2.NewClient(opts.Url, opts.Token)
 	ok, err := db.Ping(context.Background())
 	if err != nil {
