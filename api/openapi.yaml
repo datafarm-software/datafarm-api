@@ -4,7 +4,7 @@ info:
     description: |4
         ## Welcome
 
-        The DataFarm SensorData API provides our clients with access to their Sensor Data,
+        The DataFarm SensorData API provides our clients with access to their SensorData,
         Device Metadata, and Export Functionality.
 
         ### Authentication
@@ -21,7 +21,7 @@ info:
         ### Contributing
 
         DataFarm welcomes external contribution to the API, through Open Source under the GPL-3.0 License. If you would like to contribute please visit the project's Github page to get started: www.github.com/datafarm-software/datafarm-api.
-    version: 1.2.0
+    version: 1.3.0
 servers:
     - url: /v1
 paths:
@@ -30,7 +30,7 @@ paths:
             tags:
                 - POST
             summary: Batch Get DeviceId DataBoundary
-            description: Clients can use this route to get the DataBoundary of multiple devices.
+            description: Clients can use this route to get the DataBoundary of multiple DeviceIds.
             requestBody:
                 content:
                     application/json:
@@ -44,6 +44,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/BatchDataBoundaryResponse'
+                "204":
+                    description: No Data for DeviceIds.
                 "400":
                     description: Bad Request
                     content:
@@ -106,8 +108,157 @@ paths:
                                 title: Unauthorized
                                 status: 401
                                 detail: Unknown user.
-                "404": {}
-                "500": {}
+                "404":
+                    description: No DeviceIds Found.
+                "500":
+                    description: Internal Server Error
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Internal Server Error
+                                status: 500
+                                detail: Database disconnected.
+            security:
+                - bearer: []
+    /batch/device/location:
+        post:
+            tags:
+                - POST
+            summary: Batch Get DeviceId Location
+            description: Clients can use this route to get the Location of multiple DeviceIds.
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/BatchLocationRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/BatchLocationResponse'
+                "204":
+                    description: No Location for any DeviceId requested.
+                "400":
+                    description: Bad Request
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Bad Request
+                                status: 400
+                                detail: No Authorization Header Provided.
+                "401":
+                    description: Unauthorized
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Unauthorized
+                                status: 401
+                                detail: Unknown user.
+                "404":
+                    description: No DeviceIds Found.
+                "500":
+                    description: Internal Server Error
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Internal Server Error
+                                status: 500
+                                detail: Database disconnected.
             security:
                 - bearer: []
     /batch/device/queryfields:
@@ -115,12 +266,12 @@ paths:
             tags:
                 - POST
             summary: Batch Get DeviceId QueryFields
-            description: Clients can use this route to request QueryFields from multiple device ids.
+            description: Clients can use this route to request QueryFields from multiple DeviceIds.
             requestBody:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/DeviceBatch'
+                            $ref: '#/components/schemas/Batch'
                 required: true
             responses:
                 "200":
@@ -191,16 +342,47 @@ paths:
                                 title: Unauthorized
                                 status: 401
                                 detail: Unknown user.
-                "404": {}
-                "500": {}
+                "404":
+                    description: No DeviceIds Found.
+                "500":
+                    description: Internal Server Error
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Internal Server Error
+                                status: 500
+                                detail: Database disconnected.
             security:
                 - bearer: []
     /batch/device/sensordata:
         post:
             tags:
                 - POST
-            summary: Batch Get Sensor Data
-            description: Clients can use this route to request data from multiple device ids.
+            summary: Batch Get DeviceId SensorData
+            description: Clients can use this route to request SensorData from multiple DeviceIds.
             requestBody:
                 content:
                     application/json:
@@ -217,7 +399,9 @@ paths:
                         text/csv:
                             schema:
                                 type: string
-                                description: Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Timestamps will be in UTC timezone and RFC3339 Format. Should there be any errors, clients can expect these to be included in the CSV.
+                                description: Clients are able to negotiate CSV formatted SensorData using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Timestamps will be in UTC timezone and RFC3339 Format. Should there be any errors, clients can expect these to be included in the CSV.
+                "204":
+                    description: No SensorData for any DeviceId requested in the time period.
                 "400":
                     description: Bad Request
                     content:
@@ -280,8 +464,157 @@ paths:
                                 title: Unauthorized
                                 status: 401
                                 detail: Unknown user.
-                "404": {}
-                "500": {}
+                "404":
+                    description: No DeviceIds Found.
+                "500":
+                    description: Internal Server Error
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Internal Server Error
+                                status: 500
+                                detail: Database disconnected.
+            security:
+                - bearer: []
+    /batch/device/sensordata/latest:
+        post:
+            tags:
+                - POST
+            summary: Batch Get DeviceId Latest SensorData
+            description: Clients can use this route to request Latest SensorData from multiple DeviceIds.
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/BatchLatestSensorDataRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/BatchSensorDataResponse'
+                "204":
+                    description: No SensorData for any DeviceId requested.
+                "400":
+                    description: Bad Request
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Bad Request
+                                status: 400
+                                detail: No Authorization Header Provided.
+                "401":
+                    description: Unauthorized
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Unauthorized
+                                status: 401
+                                detail: Unknown user.
+                "404":
+                    description: No DeviceIds Found.
+                "500":
+                    description: Internal Server Error
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Internal Server Error
+                                status: 500
+                                detail: Database disconnected.
             security:
                 - bearer: []
     /device/{deviceId}/databoundary:
@@ -293,7 +626,7 @@ paths:
             parameters:
                 - name: deviceId
                   in: path
-                  description: Device Id to get DataBoundary information from.
+                  description: DeviceId to get DataBoundary information from.
                   required: true
                   schema:
                     type: string
@@ -315,6 +648,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/DataBoundary'
+                "204":
+                    description: No SensorData for DeviceId.
                 "400":
                     description: Bad Request
                     content:
@@ -441,16 +776,167 @@ paths:
                                 detail: Internal error getting DataBoundary.
             security:
                 - bearer: []
+    /device/{deviceId}/location:
+        get:
+            tags:
+                - GET
+            summary: Get DeviceId Location
+            description: Clients can use this route to get the device's Location as GPS Coordinates.
+            parameters:
+                - name: deviceId
+                  in: path
+                  description: DeviceId to get Location information of.
+                  required: true
+                  schema:
+                    type: string
+                    pattern: ^\w{1,30}$
+            requestBody:
+                content: {}
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeviceLocationResponse'
+                "204":
+                    description: No Location Information for DeviceId.
+                "400":
+                    description: Bad Request
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Bad Request
+                                status: 400
+                                detail: No Authorization Header Provided.
+                "401":
+                    description: Unauthorized
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Unauthorized
+                                status: 401
+                                detail: Unknown user.
+                "404":
+                    description: Not Found
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Not Found
+                                status: 401
+                                detail: Device Not Found.
+                "500":
+                    description: Internal Server Error
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Internal Server Error
+                                status: 500
+                                detail: Internal error getting Location.
+            security:
+                - bearer: []
     /device/{deviceId}/queryfields:
         get:
             tags:
                 - GET
             summary: Get DeviceId QueryFields
-            description: Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor might have a 'temperature' QueryField.
+            description: Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has SensorData attached to it eg. A temperature sensor might have a 'temperature' QueryField.
             parameters:
                 - name: deviceId
                   in: path
-                  description: Device Id to get DataBoundary information from.
+                  description: DeviceId to get QueryField information from.
                   required: true
                   schema:
                     type: string
@@ -594,12 +1080,12 @@ paths:
         get:
             tags:
                 - GET
-            summary: Get Sensor Data
-            description: Clients can use this route to request data from a sensor using its device id.
+            summary: Get DeviceId SensorData
+            description: Clients can use this route to request SensorData from a DeviceId.
             parameters:
                 - name: deviceId
                   in: path
-                  description: Device Id to get DataBoundary information from.
+                  description: DeviceId to request SensorData from.
                   required: true
                   schema:
                     type: string
@@ -654,8 +1140,9 @@ paths:
                         text/csv:
                             schema:
                                 type: string
-                                description: Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Timestamps will be in UTC timezone and RFC3339 Format. Should there be any errors, clients can expect these to be included in the CSV.
-                "204": {}
+                                description: Clients are able to negotiate CSV formatted SensorData using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Timestamps will be in UTC timezone and RFC3339 Format. Should there be any errors, clients can expect these to be included in the CSV.
+                "204":
+                    description: No SensorData for the requested time period.
                 "400":
                     description: Bad Request
                     content:
@@ -779,7 +1266,179 @@ paths:
                                 schema: http://localhost:3030/schemas/ErrorModel.json
                                 title: Internal Server Error
                                 status: 500
-                                detail: Internal error while getting data for the device.
+                                detail: Internal error while getting SensorData for the DeviceId.
+            security:
+                - bearer: []
+    /device/{deviceId}/sensordata/latest:
+        get:
+            tags:
+                - GET
+            summary: Get DeviceId Latest SensorData
+            description: Clients can use this route to request only the Latest SensorData from a DeviceId.
+            parameters:
+                - name: deviceId
+                  in: path
+                  description: DeviceId to request Latest SensorData from.
+                  required: true
+                  schema:
+                    type: string
+                    pattern: ^\w{1,30}$
+                - name: queryField
+                  in: query
+                  description: One or more QueryFields to return. Specify "all" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField="temperature"&queryField="humidity"
+                  required: true
+                  explode: true
+                  schema:
+                    type: array
+                    description: One or more QueryFields to return. Specify "all" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField="temperature"&queryField="humidity"
+                    items:
+                        type: string
+                    minItems: 1
+                    maxItems: 20
+                    uniqueItems: true
+                - name: timezone-return
+                  in: query
+                  description: Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg
+                  explode: false
+                  schema:
+                    type: string
+                    description: Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg
+                    pattern: ^(|[a-zA-Z]+/[a-zA-Z]+)$
+            requestBody:
+                content: {}
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SensorData'
+                "204":
+                    description: No SensorData for the DeviceId.
+                "400":
+                    description: Bad Request
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Bad Request
+                                status: 400
+                                detail: No Authorization Header Provided.
+                "401":
+                    description: Unauthorized
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Unauthorized
+                                status: 401
+                                detail: Unknown user.
+                "404":
+                    description: Not Found
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Not Found
+                                status: 401
+                                detail: Device Not Found.
+                "500":
+                    description: Internal Server Error
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                properties:
+                                    $schema:
+                                        type: string
+                                        description: Link to Object Model.
+                                    detail:
+                                        type: string
+                                        description: Human Readable explanation of what went wrong.
+                                    status:
+                                        type: integer
+                                        description: Http Status Code.
+                                        format: int64
+                                    title:
+                                        type: string
+                                        description: Name associated with error code.
+                                required:
+                                    - $schema
+                                    - title
+                                    - status
+                                    - detail
+                            example:
+                                schema: http://localhost:3030/schemas/ErrorModel.json
+                                title: Internal Server Error
+                                status: 500
+                                detail: Internal error while getting Latest SensorData for the DeviceId.
             security:
                 - bearer: []
     /device/ids:
@@ -796,11 +1455,9 @@ paths:
                     content:
                         application/json:
                             schema:
-                                type: array
-                                description: deviceIds
-                                items:
-                                    type: string
-                                    pattern: ^[a-zA-Z0-9]{1,30}$
+                                $ref: '#/components/schemas/DeviceIdsResponse'
+                "204":
+                    description: When Client has no access to any DeviceIds.
                 "400":
                     description: Bad Request
                     content:
@@ -1011,6 +1668,26 @@ paths:
                 - basic: []
 components:
     schemas:
+        Batch:
+            type: object
+            additionalProperties: false
+            properties:
+                $schema:
+                    type: string
+                    description: A URL to the JSON Schema for this object.
+                    format: uri
+                    examples:
+                        - https://example.com/schemas/Batch.json
+                    readOnly: true
+                deviceIds:
+                    type: array
+                    items:
+                        type: string
+                        pattern: ^[a-zA-Z0-9]{1,30}$
+                    minItems: 2
+                    maxItems: 5
+            required:
+                - deviceIds
         BatchDataBoundaryRequest:
             type: object
             additionalProperties: false
@@ -1049,11 +1726,87 @@ components:
                 errors:
                     type: array
                     items:
-                        $ref: '#/components/schemas/DataBoundaryError'
+                        $ref: '#/components/schemas/BatchError'
                 results:
                     type: array
                     items:
                         $ref: '#/components/schemas/DataBoundary'
+            required:
+                - results
+                - errors
+        BatchError:
+            type: object
+            additionalProperties: false
+            properties:
+                deviceId:
+                    type: string
+                error:
+                    type: string
+            required:
+                - deviceId
+                - error
+        BatchLatestSensorDataRequest:
+            type: object
+            additionalProperties: false
+            properties:
+                $schema:
+                    type: string
+                    description: A URL to the JSON Schema for this object.
+                    format: uri
+                    examples:
+                        - https://example.com/schemas/BatchLatestSensorDataRequest.json
+                    readOnly: true
+                hardware:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Hardware'
+                    minItems: 2
+                    maxItems: 5
+                timezone-return:
+                    type: string
+                    description: Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg
+                    pattern: ^(|[a-zA-Z]+/[a-zA-Z]+)$
+            required:
+                - hardware
+        BatchLocationRequest:
+            type: object
+            additionalProperties: false
+            properties:
+                $schema:
+                    type: string
+                    description: A URL to the JSON Schema for this object.
+                    format: uri
+                    examples:
+                        - https://example.com/schemas/BatchLocationRequest.json
+                    readOnly: true
+                deviceIds:
+                    type: array
+                    items:
+                        type: string
+                        pattern: ^[a-zA-Z0-9]{1,30}$
+                    minItems: 2
+                    maxItems: 5
+            required:
+                - deviceIds
+        BatchLocationResponse:
+            type: object
+            additionalProperties: false
+            properties:
+                $schema:
+                    type: string
+                    description: A URL to the JSON Schema for this object.
+                    format: uri
+                    examples:
+                        - https://example.com/schemas/BatchLocationResponse.json
+                    readOnly: true
+                errors:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/BatchError'
+                results:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/DeviceLocationResponse'
             required:
                 - results
                 - errors
@@ -1071,7 +1824,7 @@ components:
                 errors:
                     type: array
                     items:
-                        $ref: '#/components/schemas/QueryFieldsError'
+                        $ref: '#/components/schemas/BatchError'
                 results:
                     type: array
                     items:
@@ -1123,7 +1876,7 @@ components:
                 errors:
                     type: array
                     items:
-                        $ref: '#/components/schemas/SensorDataError'
+                        $ref: '#/components/schemas/BatchError'
                 results:
                     type: array
                     items:
@@ -1154,18 +1907,7 @@ components:
                 - deviceId
                 - start
                 - stop
-        DataBoundaryError:
-            type: object
-            additionalProperties: false
-            properties:
-                deviceId:
-                    type: string
-                error:
-                    type: string
-            required:
-                - deviceId
-                - error
-        DeviceBatch:
+        DeviceIdsResponse:
             type: object
             additionalProperties: false
             properties:
@@ -1174,17 +1916,44 @@ components:
                     description: A URL to the JSON Schema for this object.
                     format: uri
                     examples:
-                        - https://example.com/schemas/DeviceBatch.json
+                        - https://example.com/schemas/DeviceIdsResponse.json
                     readOnly: true
                 deviceIds:
                     type: array
+                    description: deviceIds
                     items:
                         type: string
                         pattern: ^[a-zA-Z0-9]{1,30}$
-                    minItems: 2
-                    maxItems: 5
             required:
                 - deviceIds
+        DeviceLocationResponse:
+            type: object
+            additionalProperties: false
+            properties:
+                $schema:
+                    type: string
+                    description: A URL to the JSON Schema for this object.
+                    format: uri
+                    examples:
+                        - https://example.com/schemas/DeviceLocationResponse.json
+                    readOnly: true
+                deviceId:
+                    type: string
+                latitude:
+                    type: number
+                    format: double
+                longitude:
+                    type: number
+                    format: double
+                time:
+                    type: string
+                    description: Time the latest Location was reported.
+                    format: date-time
+            required:
+                - deviceId
+                - time
+                - latitude
+                - longitude
         ErrorDetail:
             type: object
             additionalProperties: false
@@ -1251,8 +2020,8 @@ components:
                     maxItems: 20
                     uniqueItems: true
             required:
-                - deviceId
                 - queryFields
+                - deviceId
         QueryFields:
             type: object
             additionalProperties: false
@@ -1273,21 +2042,17 @@ components:
             required:
                 - deviceId
                 - queryFields
-        QueryFieldsError:
-            type: object
-            additionalProperties: false
-            properties:
-                deviceId:
-                    type: string
-                error:
-                    type: string
-            required:
-                - deviceId
-                - error
         SensorData:
             type: object
             additionalProperties: false
             properties:
+                $schema:
+                    type: string
+                    description: A URL to the JSON Schema for this object.
+                    format: uri
+                    examples:
+                        - https://example.com/schemas/SensorData.json
+                    readOnly: true
                 deviceId:
                     type: string
                 sensorData:
@@ -1303,17 +2068,6 @@ components:
                 - deviceId
                 - timestamp
                 - sensorData
-        SensorDataError:
-            type: object
-            additionalProperties: false
-            properties:
-                deviceId:
-                    type: string
-                error:
-                    type: string
-            required:
-                - deviceId
-                - error
     securitySchemes:
         basic:
             type: http

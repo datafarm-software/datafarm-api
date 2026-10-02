@@ -1,17 +1,18 @@
-package datafetcher
+package data
 
 import (
 	"bytes"
 	"context"
 	"fmt"
 	"math"
+	"net/url"
 	"os"
 	"slices"
 	"strings"
 	"sync"
 	"time"
 
-	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
 	cfy "github.com/geraud22/config-from-yaml"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxApi "github.com/influxdata/influxdb-client-go/v2/api"
@@ -19,10 +20,10 @@ import (
 
 const TestOrg = "test-org"
 
-var ctx context.Context
+var pkgCtx context.Context
 
 type DataRow struct {
-	DeviceID string
+	DeviceID sensor.DeviceId
 	Field    string
 	Time     time.Time
 	Value    any
@@ -43,7 +44,7 @@ func NewInfluxDatafetcher(opts InfluxOpts) (*InfluxDatafetcher, error) {
 	db := influxdb2.NewClient(opts.Url, opts.Token)
 	ok, err := db.Ping(context.Background())
 	if err != nil {
-		return nil, fmt.Errorf("influx ping error: %v", err)
+		return nil, fmt.Errorf("influx ping error: %w", err)
 	}
 	if !ok {
 		return nil, fmt.Errorf("influx server not running")
@@ -59,8 +60,8 @@ func (i *InfluxDatafetcher) Close() error {
 	return nil
 }
 
-func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
-	SensorDataSlice, error) {
+func (i *InfluxDatafetcher) GetData(metadata sensor.Device) (
+	sd SensorDataSlice, err error) {
 	if metadata.Timezone == nil {
 		return SensorDataSlice{}, fmt.Errorf("nil timezone")
 	}
@@ -69,22 +70,73 @@ func (i *InfluxDatafetcher) GetData(metadata deviceinfo.DeviceInfo) (
 		return nil, err
 	}
 	query := i.generateFluxQuery(metadata, formattedQueryRange)
-	result, err := i.queryApi.Query(context.Background(), query)
+	sd, err = i.sensorDataSlice(context.Background(), query, metadata.Timezone)
 	if err != nil {
-		return nil, fmt.Errorf("error querying influxdb: %v", err)
+		return sd, fmt.Errorf("query: %w", err)
 	}
-	dataRows, err := i.extractValue(result)
-	if err != nil {
-		return nil, fmt.Errorf("error processing query result: %v", err)
-	}
-	sd, err := i.dataRows2SensorData(dataRows, metadata.Timezone)
-	if err != nil {
-		return nil, err
+	if len(sd) < 1 {
+		return sd, sensor.NoData
 	}
 	return sd, nil
 }
 
-func (i *InfluxDatafetcher) generateFluxQuery(metadata deviceinfo.DeviceInfo, queryRange string) string {
+func (i *InfluxDatafetcher) dataRows(ctx context.Context, query string) ([]DataRow, error) {
+	result, err := i.queryApi.Query(ctx, query)
+	if err != nil {
+		if strings.Contains(err.Error(), "connect:") {
+			return nil, sensor.NoConnection
+		}
+		return nil, fmt.Errorf("error querying influxdb: %w", err)
+	}
+	dataRows, err := i.extractValue(result)
+	if err != nil {
+		return nil, fmt.Errorf("error processing query result: %w", err)
+	}
+	return dataRows, nil
+}
+
+func (i *InfluxDatafetcher) sensorDataSlice(
+	ctx context.Context, query string, timezone *time.Location) (
+	sd SensorDataSlice, err error) {
+	dataRows, err := i.dataRows(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	sd, err = i.dataRows2SensorData(dataRows, timezone)
+	if err != nil {
+		return nil, err
+	}
+	return
+}
+
+func (i *InfluxDatafetcher) GetLatestData(metadata sensor.Device) (
+	sd SensorData, err error) {
+	qb := strings.Builder{}
+	fmt.Fprintf(&qb, `from(bucket: "%s")`, metadata.Network)
+	fmt.Fprintf(&qb, ` |> range(start: 0)`)
+	fmt.Fprintf(&qb, ` |> filter(fn: (r) => r["_measurement"] == "%s")`,
+		metadata.Company)
+	fmt.Fprintf(&qb, ` |> filter(fn: (r) => r["deviceID"] == "%s")`,
+		metadata.DeviceId)
+	fmt.Fprintf(&qb, ` |> filter(fn: (r) => `)
+	for _, filter := range metadata.QueryFields {
+		fmt.Fprintf(&qb, ` r["_field"] == "%s" or`, filter)
+	}
+	//NOTE: for clean syntax query termination, after the last iteration's 'or'
+	fmt.Fprintf(&qb, ` false)`)
+	fmt.Fprintf(&qb, `|> last()`)
+	fmt.Fprintf(&qb, ` |> yield(name: "last")`)
+	sdSlice, err := i.sensorDataSlice(context.Background(), qb.String(), metadata.Timezone)
+	if err != nil {
+		return sd, err
+	}
+	if len(sdSlice) < 1 {
+		return sd, sensor.NoData
+	}
+	return sdSlice[0], nil
+}
+
+func (i *InfluxDatafetcher) generateFluxQuery(metadata sensor.Device, queryRange string) string {
 	var queryBuilder strings.Builder
 	fmt.Fprintf(&queryBuilder, `from(bucket: "%s")`, metadata.Network)
 	fmt.Fprintf(&queryBuilder, ` |> range(%s)`, queryRange)
@@ -108,7 +160,7 @@ func (i *InfluxDatafetcher) extractValue(result *influxApi.QueryTableResult) ([]
 		dataRow := DataRow{
 			Time:     result.Record().Time(),
 			Value:    result.Record().Value(),
-			DeviceID: result.Record().ValueByKey("deviceID").(string),
+			DeviceID: sensor.DeviceId(result.Record().ValueByKey("deviceID").(string)),
 			Field:    result.Record().Field(),
 		}
 		records = append(records, dataRow)
@@ -173,14 +225,14 @@ func (i *InfluxDatafetcher) formatQueryRange(startTime, stopTime string) (string
 	}
 	if !relativeRange {
 		if _, err := time.Parse(time.RFC3339, stopTime); err != nil {
-			return "", fmt.Errorf("Invalid RFC3339 stop timestamp: %v", err)
+			return "", fmt.Errorf("Invalid RFC3339 stop timestamp: %w", err)
 		}
 		return fmt.Sprintf("start: %s, stop: %s", startTime, stopTime), nil
 	}
 	return fmt.Sprintf("start: %s", startTime), nil
 }
 
-func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
+func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo sensor.Device) (
 	DataBoundary, error) {
 	dataBoundary := DataBoundary{DeviceId: deviceInfo.DeviceId}
 	if deviceInfo.Timezone == nil {
@@ -198,34 +250,78 @@ func (i *InfluxDatafetcher) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
 		lastTime = data |> last()
 		union(tables: [firstTime, lastTime])
 		  |> sort(columns: ["_time"], desc: false)`)
-	result, err := i.queryApi.Query(context.Background(), queryBuilder.String())
+	dataRows, err := i.dataRows(pkgCtx, queryBuilder.String())
 	if err != nil {
-		return dataBoundary, fmt.Errorf("error querying influxdb: %v", err)
+		return dataBoundary, fmt.Errorf("error processing query result: %w", err)
 	}
-	dataRows, err := i.extractValue(result)
-	if err != nil {
-		return dataBoundary, fmt.Errorf("error processing query result: %v", err)
-	}
-	if len(dataRows) != 2 {
-		return dataBoundary, fmt.Errorf("dataBoundary dataRows returned is not 2, instead: %d", len(dataRows))
+	if len(dataRows) < 2 {
+		return dataBoundary, sensor.NoData
 	}
 	dataBoundary.Start = dataRows[0].Time.In(deviceInfo.Timezone)
 	dataBoundary.Stop = dataRows[1].Time.In(deviceInfo.Timezone)
 	return dataBoundary, nil
 }
 
-func (i *InfluxDatafetcher) PrepareDb(*deviceinfo.Schema, SensorDataSlice) error {
+func (i *InfluxDatafetcher) GetLocation(deviceInfo sensor.Device) (
+	loc DeviceLocationResponse, err error) {
+	queryBuilder := strings.Builder{}
+	fmt.Fprintf(&queryBuilder, `data = from(bucket: "%s") `, deviceInfo.Network)
+	fmt.Fprintf(&queryBuilder, "|> range(start: 0) ")
+	fmt.Fprintf(&queryBuilder, `
+		|> filter(fn: (r) => r._measurement == "%s")
+		|> filter(fn: (r) => r.deviceID == "%s")
+		|> filter(fn: (r) => r._field == "latitude" or r._field == "longitude")`,
+		deviceInfo.Company, deviceInfo.DeviceId)
+	fmt.Fprintf(&queryBuilder, `|> group(columns: ["_field"])`)
+	fmt.Fprintf(&queryBuilder, `|> last()`)
+	fmt.Fprintf(&queryBuilder, `|> yield(name: "last")`)
+	dataRows, err := i.dataRows(pkgCtx, queryBuilder.String())
+	if err != nil {
+		return loc, fmt.Errorf("error processing query result: %w", err)
+	}
+	if len(dataRows) != 2 {
+		return loc, sensor.NoLocation
+	}
+	var ok bool
+	if strings.Contains(dataRows[0].Field, "latitude") {
+		loc.Latitude, ok = dataRows[0].Value.(float64)
+		loc.Longitude, ok = dataRows[1].Value.(float64)
+	} else {
+		loc.Latitude, ok = dataRows[1].Value.(float64)
+		loc.Longitude, ok = dataRows[0].Value.(float64)
+	}
+	if !ok {
+		err = sensor.NoLocation
+	}
+	loc.DeviceId = deviceInfo.DeviceId
+	loc.Time = dataRows[0].Time
+	return
+}
+
+func (i *InfluxDatafetcher) PrepareDb(*sensor.Schema, SensorDataSlice) error {
 	return nil
 }
 
 var testingInfluxOpts InfluxOpts
 var once sync.Once
 
+type BadConnQueryApi struct {
+	influxApi.QueryAPI
+}
+
+func (b *BadConnQueryApi) Query(ctx context.Context, query string) (
+	*influxApi.QueryTableResult, error) {
+	return nil, &url.Error{
+		Op: "GET", URL: "http://localhost:8086",
+		Err: fmt.Errorf("connect: connection reset by peer"),
+	}
+}
+
 type TestingInflux struct {
 	influx *InfluxDatafetcher
 }
 
-func NewTestingInflux(configPath string) (DataFetcher, error) {
+func NewTestingInflux(configPath string) (*TestingInflux, error) {
 	var topErr error
 	once.Do(func() {
 		config, err := os.ReadFile(configPath)
@@ -250,7 +346,7 @@ func NewTestingInflux(configPath string) (DataFetcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	ctx = context.Background()
+	pkgCtx = context.Background()
 	return &TestingInflux{
 		influx: db,
 	}, nil
@@ -258,20 +354,20 @@ func NewTestingInflux(configPath string) (DataFetcher, error) {
 
 func (t *TestingInflux) Close() error {
 	orgApi := t.influx.db.OrganizationsAPI()
-	org, err := orgApi.FindOrganizationByName(ctx, TestOrg)
+	org, err := orgApi.FindOrganizationByName(pkgCtx, TestOrg)
 	if err != nil {
-		return fmt.Errorf("finding org: %v", err)
+		return fmt.Errorf("finding org: %w", err)
 	}
 	if org == nil {
 		return fmt.Errorf("returned org is nil")
 	}
-	if err = orgApi.DeleteOrganization(ctx, org); err != nil {
-		return fmt.Errorf("deleting org: %v", err)
+	if err = orgApi.DeleteOrganization(pkgCtx, org); err != nil {
+		return fmt.Errorf("deleting org: %w", err)
 	}
 	return t.influx.Close()
 }
 
-func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, sensorData SensorDataSlice) error {
+func (t *TestingInflux) PrepareDb(allDevicesInfo *sensor.Schema, sensorData SensorDataSlice) error {
 	if allDevicesInfo == nil {
 		return nil
 	}
@@ -280,9 +376,9 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, sensorData 
 	}
 	deviceInfoMap := deviceInfoMap(allDevicesInfo)
 	orgApi := t.influx.db.OrganizationsAPI()
-	org, err := orgApi.CreateOrganizationWithName(ctx, TestOrg)
+	org, err := orgApi.CreateOrganizationWithName(pkgCtx, TestOrg)
 	if err != nil {
-		return fmt.Errorf("org api: %v", err)
+		return fmt.Errorf("org api: %w", err)
 	}
 	bucketsApi := t.influx.db.BucketsAPI()
 	uniqueNetworks := make([]string, 0, len(allDevicesInfo.DeviceNetworks))
@@ -291,7 +387,7 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, sensorData 
 			continue
 		}
 		uniqueNetworks = append(uniqueNetworks, dd.Network)
-		if _, err = bucketsApi.CreateBucketWithName(ctx, org, dd.Network); err != nil {
+		if _, err = bucketsApi.CreateBucketWithName(pkgCtx, org, dd.Network); err != nil {
 			if strings.Contains(err.Error(), "exists") {
 				err = nil
 			} else {
@@ -300,25 +396,26 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, sensorData 
 		}
 	}
 	if err != nil {
-		return fmt.Errorf("buckets api: %v", err)
+		return fmt.Errorf("buckets api: %w", err)
 	}
 	var writeApi influxApi.WriteAPI
 	var ok bool
-	var deviceInfo deviceinfo.DeviceInfo
+	var deviceInfo sensor.Device
 	for _, sd := range sensorData {
-		fields := make(map[string]any)
+		fields := make(map[string]any, len(sd.SensorData))
 		for key, value := range sd.SensorData {
 			fields[key] = value
 		}
 		deviceInfo, ok = deviceInfoMap[sd.DeviceID]
 		if !ok {
 			err = fmt.Errorf("could not find deviceInfo: %s", sd.DeviceID)
+			break
 		}
 		writeApi = t.influx.db.WriteAPI(testingInfluxOpts.Org, deviceInfo.Network)
 		p := influxdb2.NewPoint(
 			deviceInfo.Company,
 			map[string]string{
-				"deviceID": sd.DeviceID,
+				"deviceID": sd.DeviceID.String(),
 			},
 			fields,
 			sd.Timestamp,
@@ -332,9 +429,13 @@ func (t *TestingInflux) PrepareDb(allDevicesInfo *deviceinfo.Schema, sensorData 
 	return nil
 }
 
-func deviceInfoMap(allDevicesInfo *deviceinfo.Schema) map[string]deviceinfo.DeviceInfo {
-	deviceInfoMap := make(map[string]deviceinfo.DeviceInfo)
-	var di deviceinfo.DeviceInfo
+func (t *TestingInflux) BadConnQueryApi() {
+	t.influx.queryApi = &BadConnQueryApi{QueryAPI: t.influx.queryApi}
+}
+
+func deviceInfoMap(allDevicesInfo *sensor.Schema) map[sensor.DeviceId]sensor.Device {
+	deviceInfoMap := make(map[sensor.DeviceId]sensor.Device)
+	var di sensor.Device
 	for _, dd := range allDevicesInfo.DeviceNetworks {
 		di = deviceInfoMap[dd.DeviceId]
 		di.Network = dd.Network
@@ -348,12 +449,22 @@ func deviceInfoMap(allDevicesInfo *deviceinfo.Schema) map[string]deviceinfo.Devi
 	return deviceInfoMap
 }
 
-func (t *TestingInflux) GetData(metadata deviceinfo.DeviceInfo) (
+func (t *TestingInflux) GetData(metadata sensor.Device) (
 	SensorDataSlice, error) {
 	return t.influx.GetData(metadata)
 }
 
-func (t *TestingInflux) GetDataBoundary(deviceInfo deviceinfo.DeviceInfo) (
+func (t *TestingInflux) GetLatestData(metadata sensor.Device) (
+	SensorData, error) {
+	return t.influx.GetLatestData(metadata)
+}
+
+func (t *TestingInflux) GetDataBoundary(deviceInfo sensor.Device) (
 	DataBoundary, error) {
 	return t.influx.GetDataBoundary(deviceInfo)
+}
+
+func (t *TestingInflux) GetLocation(deviceInfo sensor.Device) (
+	DeviceLocationResponse, error) {
+	return t.influx.GetLocation(deviceInfo)
 }

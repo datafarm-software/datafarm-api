@@ -38,3 +38,4 @@ config.yml
 
 # startup script
 start.sh
+stop.sh

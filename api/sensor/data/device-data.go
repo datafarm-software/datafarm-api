@@ -1,4 +1,4 @@
-package datafetcher
+package data
 
 import (
 	"encoding/csv"
@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
 )
 
 var EmptySensorData = errors.New("empty sensor data")
@@ -19,9 +19,9 @@ type SensorDataResponse struct {
 	Body   SensorDataSlice
 }
 
-type Hardware struct {
-	DeviceId    string   `log:"deviceid" json:"deviceId" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
-	QueryFields []string `log:"queryfields" query:"queryField,explode" json:"queryFields" required:"true" minItems:"1" maxItems:"20" uniqueItems:"true" doc:"One or more QueryFields to return. Specify \"all\" to return every field the client has access to. Multiple values are supported for those endpoints where the queryField is required as a URL query parameter. In that case clients can request eg. ?queryField=\"temperature\"&queryField=\"humidity\""`
+type LatestSensorDataResponse struct {
+	Status int
+	Body   SensorData
 }
 
 type Timezone struct {
@@ -46,23 +46,28 @@ type TimeFrame struct {
 }
 
 type SensorDataRequest struct {
-	Hardware
+	sensor.Hardware
 	TimeFrame
+}
+
+type LatestSensorDataRequest struct {
+	sensor.Hardware
+	Timezone
+}
+
+type BatchLatestSensorDataRequest struct {
+	Hardware []sensor.Hardware `json:"hardware" required:"true" minItems:"2" maxItems:"5"`
+	Timezone
 }
 
 type BatchSensorDataRequest struct {
-	Hardware []Hardware `json:"hardware" required:"true" minItems:"2" maxItems:"5"`
+	Hardware []sensor.Hardware `json:"hardware" required:"true" minItems:"2" maxItems:"5"`
 	TimeFrame
 }
 
-type SensorDataError struct {
-	DeviceId string `json:"deviceId"`
-	Error    string `json:"error"`
-}
-
 type BatchSensorDataResponse struct {
-	Results SensorDataSlice   `json:"results"`
-	Errors  []SensorDataError `json:"errors"`
+	Results SensorDataSlice     `json:"results"`
+	Errors  []sensor.BatchError `json:"errors"`
 }
 
 func (b *BatchSensorDataResponse) Csv() (csvStr string, err error) {
@@ -75,7 +80,6 @@ func (b *BatchSensorDataResponse) Csv() (csvStr string, err error) {
 	return
 }
 
-type DeviceId string
 type Indexes []int
 
 type CsvMarshaller interface {
@@ -84,15 +88,15 @@ type CsvMarshaller interface {
 
 type CsvInfo struct {
 	Headers         []string
-	DeviceIdIndexes map[DeviceId]Indexes
-	DeviceIds       []DeviceId
+	DeviceIdIndexes map[sensor.DeviceId]Indexes
+	DeviceIds       sensor.DeviceIds
 }
 
 type SensorDataSlice []SensorData
 
 func (d SensorDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
 	csvInfo.Headers = make([]string, 0, len(d))
-	csvInfo.DeviceIdIndexes = make(map[DeviceId]Indexes)
+	csvInfo.DeviceIdIndexes = make(map[sensor.DeviceId]Indexes)
 	if len(d) < 1 {
 		return csvInfo, EmptySensorData
 	}
@@ -101,12 +105,12 @@ func (d SensorDataSlice) CsvInfo() (csvInfo CsvInfo, err error) {
 	slices.SortFunc(sorted, func(a, b SensorData) int {
 		return a.Timestamp.Compare(b.Timestamp)
 	})
-	var id DeviceId
-	idSeen := make(map[DeviceId]bool)
+	var id sensor.DeviceId
+	idSeen := make(map[sensor.DeviceId]bool)
 	for i, dd := range sorted {
-		id = DeviceId(dd.DeviceID)
+		id = sensor.DeviceId(dd.DeviceID)
 		csvInfo.DeviceIdIndexes[id] = append(
-			csvInfo.DeviceIdIndexes[DeviceId(dd.DeviceID)], i)
+			csvInfo.DeviceIdIndexes[sensor.DeviceId(dd.DeviceID)], i)
 		if !idSeen[id] {
 			csvInfo.DeviceIds = append(csvInfo.DeviceIds, id)
 			idSeen[id] = true
@@ -188,46 +192,69 @@ func writeDataRow(queryFieldColumns []string, sensorData SensorData, writer *csv
 }
 
 type SensorData struct {
-	DeviceID   string             `json:"deviceId"`
+	DeviceID   sensor.DeviceId    `json:"deviceId"`
 	Timestamp  time.Time          `json:"timestamp" doc:"Timestamp will be in RFC3339 Format. Default timezone is UTC."`
 	SensorData map[string]float64 `json:"sensorData"`
 }
 
+type DataBoundarySlice []DataBoundary
+
 type DataBoundary struct {
-	DeviceId string    `json:"deviceId"`
-	Start    time.Time `json:"start"`
-	Stop     time.Time `json:"stop"`
+	DeviceId sensor.DeviceId `json:"deviceId"`
+	Start    time.Time       `json:"start"`
+	Stop     time.Time       `json:"stop"`
 }
 
 type DataBoundaryRequest struct {
-	DeviceId string `log:"deviceid" path:"deviceId" pattern:"^[a-zA-Z0-9]{1,30}$" required:"true"`
+	sensor.DeviceIdParam
 	Timezone
 }
-type DataBoundaryResponse struct{ Body DataBoundary }
-
-// NOTE: this is exactly the same as deviceinfo.QueryFieldsError struct
-type DataBoundaryError struct {
-	DeviceId string `json:"deviceId"`
-	Error    string `json:"error"`
+type DataBoundaryResponse struct {
+	Status int
+	Body   DataBoundary
 }
 
 type BatchDataBoundaryRequest struct {
-	deviceinfo.DeviceBatch
+	sensor.Batch
 	Timezone
 }
 
 type BatchDataBoundaryResponse struct {
 	Results []DataBoundary      `json:"results"`
-	Errors  []DataBoundaryError `json:"errors"`
+	Errors  []sensor.BatchError `json:"errors"`
+}
+
+type DeviceLocationResponseSlice []DeviceLocationResponse
+
+type DeviceLocationResponse struct {
+	DeviceId  sensor.DeviceId `json:"deviceId"`
+	Time      time.Time       `json:"time" doc:"Time the latest Location was reported."`
+	Latitude  float64         `log:"latitude" json:"latitude"`
+	Longitude float64         `log:"longitude" json:"longitude"`
+}
+
+type BatchLocationRequest struct {
+	sensor.Batch
+}
+
+type BatchLocationResponse struct {
+	Results []DeviceLocationResponse `json:"results"`
+	Errors  []sensor.BatchError      `json:"errors"`
 }
 
 type TestingDataFetcher interface {
-	PrepareDb(*deviceinfo.Schema, SensorDataSlice) error
+	PrepareDb(*sensor.Schema, SensorDataSlice) error
 }
 
-type DataFetcher interface {
+type Fetcher interface {
 	TestingDataFetcher
-	GetData(metadata deviceinfo.DeviceInfo) (SensorDataSlice, error)
-	GetDataBoundary(metadata deviceinfo.DeviceInfo) (DataBoundary, error)
+	//NOTE: could return NoData, NoConnection
+	GetData(metadata sensor.Device) (SensorDataSlice, error)
+	//NOTE: could return NoData, NoConnection
+	GetLatestData(metadata sensor.Device) (SensorData, error)
+	//NOTE: could return NoData, NoConnection
+	GetDataBoundary(metadata sensor.Device) (DataBoundary, error)
+	//NOTE: could return NoLocation, NoConnection
+	GetLocation(metadata sensor.Device) (DeviceLocationResponse, error)
 	Close() error
 }

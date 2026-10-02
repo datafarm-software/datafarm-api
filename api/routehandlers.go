@@ -5,70 +5,156 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/datafarm-software/datafarm-api/api/authstore"
-	"github.com/datafarm-software/datafarm-api/api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
-	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
+	"github.com/datafarm-software/datafarm-api/api/sensor/data"
+	"github.com/datafarm-software/datafarm-api/api/sensor/info"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
+	"github.com/datafarm-software/telemetry/logging"
 )
 
 func (a *Api) GetSensorData(ctx context.Context,
-	in *datafetcher.SensorDataRequest) (out *datafetcher.SensorDataResponse, err error) {
+	in *data.SensorDataRequest) (out *data.SensorDataResponse, err error) {
 	logFromTag(ctx, in)
-	sensorData, err := a.getSensorData(ctx, in)
+	sensorData, err := a.getSensorData(ctx, *in)
 	if err != nil {
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("Not Found.")
+		}
+		if errors.Is(err, sensor.NoData) {
+			return &data.SensorDataResponse{Status: http.StatusNoContent}, nil
+		}
 		return nil, err
 	}
 	if len(sensorData) < 1 {
-		return &datafetcher.SensorDataResponse{Status: http.StatusNoContent}, nil
+		return &data.SensorDataResponse{Status: http.StatusNoContent}, nil
 	}
-	return &datafetcher.SensorDataResponse{
+	return &data.SensorDataResponse{
 		Status: http.StatusOK,
 		Body:   sensorData,
 	}, nil
 }
 
+func (a *Api) GetLatestSensorData(ctx context.Context,
+	in *data.LatestSensorDataRequest) (
+	out *data.LatestSensorDataResponse, err error) {
+	logFromTag(ctx, in)
+	sensorData, err := a.getLatestSensorData(ctx, *in)
+	if err != nil {
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("Not Found.")
+		}
+		if errors.Is(err, sensor.NoData) {
+			return &data.LatestSensorDataResponse{
+				Status: http.StatusNoContent,
+			}, nil
+		}
+		return nil, err
+	}
+	if len(sensorData) != 1 {
+		return nil, huma.Error500InternalServerError(
+			"Unexpected error while getting Latest SensorData.")
+	}
+	return &data.LatestSensorDataResponse{
+		Status: http.StatusOK,
+		Body:   sensorData[0],
+	}, nil
+}
+
 func (a *Api) BatchGetSensorData(ctx context.Context,
 	in *struct {
-		Body datafetcher.BatchSensorDataRequest
+		Body data.BatchSensorDataRequest
 	}) (*struct {
-	Body *datafetcher.BatchSensorDataResponse
+	Status int
+	Body   *data.BatchSensorDataResponse
 }, error) {
 	logFromTag(ctx, in.Body)
-	var dataReq *datafetcher.SensorDataRequest
-	var deviceErr datafetcher.SensorDataError
-	var sds datafetcher.SensorDataSlice
-	var err error
-	errSlice := make([]datafetcher.SensorDataError, 0, len(in.Body.Hardware))
-	resultSlice := make(datafetcher.SensorDataSlice, 0, len(in.Body.Hardware))
-	for _, hw := range in.Body.Hardware {
-		dataReq = &datafetcher.SensorDataRequest{
-			Hardware:  hw,
-			TimeFrame: in.Body.TimeFrame,
-		}
-		sds, err = a.getSensorData(ctx, dataReq)
-		if err == nil {
-			resultSlice = append(resultSlice, sds...)
-		} else {
-			deviceErr.DeviceId = hw.DeviceId
-			deviceErr.Error = err.Error()
-			errSlice = append(errSlice, deviceErr)
-		}
-	}
-	return &struct {
-		Body *datafetcher.BatchSensorDataResponse
-	}{
-		Body: &datafetcher.BatchSensorDataResponse{
-			Results: resultSlice,
-			Errors:  errSlice,
+	batch, err := sensor.BatchFactory(ctx, in.Body.Hardware,
+		func(hw sensor.Hardware) data.SensorDataRequest {
+			return data.SensorDataRequest{
+				Hardware: hw, TimeFrame: data.TimeFrame{
+					Start:    in.Body.Start,
+					Stop:     in.Body.Stop,
+					Timezone: in.Body.Timezone,
+				},
+			}
 		},
-	}, nil
+		a.getSensorData,
+	)
+	if err != nil {
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("No DeviceIds Found.")
+		}
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError("Database Disconnected.")
+		}
+		return nil, huma.Error500InternalServerError(
+			"Unexpected internal error while getting SensorData.")
+	}
+	resp := &struct {
+		Status int
+		Body   *data.BatchSensorDataResponse
+	}{
+		Status: http.StatusOK,
+		Body: &data.BatchSensorDataResponse{
+			Results: batch.Results,
+			Errors:  batch.Errors,
+		},
+	}
+	if len(batch.Results) < 1 && batch.OnlyDataMissingErrors {
+		resp.Status = http.StatusNoContent
+		resp.Body = nil
+	}
+	return resp, nil
+}
+
+func (a *Api) BatchGetLatestSensorData(ctx context.Context,
+	in *struct {
+		Body data.BatchLatestSensorDataRequest
+	}) (*struct {
+	Status int
+	Body   *data.BatchSensorDataResponse
+}, error) {
+	logFromTag(ctx, in.Body)
+	batch, err := sensor.BatchFactory(ctx, in.Body.Hardware,
+		func(hw sensor.Hardware) data.LatestSensorDataRequest {
+			return data.LatestSensorDataRequest{
+				Hardware: hw,
+				Timezone: in.Body.Timezone,
+			}
+		},
+		a.getLatestSensorData,
+	)
+	if err != nil {
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("No DeviceIds Found.")
+		}
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError("Database Disconnected.")
+		}
+		return nil, huma.Error500InternalServerError(
+			"Unexpected internal error with batch request.")
+	}
+	resp := &struct {
+		Status int
+		Body   *data.BatchSensorDataResponse
+	}{
+		Status: http.StatusOK,
+		Body: &data.BatchSensorDataResponse{
+			Results: batch.Results,
+			Errors:  batch.Errors,
+		},
+	}
+	if len(batch.Results) < 1 && batch.OnlyDataMissingErrors {
+		resp.Status = http.StatusNoContent
+		resp.Body = nil
+	}
+	return resp, nil
 }
 
 func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
@@ -86,14 +172,18 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 	var lr tokenprovider.LoginResponse
 	lr.Body = strings.TrimSpace(parts[1])
 	lr.Body = strings.Trim(lr.Body, `"`)
+	log, ok := humaCtx.Context().Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		a.httpErr(humaCtx, w, "Internal error while getting request log.",
+			http.StatusInternalServerError)
+	}
 	if !a.TokenProvider.ValidToken(lr) {
 		if err := a.AuthStore.DeleteToken(authstore.UserToken{Token: lr.Body}); err != nil {
-			logMetadata(humaCtx.Context(), logging.Metadata{
-				KeyValue: map[string][]string{
-					"authstore.error.message": {err.Error()}}})
+			log.AddMetadata(logging.Metadata{
+				"source":        {"verifyToken.authStore.DeleteToken"},
+				"error.message": {err.Error()}})
 			a.httpErr(humaCtx, w,
-				`Your token is invalid. Please login again. 
-				There was an internal error while deleting the invalid token.`,
+				`Your token is invalid. Please login again. There was an internal error while deleting the invalid token.`,
 				http.StatusInternalServerError)
 			return
 		}
@@ -102,20 +192,18 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 	}
 	user, err := a.AuthStore.GetUser(lr.Body)
 	if err != nil {
-		logMetadata(humaCtx.Context(), logging.Metadata{
-			KeyValue: map[string][]string{
-				"authstore.error.message": {fmt.Sprintf("getting user: %v", err)}}})
+		log.AddMetadata(logging.Metadata{
+			"source":        {"verifyToken.authStore.getUser"},
+			"error.message": {fmt.Sprintf("getting user: %v", err)}})
 		a.httpErr(humaCtx, w, "Internal error while getting user information.",
 			http.StatusInternalServerError)
 		return
 	}
-	logMetadata(humaCtx.Context(),
-		logging.Metadata{KeyValue: map[string][]string{
-			"client.username": {user.Username},
-			"client.company":  {user.Company},
-			"client.network":  {user.Network},
-		}},
-	)
+	log.AddMetadata(logging.Metadata{
+		"client.username": {user.Username},
+		"client.company":  {user.Company},
+		"client.network":  {user.Network},
+	})
 	next(huma.WithValue(humaCtx, "user", user))
 }
 
@@ -123,15 +211,15 @@ func (a *Api) Login(ctx context.Context,
 	ar *tokenprovider.LoginRequest) (*tokenprovider.LoginResponse, error) {
 	parts := strings.Split(ar.Auth, " ")
 	logFromTag(ctx, ar)
-	if len(parts) != 2 || parts[0] != "Basic" {
-		return nil, huma.Error400BadRequest(
-			"Authorization header must follow the basic format: 'Basic base64(username:password)'")
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		huma.Error500InternalServerError("Internal error while getting request log.")
 	}
 	authBytes, err := base64.StdEncoding.DecodeString(parts[1])
 	if err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"domain.error.message": {fmt.Sprintf("base64 decode: %v", err)}}})
+		log.AddMetadata(logging.Metadata{
+			"source":        {"login.domain"},
+			"error.message": {fmt.Sprintf("base64 decode: %v", err)}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error decoding given base64.")
 	}
@@ -161,15 +249,17 @@ func (a *Api) Login(ctx context.Context,
 			"Password failed the regex.")
 	}
 	if err = a.AuthStore.VerifyCredentials(username, password); err != nil {
-		log.Printf("verifyCredentials error: %v", err)
-		return nil, huma.Error401Unauthorized("Bad credentials provided.")
+		log.AddMetadata(logging.Metadata{
+			"source":        {"login.authStore.verifyCredentials"},
+			"error.message": {err.Error()}})
+		return nil, huma.Error401Unauthorized("Bad credentials.")
 	}
 	ut, err := a.AuthStore.GetToken(username)
 	if err != nil {
 		if !errors.Is(err, authstore.NotLoggedIn) {
-			logMetadata(ctx, logging.Metadata{
-				KeyValue: map[string][]string{
-					"authstore.error.message": {fmt.Sprintf("getting token: %v", err)}}})
+			log.AddMetadata(logging.Metadata{
+				"source":        {"login.authStore.getToken"},
+				"error.message": {err.Error()}})
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking if user is logged in.")
 		}
@@ -179,149 +269,277 @@ func (a *Api) Login(ctx context.Context,
 	}
 	ut, err = a.TokenProvider.GenerateToken(username)
 	if err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"tokenprovider.error.message": {fmt.Sprintf("generate token: %v", err)}}})
+		log.AddMetadata(logging.Metadata{
+			"source":        {"login.tokenProvider.generateToken"},
+			"error.message": {err.Error()}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error generating an access token.")
 	}
 	if err = a.AuthStore.StoreToken(ut); err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"authstore.error.message": {fmt.Sprintf("store token: %v", err)}}})
+		log.AddMetadata(logging.Metadata{
+			"source":        {"login.authStore.storeToken"},
+			"error.message": {err.Error()}})
 		return nil, huma.Error500InternalServerError(
-			"Internal error linking the token to the user.")
+			"Internal error storing the token.")
 	}
 	a.Meter.ActiveUsersCountAdd(1)
 	return &tokenprovider.LoginResponse{Body: ut.Token}, nil
 }
 
-func (a *Api) GetQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (
-	*deviceinfo.QueryFieldsResponse, error) {
+func (a *Api) GetQueryFields(ctx context.Context, in *sensor.DeviceIdParam) (
+	*info.QueryFieldsResponse, error) {
 	logFromTag(ctx, in)
-	queryFields, err := a.getQueryFields(ctx, in)
+	queryFields, err := a.getQueryFields(ctx, *in)
 	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError(
+				"Database Disconnected.")
+		}
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("Not Found.")
+		}
 		return nil, err
 	}
-	return &deviceinfo.QueryFieldsResponse{Body: queryFields}, nil
+	if len(queryFields) != 1 {
+		return nil, huma.Error500InternalServerError(
+			"Internal error while getting QueryFields")
+	}
+	return &info.QueryFieldsResponse{Body: queryFields[0]}, nil
 }
 
 func (a *Api) BatchGetQueryFields(ctx context.Context,
-	in *deviceinfo.BatchQueryFieldsRequest) (*struct {
-	Body deviceinfo.BatchQueryFieldsResponse
+	in *info.BatchQueryFieldsRequest) (*struct {
+	Body info.BatchQueryFieldsResponse
 }, error) {
 	logFromTag(ctx, in)
-	var qr deviceinfo.QueryFieldsRequest
-	var dataResp deviceinfo.QueryFields
-	var deviceErr deviceinfo.QueryFieldsError
-	var err error
-	errSlice := make([]deviceinfo.QueryFieldsError, 0, len(in.Body.DeviceIds))
-	resultSlice := make([]deviceinfo.QueryFields, 0, len(in.Body.DeviceIds))
-	for _, deviceId := range in.Body.DeviceIds {
-		qr = deviceinfo.QueryFieldsRequest{
-			DeviceId: deviceId,
+	batch, err := sensor.BatchFactory(ctx, in.Body.DeviceIds,
+		func(d sensor.DeviceId) sensor.DeviceIdParam {
+			return sensor.DeviceIdParam{DeviceId: d}
+		},
+		a.getQueryFields,
+	)
+	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError("Database Disconnected.")
 		}
-		dataResp, err = a.getQueryFields(ctx, &qr)
-		if err == nil {
-			resultSlice = append(resultSlice, dataResp)
-		} else {
-			deviceErr.DeviceId = deviceId
-			deviceErr.Error = err.Error()
-			errSlice = append(errSlice, deviceErr)
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("DeviceIds Not Found.")
 		}
+		return nil, huma.Error500InternalServerError(
+			"Unexpected internal error while getting SensorData.")
 	}
 	return &struct {
-		Body deviceinfo.BatchQueryFieldsResponse
+		Body info.BatchQueryFieldsResponse
 	}{
-		Body: deviceinfo.BatchQueryFieldsResponse{
-			Results: resultSlice,
-			Errors:  errSlice,
+		Body: info.BatchQueryFieldsResponse{
+			Results: batch.Results,
+			Errors:  batch.Errors,
 		},
 	}, nil
+	// if len(batch.Results) < 1 && batch.OnlyDataMissingErrors {
+	// 	resp.Status = http.StatusNoContent
+	// 	resp.Body = nil
+	// }
+	// return resp, nil
 }
 
 func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
-	*deviceinfo.DeviceIdsResponse, error) {
+	*struct {
+		Status int
+		Body   info.DeviceIdsResponse
+	}, error) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting user.")
 	}
-	sr := deviceinfo.ScopeRestriction{
+	sr := info.ScopeRestriction{
 		Company: user.Company,
 		Network: user.Network,
 	}
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		huma.Error500InternalServerError("Internal error while getting request log.")
+	}
 	switch authstore.Role(user.Role) {
 	case authstore.User:
-		sr.Scope = deviceinfo.DevicesInCompanyInNetwork
+		sr.Scope = info.DevicesInCompanyInNetwork
 	case authstore.NetworkUser:
-		sr.Scope = deviceinfo.DevicesInNetwork
+		sr.Scope = info.DevicesInNetwork
 	case authstore.Admin:
-		sr.Scope = deviceinfo.AllDevices
+		sr.Scope = info.AllDevices
 	default:
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"domain.error.message": {fmt.Sprintf("unknown user role: %v", user.Role)}}})
+		log.AddMetadata(logging.Metadata{
+			"source":        {"getDeviceIds.domain"},
+			"error.message": {fmt.Sprintf("unexpected user role: %v", user.Role)}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error determining user role.")
 	}
 	userDevices, err := a.DeviceInfo.GetDevices(sr)
 	if err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"deviceinfo.error.message": {fmt.Sprintf("get devices: %v", err)}}})
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError(
+				"Database disconnected.")
+		}
+		log.AddMetadata(logging.Metadata{
+			"source":        {"getDeviceIds.deviceInfo.getDevices"},
+			"error.message": {err.Error()}})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting DeviceIds.")
 	}
-	return &deviceinfo.DeviceIdsResponse{
-		Body: userDevices,
-	}, nil
+	resp := &struct {
+		Status int
+		Body   info.DeviceIdsResponse
+	}{
+		Status: http.StatusOK,
+		Body:   info.DeviceIdsResponse{DeviceIds: userDevices},
+	}
+	if len(userDevices) < 1 {
+		resp.Status = http.StatusNoContent
+	}
+	return resp, nil
 }
 
-func (a *Api) GetSensorDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
-	*datafetcher.DataBoundaryResponse, error) {
+func (a *Api) GetDataBoundary(ctx context.Context, in *data.DataBoundaryRequest) (
+	*data.DataBoundaryResponse, error) {
 	logFromTag(ctx, in)
-	db, err := a.getSensorDataBoundary(ctx, in)
+	db, err := a.getDataBoundary(ctx, *in)
 	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError(
+				"Database Disconnected.")
+		}
+		if errors.Is(err, sensor.NoData) {
+			return &data.DataBoundaryResponse{Status: http.StatusNoContent}, nil
+		}
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("Not Found.")
+		}
 		return nil, err
 	}
-	return &datafetcher.DataBoundaryResponse{Body: db}, nil
+	if len(db) != 1 {
+		return nil, huma.Error500InternalServerError(
+			"Unexpected internal error while getting DataBoundary.")
+	}
+	return &data.DataBoundaryResponse{Status: http.StatusOK, Body: db[0]}, nil
 }
 
-func (a *Api) BatchGetSensorDataBoundary(ctx context.Context,
+func (a *Api) BatchGetDataBoundary(ctx context.Context,
 	in *struct {
-		Body datafetcher.BatchDataBoundaryRequest
+		Body data.BatchDataBoundaryRequest
 	}) (
 	*struct {
-		Body datafetcher.BatchDataBoundaryResponse
+		Status int
+		Body   data.BatchDataBoundaryResponse
 	}, error) {
 	logFromTag(ctx, in.Body)
-	var qr datafetcher.DataBoundaryRequest
-	var dataResp datafetcher.DataBoundary
-	var deviceErr datafetcher.DataBoundaryError
-	var err error
-	errSlice := make([]datafetcher.DataBoundaryError, 0, len(in.Body.DeviceIds))
-	resultSlice := make([]datafetcher.DataBoundary, 0, len(in.Body.DeviceIds))
-	for _, deviceId := range in.Body.DeviceIds {
-		qr = datafetcher.DataBoundaryRequest{
-			DeviceId: deviceId,
-			Timezone: in.Body.Timezone,
+	batch, err := sensor.BatchFactory(ctx, in.Body.DeviceIds,
+		func(d sensor.DeviceId) data.DataBoundaryRequest {
+			return data.DataBoundaryRequest{
+				DeviceIdParam: sensor.DeviceIdParam{DeviceId: d},
+				Timezone:      in.Body.Timezone,
+			}
+		},
+		a.getDataBoundary)
+	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError("Database Disconnected.")
 		}
-		dataResp, err = a.getSensorDataBoundary(ctx, &qr)
-		if err == nil {
-			resultSlice = append(resultSlice, dataResp)
-		} else {
-			deviceErr.DeviceId = deviceId
-			deviceErr.Error = err.Error()
-			errSlice = append(errSlice, deviceErr)
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("Not Found.")
+		}
+		if !errors.Is(err, sensor.NoData) {
+			return nil, huma.Error500InternalServerError(
+				"Unexpected internal error while getting DataBoundary.")
 		}
 	}
-	return &struct {
-		Body datafetcher.BatchDataBoundaryResponse
+	resp := &struct {
+		Status int
+		Body   data.BatchDataBoundaryResponse
 	}{
-		Body: datafetcher.BatchDataBoundaryResponse{
-			Results: resultSlice,
-			Errors:  errSlice,
+		Status: http.StatusOK,
+		Body: data.BatchDataBoundaryResponse{
+			Results: batch.Results,
+			Errors:  batch.Errors,
 		},
-	}, nil
+	}
+	if len(batch.Results) < 1 && batch.OnlyDataMissingErrors {
+		resp.Status = http.StatusNoContent
+		resp.Body = data.BatchDataBoundaryResponse{}
+	}
+	return resp, nil
+}
+
+func (a *Api) GetLocation(ctx context.Context, in *sensor.DeviceIdParam) (
+	*struct {
+		Status int
+		Body   data.DeviceLocationResponse
+	}, error) {
+	logFromTag(ctx, in)
+	loc, err := a.getLocation(ctx, *in)
+	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError(
+				"Database Disconnected.")
+		}
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("Not Found.")
+		}
+		if errors.Is(err, sensor.NoLocation) {
+			return &struct {
+				Status int
+				Body   data.DeviceLocationResponse
+			}{http.StatusNoContent, data.DeviceLocationResponse{}}, nil
+		}
+		return nil, err
+	}
+	if len(loc) != 1 {
+		return nil, huma.Error500InternalServerError(
+			"Unexpected internal error while getting Location.")
+	}
+	return &struct {
+		Status int
+		Body   data.DeviceLocationResponse
+	}{http.StatusOK, loc[0]}, nil
+}
+
+func (a *Api) BatchGetLocation(ctx context.Context, in *struct {
+	Body data.BatchLocationRequest
+}) (*struct {
+	Status int
+	Body   data.BatchLocationResponse
+}, error) {
+	logFromTag(ctx, in.Body)
+	batch, err := sensor.BatchFactory(ctx, in.Body.DeviceIds,
+		func(d sensor.DeviceId) sensor.DeviceIdParam {
+			return sensor.DeviceIdParam{DeviceId: d}
+		},
+		a.getLocation)
+	if err != nil {
+		if errors.Is(err, sensor.NotFound) {
+			return nil, huma.Error404NotFound("DeviceIds Not Found.")
+		}
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, huma.Error500InternalServerError("Database Disconnected.")
+		}
+		if !errors.Is(err, sensor.NoLocation) {
+			return nil, huma.Error500InternalServerError(
+				"Unexpected internal error while getting Locations.")
+		}
+	}
+	resp := &struct {
+		Status int
+		Body   data.BatchLocationResponse
+	}{
+		Status: http.StatusOK,
+		Body: data.BatchLocationResponse{
+			Results: batch.Results,
+			Errors:  batch.Errors,
+		},
+	}
+	if len(batch.Results) < 1 && batch.OnlyDataMissingErrors {
+		resp.Status = http.StatusNoContent
+		resp.Body = data.BatchLocationResponse{}
+	}
+	return resp, nil
 }

@@ -11,8 +11,9 @@ import (
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/datafarm-software/datafarm-api/api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
+	"github.com/datafarm-software/datafarm-api/api/sensor/data"
+	"github.com/datafarm-software/datafarm-api/api/sensor/info"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
 )
 
@@ -34,29 +35,55 @@ type HumaOperator interface {
 	RateLimit(ctx huma.Context, next func(huma.Context))
 	VerifyToken(ctx huma.Context, next func(huma.Context))
 	GetSensorData(context.Context,
-		*datafetcher.SensorDataRequest) (*datafetcher.SensorDataResponse, error)
+		*data.SensorDataRequest) (*data.SensorDataResponse, error)
 	BatchGetSensorData(context.Context, *struct {
-		Body datafetcher.BatchSensorDataRequest
+		Body data.BatchSensorDataRequest
 	}) (*struct {
-		Body *datafetcher.BatchSensorDataResponse
+		Status int
+		Body   *data.BatchSensorDataResponse
+	}, error)
+	GetLatestSensorData(context.Context,
+		*data.LatestSensorDataRequest) (*data.LatestSensorDataResponse, error)
+	BatchGetLatestSensorData(context.Context, *struct {
+		Body data.BatchLatestSensorDataRequest
+	}) (*struct {
+		Status int
+		Body   *data.BatchSensorDataResponse
 	}, error)
 	Login(context.Context, *tokenprovider.LoginRequest) (
 		*tokenprovider.LoginResponse, error)
-	GetQueryFields(context.Context, *deviceinfo.QueryFieldsRequest) (
-		*deviceinfo.QueryFieldsResponse, error)
-	BatchGetQueryFields(context.Context, *deviceinfo.BatchQueryFieldsRequest) (
+	GetQueryFields(context.Context, *sensor.DeviceIdParam) (
+		*info.QueryFieldsResponse, error)
+	BatchGetQueryFields(context.Context, *info.BatchQueryFieldsRequest) (
 		*struct {
-			Body deviceinfo.BatchQueryFieldsResponse
+			Body info.BatchQueryFieldsResponse
 		}, error)
-	GetDeviceIds(context.Context, *struct{}) (*deviceinfo.DeviceIdsResponse, error)
-	GetSensorDataBoundary(context.Context, *datafetcher.DataBoundaryRequest) (
-		*datafetcher.DataBoundaryResponse, error)
-	BatchGetSensorDataBoundary(context.Context,
+	GetDeviceIds(context.Context, *struct{}) (*struct {
+		Status int
+		Body   info.DeviceIdsResponse
+	}, error)
+	GetDataBoundary(context.Context, *data.DataBoundaryRequest) (
+		*data.DataBoundaryResponse, error)
+	BatchGetDataBoundary(context.Context,
 		*struct {
-			Body datafetcher.BatchDataBoundaryRequest
+			Body data.BatchDataBoundaryRequest
 		}) (
 		*struct {
-			Body datafetcher.BatchDataBoundaryResponse
+			Status int
+			Body   data.BatchDataBoundaryResponse
+		}, error)
+	GetLocation(context.Context, *sensor.DeviceIdParam) (
+		*struct {
+			Status int
+			Body   data.DeviceLocationResponse
+		}, error)
+	BatchGetLocation(context.Context,
+		*struct {
+			Body data.BatchLocationRequest
+		}) (
+		*struct {
+			Status int
+			Body   data.BatchLocationResponse
 		}, error)
 }
 
@@ -166,6 +193,18 @@ func baseOperation(method string, middlewares *huma.Middlewares) huma.Operation 
 	return op
 }
 
+func deviceIdParam() *huma.Param {
+	return &huma.Param{
+		Name:     "deviceId",
+		In:       "path",
+		Required: true,
+		Schema: &huma.Schema{
+			Type:    "string",
+			Pattern: `^\w{1,30}$`,
+		},
+	}
+}
+
 func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	mw := []func(ctx huma.Context, next func(huma.Context)){
 		ho.RateLimit, ho.CountApiRequest, ho.TraceRequest, ho.LogRequest, ho.RecordLatency,
@@ -187,62 +226,121 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 
 	op = baseOperation("POST", &allMw)
 	op.Path = "/batch/device/sensordata"
-	op.Summary = "Batch Get Sensor Data"
-	op.Description = "Clients can use this route to request data from multiple device ids."
-	op.Responses["500"] = &huma.Response{}
-	op.Responses["404"] = &huma.Response{}
+	op.Summary = "Batch Get DeviceId SensorData"
+	op.Description = "Clients can use this route to request SensorData from multiple DeviceIds."
+	fh = FiveHundredExample()
+	fh.Detail =
+		"Database disconnected."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	op.Responses["404"] = &huma.Response{
+		Description: "No DeviceIds Found.",
+	}
+	op.Responses["204"] = &huma.Response{
+		Description: "No SensorData for any DeviceId requested in the time period.",
+	}
 	huma.Register(api, op, ho.BatchGetSensorData)
+
+	op = baseOperation("POST", &allMw)
+	op.Path = "/batch/device/sensordata/latest"
+	op.Summary = "Batch Get DeviceId Latest SensorData"
+	op.Description = "Clients can use this route to request Latest SensorData from multiple DeviceIds."
+	fh = FiveHundredExample()
+	fh.Detail =
+		"Database disconnected."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	op.Responses["404"] = &huma.Response{
+		Description: "No DeviceIds Found.",
+	}
+	op.Responses["204"] = &huma.Response{
+		Description: "No SensorData for any DeviceId requested.",
+	}
+	huma.Register(api, op, ho.BatchGetLatestSensorData)
 
 	op = baseOperation("POST", &allMw)
 	op.Path = "/batch/device/queryfields"
 	op.Summary = "Batch Get DeviceId QueryFields"
 	op.Description =
-		"Clients can use this route to request QueryFields from multiple device ids."
-	op.Responses["500"] = &huma.Response{}
-	op.Responses["404"] = &huma.Response{}
+		"Clients can use this route to request QueryFields from multiple DeviceIds."
+	fh = FiveHundredExample()
+	fh.Detail =
+		"Database disconnected."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	op.Responses["404"] = &huma.Response{
+		Description: "No DeviceIds Found.",
+	}
 	huma.Register(api, op, ho.BatchGetQueryFields)
 
 	op = baseOperation("POST", &allMw)
 	op.Path = "/batch/device/databoundary"
 	op.Summary = "Batch Get DeviceId DataBoundary"
-	op.Description = "Clients can use this route to get the DataBoundary of multiple devices."
-	op.Responses["500"] = &huma.Response{}
-	op.Responses["404"] = &huma.Response{}
-	huma.Register(api, op, ho.BatchGetSensorDataBoundary)
-
-	deviceIdParam := &huma.Param{
-		Name:     "deviceId",
-		In:       "path",
-		Required: true,
-		Schema: &huma.Schema{
-			Type:    "string",
-			Pattern: `^\w{1,30}$`,
-		},
+	op.Description = "Clients can use this route to get the DataBoundary of multiple DeviceIds."
+	fh = FiveHundredExample()
+	fh.Detail =
+		"Database disconnected."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	op.Responses["404"] = &huma.Response{
+		Description: "No DeviceIds Found.",
 	}
+	op.Responses["204"] = &huma.Response{
+		Description: "No Data for DeviceIds.",
+	}
+	huma.Register(api, op, ho.BatchGetDataBoundary)
+
+	op = baseOperation("POST", &allMw)
+	op.Path = "/batch/device/location"
+	op.Summary = "Batch Get DeviceId Location"
+	op.Description = "Clients can use this route to get the Location of multiple DeviceIds."
+	fh = FiveHundredExample()
+	fh.Detail =
+		"Database disconnected."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	op.Responses["404"] = &huma.Response{
+		Description: "No DeviceIds Found.",
+	}
+	op.Responses["204"] = &huma.Response{
+		Description: "No Location for any DeviceId requested.",
+	}
+	huma.Register(api, op, ho.BatchGetLocation)
 
 	op = baseOperation("GET", &allMw)
 	op.Path = "/device/{deviceId}/sensordata"
-	deviceIdParam.Description = "Device Id to request data from."
-	op.Parameters = []*huma.Param{deviceIdParam}
-	op.Summary = "Get Sensor Data"
+	di := deviceIdParam()
+	di.Description = "DeviceId to request SensorData from."
+	op.Parameters = []*huma.Param{di}
+	op.Summary = "Get DeviceId SensorData"
 	op.Description =
-		"Clients can use this route to request data from a sensor using its device id."
+		"Clients can use this route to request SensorData from a DeviceId."
 	op.Responses["204"] = &huma.Response{
 		Description: "No SensorData for the requested time period.",
 	}
 	fh = FiveHundredExample()
-	fh.Detail = "Internal error while getting data for the device."
+	fh.Detail = "Internal error while getting SensorData for the DeviceId."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	huma.Register(api, op, ho.GetSensorData)
-	op.Responses["204"] = &huma.Response{}
-	op.Parameters = []*huma.Param{}
+
+	op = baseOperation("GET", &allMw)
+	op.Path = "/device/{deviceId}/sensordata/latest"
+	di = deviceIdParam()
+	di.Description = "DeviceId to request Latest SensorData from."
+	op.Parameters = []*huma.Param{di}
+	op.Summary = "Get DeviceId Latest SensorData"
+	op.Description =
+		"Clients can use this route to request only the Latest SensorData from a DeviceId."
+	op.Responses["204"] = &huma.Response{
+		Description: "No SensorData for the DeviceId.",
+	}
+	fh = FiveHundredExample()
+	fh.Detail = "Internal error while getting Latest SensorData for the DeviceId."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	huma.Register(api, op, ho.GetLatestSensorData)
 
 	op = baseOperation("GET", &allMw)
 	op.Path = "/device/{deviceId}/queryfields"
 	op.Summary = "Get DeviceId QueryFields"
-	op.Description = "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has data attached to it eg. A temperature sensor might have a 'temperature' QueryField."
-	deviceIdParam.Description = "Device Id to get QueryField information from."
-	op.Parameters = []*huma.Param{deviceIdParam}
+	op.Description = "Clients can use this route to get the device's QueryFields. A QueryField is defined as a metric which has SensorData attached to it eg. A temperature sensor might have a 'temperature' QueryField."
+	di = deviceIdParam()
+	di.Description = "DeviceId to get QueryField information from."
+	op.Parameters = []*huma.Param{di}
 	fh = FiveHundredExample()
 	fh.Detail = "Internal error getting queryFields."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
@@ -256,18 +354,40 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	fh.Detail = "Internal error while getting deviceids."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	op.Responses["404"] = &huma.Response{}
+	op.Responses["204"] = &huma.Response{
+		Description: "When Client has no access to any DeviceIds.",
+	}
 	huma.Register(api, op, ho.GetDeviceIds)
 
 	op = baseOperation("GET", &allMw)
 	op.Path = "/device/{deviceId}/databoundary"
 	op.Summary = "Get DeviceId DataBoundary"
 	op.Description = "Clients can use this route to get the device's DataBoundary. A DataBoundary contains the oldest and most recent sensordata timestamps for the device."
-	deviceIdParam.Description = "Device Id to get DataBoundary information from."
-	op.Parameters = []*huma.Param{deviceIdParam}
+	di = deviceIdParam()
+	di.Description = "DeviceId to get DataBoundary information from."
+	op.Parameters = []*huma.Param{di}
 	fh = FiveHundredExample()
 	fh.Detail = "Internal error getting DataBoundary."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
-	huma.Register(api, op, ho.GetSensorDataBoundary)
+	op.Responses["204"] = &huma.Response{
+		Description: "No SensorData for DeviceId.",
+	}
+	huma.Register(api, op, ho.GetDataBoundary)
+
+	op = baseOperation("GET", &allMw)
+	op.Path = "/device/{deviceId}/location"
+	op.Summary = "Get DeviceId Location"
+	op.Description = "Clients can use this route to get the device's Location as GPS Coordinates."
+	di = deviceIdParam()
+	di.Description = "DeviceId to get Location information of."
+	op.Parameters = []*huma.Param{di}
+	fh = FiveHundredExample()
+	fh.Detail = "Internal error getting Location."
+	op.Responses["500"].Content["application/json"] = fh.MediaType()
+	op.Responses["204"] = &huma.Response{
+		Description: "No Location Information for DeviceId.",
+	}
+	huma.Register(api, op, ho.GetLocation)
 }
 
 var versionRegex = regexp.MustCompile(`[\d]+.[\d]+.[\d]+`)
@@ -295,7 +415,7 @@ func Config(mode Mode) (config huma.Config) {
 	config.Info.Description = `
 ## Welcome
 
-The DataFarm SensorData API provides our clients with access to their Sensor Data,
+The DataFarm SensorData API provides our clients with access to their SensorData,
 Device Metadata, and Export Functionality.
 
 ### Authentication
@@ -337,7 +457,7 @@ DataFarm welcomes external contribution to the API, through Open Source under th
 	config.DefaultFormat = "application/json"
 	config.Formats["text/csv"] = huma.Format{
 		Marshal: func(w io.Writer, v any) error {
-			cm, ok := v.(datafetcher.CsvMarshaller)
+			cm, ok := v.(data.CsvMarshaller)
 			if !ok {
 				return fmt.Errorf("csv marshal did not receive marshaller, got: %T", v)
 			}
@@ -383,7 +503,7 @@ func SetupApiOperations(humaApi huma.API, a HumaOperator) {
 	}
 	csvMediaType := &huma.MediaType{
 		Schema: &huma.Schema{
-			Description: "Clients are able to negotiate CSV formatted Sensor Data using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Timestamps will be in UTC timezone and RFC3339 Format. Should there be any errors, clients can expect these to be included in the CSV.",
+			Description: "Clients are able to negotiate CSV formatted SensorData using the Accept header. Format of the CSV is dependent on the QueryFields associated with the DeviceId. Timestamps will be in UTC timezone and RFC3339 Format. Should there be any errors, clients can expect these to be included in the CSV.",
 			Type:        "string",
 		},
 	}

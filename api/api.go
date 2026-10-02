@@ -13,14 +13,14 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/danielgtaylor/huma/v2/humacli"
 	"github.com/datafarm-software/datafarm-api/api/authstore"
-	"github.com/datafarm-software/datafarm-api/api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/sensor/data"
+	"github.com/datafarm-software/datafarm-api/api/sensor/info"
 	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
-	"github.com/datafarm-software/datafarm-api/api/telemetry"
-	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
-	"github.com/datafarm-software/datafarm-api/api/telemetry/metering"
-	"github.com/datafarm-software/datafarm-api/api/telemetry/tracing"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
+	"github.com/datafarm-software/telemetry"
+	"github.com/datafarm-software/telemetry/logging"
+	"github.com/datafarm-software/telemetry/metering"
+	"github.com/datafarm-software/telemetry/tracing"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 
@@ -43,18 +43,18 @@ var NUMBER_REGEX = regexp.MustCompile(`[0-9]`)
 var SPECIAL_CHARS_REGEX = regexp.MustCompile(`[@$!%*?&#]`)
 
 type ApiOpts struct {
-	RedisOpts      redis.RedisOpts        `mapstructure:"Redis" validate:"required"`
-	InfluxOpts     datafetcher.InfluxOpts `mapstructure:"Influx" validate:"required"`
-	TelemetryOpts  telemetry.Opts         `mapstructure:"telemetry" validate:"required"`
-	Port           string                 `mapstructure:"port" validate:"required"`
-	PrivateKeyFile string                 `mapstructure:"privatekeyfile" validate:"required"`
-	PublicKeyFile  string                 `mapstructure:"publickeyfile" validate:"required"`
-	Mode           localhuma.Mode         `mapstructure:"mode"`
+	RedisOpts      redis.RedisOpts `mapstructure:"Redis" validate:"required"`
+	InfluxOpts     data.InfluxOpts `mapstructure:"Influx" validate:"required"`
+	TelemetryOpts  telemetry.Opts  `mapstructure:"telemetry" validate:"required"`
+	Port           string          `mapstructure:"port" validate:"required"`
+	PrivateKeyFile string          `mapstructure:"privatekeyfile" validate:"required"`
+	PublicKeyFile  string          `mapstructure:"publickeyfile" validate:"required"`
+	Mode           localhuma.Mode  `mapstructure:"mode"`
 }
 
 type Api struct {
-	DeviceInfo    deviceinfo.DeviceInfoFetcher
-	DataFetcher   datafetcher.DataFetcher
+	DeviceInfo    info.Fetcher
+	DataFetcher   data.Fetcher
 	TokenProvider tokenprovider.TokenProvider
 	AuthStore     authstore.AuthStore
 	Meter         metering.Meter
@@ -73,7 +73,7 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return err
 	}
-	df, err := datafetcher.NewInfluxDatafetcher(opts.InfluxOpts)
+	df, err := data.NewInfluxDatafetcher(opts.InfluxOpts)
 	if err != nil {
 		return fmt.Errorf("error init influx: %v", err)
 	}
@@ -93,11 +93,15 @@ func Start(opts ApiOpts) error {
 	if err != nil {
 		return fmt.Errorf("init logger: %v", err)
 	}
-	tracer, err := tracing.NewOtlpTracer(res, opts.TelemetryOpts.CollectorEndpoint)
+	tracer, err := tracing.NewOtlpTracer(res, "datafarm-software/datafarm-api", opts.TelemetryOpts.CollectorEndpoint, 0.25)
 	if err != nil {
 		return fmt.Errorf("init tracer: %v", err)
 	}
-	meter, err := metering.NewOtlpMeter(res, opts.TelemetryOpts.CollectorEndpoint)
+	meter, err := metering.NewOtlpMeter(metering.OtlpOpts{
+		Name:     "datafarm-software/datafarm-api",
+		Endpoint: opts.TelemetryOpts.CollectorEndpoint, Res: res},
+		metering.WithLatency(), metering.WithMemoryUsage(), metering.WithActiveUsersCount(),
+		metering.WithOtelRuntime(), metering.WithUptime(), metering.WithRequestCount())
 	if err != nil {
 		return fmt.Errorf("init meter: %v", err)
 	}
@@ -147,10 +151,10 @@ func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
 func (a *Api) Close() {
 	var err error
 	if err = a.DeviceInfo.Close(); err != nil {
-		log.Printf("error closing metadatafetcher: %v", err)
+		log.Printf("error closing metadevice/data: %v", err)
 	}
 	if err = a.DataFetcher.Close(); err != nil {
-		log.Printf("error closing datafetcher: %v", err)
+		log.Printf("error closing device/data: %v", err)
 	}
 	if err = a.TokenProvider.Close(); err != nil {
 		log.Printf("error closing token auth: %v", err)

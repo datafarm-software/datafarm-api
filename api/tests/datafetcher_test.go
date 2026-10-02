@@ -5,26 +5,27 @@ import (
 	"testing"
 	"time"
 
-	"github.com/datafarm-software/datafarm-api/api/datafetcher"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
+	"github.com/datafarm-software/datafarm-api/api/sensor/data"
 	"github.com/google/go-cmp/cmp"
 )
 
 func TestSensorDataSliceCsvInfo(t *testing.T) {
 	tests := map[string]struct {
 		wantErr bool
-		input   datafetcher.SensorDataSlice
-		want    datafetcher.CsvInfo
+		input   data.SensorDataSlice
+		want    data.CsvInfo
 	}{
 
 		"single deviceid, single queryfield to csv info": {
-			want: datafetcher.CsvInfo{
+			want: data.CsvInfo{
 				Headers: []string{RegisteredQueryField},
-				DeviceIdIndexes: map[datafetcher.DeviceId]datafetcher.Indexes{
+				DeviceIdIndexes: map[sensor.DeviceId]data.Indexes{
 					RegisteredDeviceId: {0, 1},
 				},
-				DeviceIds: []datafetcher.DeviceId{RegisteredDeviceId},
+				DeviceIds: []sensor.DeviceId{RegisteredDeviceId},
 			},
-			input: datafetcher.SensorDataSlice{
+			input: data.SensorDataSlice{
 				{
 					DeviceID:   RegisteredDeviceId,
 					Timestamp:  InsideTimeRange,
@@ -39,14 +40,14 @@ func TestSensorDataSliceCsvInfo(t *testing.T) {
 		},
 
 		"single deviceid, multiple queryfields to csv info": {
-			want: datafetcher.CsvInfo{
+			want: data.CsvInfo{
 				Headers: []string{AnotherRegisteredQueryField, RegisteredQueryField},
-				DeviceIdIndexes: map[datafetcher.DeviceId]datafetcher.Indexes{
+				DeviceIdIndexes: map[sensor.DeviceId]data.Indexes{
 					RegisteredDeviceId: {0, 1},
 				},
-				DeviceIds: []datafetcher.DeviceId{RegisteredDeviceId},
+				DeviceIds: []sensor.DeviceId{RegisteredDeviceId},
 			},
-			input: datafetcher.SensorDataSlice{
+			input: data.SensorDataSlice{
 				{
 					DeviceID:   RegisteredDeviceId,
 					Timestamp:  InsideTimeRange,
@@ -61,15 +62,15 @@ func TestSensorDataSliceCsvInfo(t *testing.T) {
 		},
 
 		"multiple deviceids but same queryfields": {
-			want: datafetcher.CsvInfo{
+			want: data.CsvInfo{
 				Headers: []string{RegisteredQueryField},
-				DeviceIdIndexes: map[datafetcher.DeviceId]datafetcher.Indexes{
+				DeviceIdIndexes: map[sensor.DeviceId]data.Indexes{
 					RegisteredDeviceId:        {0},
 					AnotherRegisteredDeviceId: {1},
 				},
-				DeviceIds: []datafetcher.DeviceId{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				DeviceIds: []sensor.DeviceId{RegisteredDeviceId, AnotherRegisteredDeviceId},
 			},
-			input: datafetcher.SensorDataSlice{
+			input: data.SensorDataSlice{
 				{
 					DeviceID:   RegisteredDeviceId,
 					Timestamp:  InsideTimeRange,
@@ -84,15 +85,15 @@ func TestSensorDataSliceCsvInfo(t *testing.T) {
 		},
 
 		"multiple deviceids multiple queryfields": {
-			want: datafetcher.CsvInfo{
+			want: data.CsvInfo{
 				Headers: []string{AnotherRegisteredQueryField, RegisteredQueryField},
-				DeviceIdIndexes: map[datafetcher.DeviceId]datafetcher.Indexes{
+				DeviceIdIndexes: map[sensor.DeviceId]data.Indexes{
 					RegisteredDeviceId:        {0},
 					AnotherRegisteredDeviceId: {1},
 				},
-				DeviceIds: []datafetcher.DeviceId{RegisteredDeviceId, AnotherRegisteredDeviceId},
+				DeviceIds: []sensor.DeviceId{RegisteredDeviceId, AnotherRegisteredDeviceId},
 			},
-			input: datafetcher.SensorDataSlice{
+			input: data.SensorDataSlice{
 				{
 					DeviceID:   AnotherRegisteredDeviceId,
 					Timestamp:  AlsoInsideTimeRange,
@@ -125,7 +126,7 @@ func TestSensorDataSliceCsvInfo(t *testing.T) {
 func TestSensorDataSliceCsv(t *testing.T) {
 	tests := map[string]struct {
 		wantErr bool
-		input   datafetcher.SensorDataSlice
+		input   data.SensorDataSlice
 		want    string
 	}{
 
@@ -135,7 +136,7 @@ func TestSensorDataSliceCsv(t *testing.T) {
 				InsideTimeRange.Format(time.RFC3339), "24.000",
 				AlsoInsideTimeRange.Format(time.RFC3339), "25.000",
 			),
-			input: datafetcher.SensorDataSlice{
+			input: data.SensorDataSlice{
 				{
 					DeviceID:   RegisteredDeviceId,
 					Timestamp:  InsideTimeRange,
@@ -155,7 +156,7 @@ func TestSensorDataSliceCsv(t *testing.T) {
 				InsideTimeRange.Format(time.RFC3339), "24.000",
 				AlsoInsideTimeRange.Format(time.RFC3339), "80.000",
 			),
-			input: datafetcher.SensorDataSlice{
+			input: data.SensorDataSlice{
 				{
 					DeviceID:   RegisteredDeviceId,
 					Timestamp:  InsideTimeRange,
@@ -176,7 +177,7 @@ func TestSensorDataSliceCsv(t *testing.T) {
 				AnotherRegisteredDeviceId,
 				AlsoInsideTimeRange.Format(time.RFC3339), "25.000",
 			),
-			input: datafetcher.SensorDataSlice{
+			input: data.SensorDataSlice{
 				{
 					DeviceID:   RegisteredDeviceId,
 					Timestamp:  InsideTimeRange,
@@ -197,7 +198,7 @@ func TestSensorDataSliceCsv(t *testing.T) {
 				AnotherRegisteredDeviceId,
 				AlsoInsideTimeRange.Format(time.RFC3339), "80.000",
 			),
-			input: datafetcher.SensorDataSlice{
+			input: data.SensorDataSlice{
 				{
 					DeviceID:   RegisteredDeviceId,
 					Timestamp:  InsideTimeRange,

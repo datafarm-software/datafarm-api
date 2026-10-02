@@ -4,8 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
-	"maps"
+	stdlog "log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,9 +12,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/datafarm-software/datafarm-api/api/authstore"
-	"github.com/datafarm-software/datafarm-api/api/datafetcher"
-	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
-	"github.com/datafarm-software/datafarm-api/api/telemetry/logging"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
+	"github.com/datafarm-software/datafarm-api/api/sensor/data"
+	"github.com/datafarm-software/datafarm-api/api/sensor/info"
+	"github.com/datafarm-software/telemetry/logging"
 )
 
 func (a *Api) httpErr(humaCtx huma.Context, w http.ResponseWriter, msg string, code int) {
@@ -30,20 +30,17 @@ func (a *Api) httpErr(humaCtx huma.Context, w http.ResponseWriter, msg string, c
 	w.Write([]byte(msg))
 }
 
-func logMetadata(ctx context.Context, m logging.Metadata) {
-	//NOTE: requestLog added to context via telemetry middleware
-	rl, _ := ctx.Value("request-log").(*requestLog)
-	if rl != nil {
-		maps.Copy(rl.KeyValue, m.KeyValue)
-	}
-}
-
 func logFromTag(ctx context.Context, a any) error {
 	m, err := logging.FromTagMetadata(a)
 	if err != nil {
 		return err
 	}
-	logMetadata(ctx, m)
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		return huma.Error500InternalServerError(
+			"Internal error while getting request log.")
+	}
+	log.AddMetadata(m)
 	return nil
 }
 
@@ -73,7 +70,7 @@ func CheckOlderThanNinetyDays(start string) bool {
 	}
 	number, err := strconv.Atoi(start)
 	if err != nil {
-		log.Printf("number conversion error: %v", err)
+		stdlog.Printf("number conversion error: %v", err)
 		return true
 	}
 	switch suffix {
@@ -98,13 +95,13 @@ func CheckOlderThanNinetyDays(start string) bool {
 			return true
 		}
 	default:
-		log.Printf("unknown suffix: %v", suffix)
+		stdlog.Printf("unknown suffix: %v", suffix)
 		return true
 	}
 	return false
 }
 
-func formatTimestamp(in *datafetcher.SensorDataRequest) (err error) {
+func formatTimestamp(in *data.SensorDataRequest) (err error) {
 	in.TimeFrame.Start = strings.TrimSpace(in.TimeFrame.Start)
 	if RELATIVETIME_REGEX.MatchString(in.TimeFrame.Start) {
 		older := CheckOlderThanNinetyDays(in.TimeFrame.Start)
@@ -138,87 +135,83 @@ func formatTimestamp(in *datafetcher.SensorDataRequest) (err error) {
 	return nil
 }
 
-func (a *Api) checkAccessToDevice(deviceId string, user authstore.UserInfo) (
-	deviceinfo.DeviceInfo, int, error) {
-	di := deviceinfo.DeviceInfo{DeviceId: deviceId}
+func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, deviceId sensor.DeviceId) (
+	di sensor.Device, err error) {
+	di = sensor.Device{DeviceId: deviceId}
 	deviceCompany, err := a.DeviceInfo.GetCompany(deviceId)
 	if err != nil {
-		if errors.Is(err, deviceinfo.NotFound) {
-			return di, http.StatusNotFound, fmt.Errorf(
-				"Device not found.")
+		if errors.Is(err, sensor.NotFound) {
+			return di, err
 		}
-		return di, http.StatusInternalServerError, err
+		log.AddMetadata(logging.Metadata{
+			"source":        {"checkAccess.deviceInfo.getCompany"},
+			"error.message": {err.Error()}})
+		return di, huma.Error500InternalServerError(
+			"Internal error checking access to DeviceId.")
 	}
 	if user.Company != deviceCompany {
 		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyCompany) {
-			return di, http.StatusUnauthorized, fmt.Errorf("Unauthorized access to this device.")
+			return di, huma.Error401Unauthorized(
+				"Unauthorized access to this sensor.")
 		}
 	}
 	deviceNetwork, err := a.DeviceInfo.GetNetwork(deviceId)
 	if err != nil {
-		if errors.Is(err, deviceinfo.NotFound) {
-			return di, http.StatusNotFound, fmt.Errorf(
-				"Device not found.")
+		if errors.Is(err, sensor.NotFound) {
+			return di, err
 		}
-		return di, http.StatusInternalServerError, err
+		log.AddMetadata(logging.Metadata{
+			"source":        {"checkAccess.deviceInfo.getNetwork"},
+			"error.message": {err.Error()}})
+		return di, huma.Error500InternalServerError(
+			"Internal error checking access to DeviceId.")
 	}
 	if user.Network != deviceNetwork {
 		if !authstore.HasPermission(authstore.Role(user.Role), authstore.GetAnyNetwork) {
-			return di, http.StatusUnauthorized, fmt.Errorf("Unauthorized access to this device.")
+			return di, huma.Error401Unauthorized("Unauthorized access to this sensor.")
 		}
 	}
 	di.Company = deviceCompany
 	di.Network = deviceNetwork
-	return di, http.StatusOK, nil
+	return
 }
 
 func (a *Api) getSensorData(
-	ctx context.Context, in *datafetcher.SensorDataRequest) (
-	sensorData datafetcher.SensorDataSlice, err error) {
-	if err = formatTimestamp(in); err != nil {
+	ctx context.Context, in data.SensorDataRequest) (
+	sensorData data.SensorDataSlice, err error) {
+	if err = formatTimestamp(&in); err != nil {
 		return nil, err
 	}
-	user, ok := ctx.Value("user").(authstore.UserInfo)
-	if !ok {
-		return nil, huma.Error500InternalServerError(
-			"Internal error getting user.")
-	}
-	di, code, err := a.checkAccessToDevice(in.Hardware.DeviceId, user)
+	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceIdParam.DeviceId,
+		authstore.GetSensorData)
 	if err != nil {
-		switch code {
-		case http.StatusUnauthorized:
-			return nil, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		case http.StatusNotFound:
-			return nil, huma.Error404NotFound(
-				"Device Not Found.")
-		default:
-			logMetadata(ctx, logging.Metadata{
-				KeyValue: map[string][]string{
-					"deviceinfo.error.message": {err.Error()}}})
-			return nil, huma.Error500InternalServerError(
-				"Internal error checking acess to DeviceId.")
-		}
+		return nil, err
 	}
 	di.Start = in.TimeFrame.Start
 	di.Stop = in.TimeFrame.Stop
 	di.QueryFields = in.Hardware.QueryFields
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error while getting request log.")
+	}
 	if in.Hardware.QueryFields[0] == "all" {
+		user, _ := a.user(ctx)
 		if !authstore.HasPermission(authstore.Role(user.Role),
 			authstore.GetAllQueryFields) {
 			return nil, huma.Error401Unauthorized(
-				"Unauthorized for all queryfields.")
+				"Unauthorized for all QueryFields.")
 		}
-		qf, err := a.DeviceInfo.GetQueryFields(in.Hardware.DeviceId)
+		qf, err := a.DeviceInfo.GetQueryFields(in.Hardware.DeviceIdParam.DeviceId)
 		if err != nil {
-			logMetadata(ctx, logging.Metadata{
-				KeyValue: map[string][]string{
-					"deviceinof.error.message": {fmt.Sprintf(
-						"error getting query fields for: %s: %v",
-						in.Hardware.DeviceId, err)}}},
-			)
+			if errors.Is(err, sensor.NotFound) {
+				return nil, err
+			}
+			log.AddMetadata(logging.Metadata{
+				"source":        {"getSensorData.deviceInfo.getQueryFields"},
+				"error.message": {err.Error()}})
 			return nil, huma.Error500InternalServerError(
-				"Internal error getting QueryFields for Device.")
+				"Internal error getting QueryFields.")
 		}
 		di.QueryFields = qf.QueryFields
 	}
@@ -229,96 +222,191 @@ func (a *Api) getSensorData(
 	}
 	sensorData, err = a.DataFetcher.GetData(di)
 	if err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"datafetcher.error.message": {fmt.Sprintf(
-					"error getting data: %v", err)}}})
+		if errors.Is(err, sensor.NoData) ||
+			errors.Is(err, sensor.NoConnection) {
+			return sensorData, err
+		}
+		log.AddMetadata(logging.Metadata{
+			"source":        {"getSensorData.dataFetcher.getData"},
+			"error.message": {err.Error()}})
+
 		return nil, huma.Error500InternalServerError(
-			"Internal error fetching data.")
+			"Internal error getting SensorData.")
 	}
 	return sensorData, nil
 }
 
-func (a *Api) getQueryFields(ctx context.Context, in *deviceinfo.QueryFieldsRequest) (
-	qf deviceinfo.QueryFields, err error) {
-	user, ok := ctx.Value("user").(authstore.UserInfo)
+func (a *Api) getLatestSensorData(
+	ctx context.Context, in data.LatestSensorDataRequest) (
+	data.SensorDataSlice, error) {
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
 	if !ok {
-		return qf, huma.Error500InternalServerError(
-			"Internal error getting user.")
+		return nil, huma.Error500InternalServerError(
+			"Internal error while getting request log.")
 	}
-	_, code, err := a.checkAccessToDevice(in.DeviceId, user)
+	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceIdParam.DeviceId,
+		authstore.GetSensorData)
 	if err != nil {
-		switch code {
-		case http.StatusUnauthorized:
-			return qf, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		case http.StatusNotFound:
-			return qf, huma.Error404NotFound(
-				"Device Not Found.")
-		default:
-			logMetadata(ctx, logging.Metadata{
-				KeyValue: map[string][]string{
-					"deviceinfo.error.message": {err.Error()}}})
-			return qf, huma.Error500InternalServerError(
-				"Internal error checking acess to DeviceId.")
+		return nil, err
+	}
+	di.QueryFields = in.Hardware.QueryFields
+	if in.Hardware.QueryFields[0] == "all" {
+		user, _ := a.user(ctx)
+		if !authstore.HasPermission(authstore.Role(user.Role),
+			authstore.GetAllQueryFields) {
+			return nil, huma.Error401Unauthorized(
+				"Unauthorized for all QueryFields.")
 		}
-	}
-	if !authstore.HasPermission(authstore.Role(user.Role),
-		authstore.GetAllQueryFields) {
-		return qf, huma.Error401Unauthorized("Access denied to QueryFields.")
-	}
-	qf, err = a.DeviceInfo.GetQueryFields(in.DeviceId)
-	if err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"deviceinfo.error.message": {fmt.Sprintf(
-					"get queryfields: %v", err)}}})
-		return qf, huma.Error500InternalServerError(
-			"Internal error while getting queryfields.")
-	}
-	return qf, nil
-}
-
-func (a *Api) getSensorDataBoundary(ctx context.Context, in *datafetcher.DataBoundaryRequest) (
-	db datafetcher.DataBoundary, err error) {
-	user, ok := ctx.Value("user").(authstore.UserInfo)
-	if !ok {
-		return db, huma.Error500InternalServerError(
-			"Internal error getting user.")
-	}
-	di, code, err := a.checkAccessToDevice(in.DeviceId, user)
-	if err != nil {
-		switch code {
-		case http.StatusUnauthorized:
-			return db, huma.Error401Unauthorized(
-				"Unauthorized access to this device.")
-		case http.StatusNotFound:
-			return db, huma.Error404NotFound(
-				"Device Not Found.")
-		default:
-			logMetadata(ctx, logging.Metadata{
-				KeyValue: map[string][]string{
-					"deviceinfo.error.message": {err.Error()}}})
-			return db, huma.Error500InternalServerError(
-				"Internal error checking acess to DeviceId.")
+		qf, err := a.DeviceInfo.GetQueryFields(in.Hardware.DeviceIdParam.DeviceId)
+		if err != nil {
+			if errors.Is(err, sensor.NotFound) {
+				return nil, err
+			}
+			log.AddMetadata(logging.Metadata{
+				"source":        {"getSensorData.deviceInfo.getQueryFields"},
+				"error.message": {err.Error()}})
+			return nil, huma.Error500InternalServerError(
+				"Internal error getting QueryFields.")
 		}
-	}
-	if !authstore.HasPermission(authstore.Role(user.Role),
-		authstore.GetDataBoundary) {
-		return db, huma.Error401Unauthorized("Access denied to DataBoundary.")
+		di.QueryFields = qf.QueryFields
 	}
 	di.Timezone, err = in.Timezone.Location()
 	if err != nil {
-		return db, huma.Error400BadRequest(
+		return nil, huma.Error400BadRequest(
 			"Invalid location. Please try a different IANA Timezone.")
 	}
-	db, err = a.DataFetcher.GetDataBoundary(di)
+	sd, err := a.DataFetcher.GetLatestData(di)
 	if err != nil {
-		logMetadata(ctx, logging.Metadata{
-			KeyValue: map[string][]string{
-				"datafetcher.error.message": {fmt.Sprintf("getting data boundary: %v", err)}}})
-		return db, huma.Error500InternalServerError(
-			"Internal error getting DataBoundary.")
+		if errors.Is(err, sensor.NoData) ||
+			errors.Is(err, sensor.NoConnection) {
+			return nil, err
+		}
+		log.AddMetadata(logging.Metadata{
+			"source":        {"getLatestSensorData.dataFetcher.getLatestData"},
+			"error.message": {err.Error()}})
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting Latest SensorData.")
+	}
+	return data.SensorDataSlice{sd}, nil
+}
+
+func (a *Api) getQueryFields(ctx context.Context, in sensor.DeviceIdParam) (
+	info.QueryFieldSlice, error) {
+	_, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetAllQueryFields)
+	if err != nil {
+		return nil, err
+	}
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error while getting request log.")
+	}
+	qf, err := a.DeviceInfo.GetQueryFields(in.DeviceId)
+	if err != nil {
+		if errors.Is(err, sensor.NotFound) {
+			return nil, err
+		}
+		log.AddMetadata(logging.Metadata{
+			"source":        {"getQueryFields.deviceInfo.getQueryFields"},
+			"error.message": {err.Error()}})
+		return nil, huma.Error500InternalServerError(
+			"Internal error while getting QueryFields.")
+	}
+	return info.QueryFieldSlice{qf}, nil
+}
+
+func (a *Api) deviceInfoIfAccessAndPermission(ctx context.Context,
+	deviceId sensor.DeviceId, permission authstore.Permission) (
+	di sensor.Device, err error) {
+	user, ok := ctx.Value("user").(authstore.UserInfo)
+	if !ok {
+		return di, huma.Error500InternalServerError(
+			"Internal error getting user.")
+	}
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		return di, huma.Error500InternalServerError(
+			"Internal error while getting request log.")
+	}
+	di, err = a.checkAccess(log, user, deviceId)
+	if err != nil {
+		return
+	}
+	if !authstore.HasPermission(authstore.Role(user.Role), permission) {
+		return di, huma.Error401Unauthorized("Access denied.")
 	}
 	return
+}
+
+func (a *Api) user(ctx context.Context) (authstore.UserInfo, error) {
+	user, ok := ctx.Value("user").(authstore.UserInfo)
+	if !ok {
+		return user, huma.Error500InternalServerError(
+			"Internal error getting user.")
+	}
+	return user, nil
+}
+
+func (a *Api) getDataBoundary(ctx context.Context, in data.DataBoundaryRequest) (
+	data.DataBoundarySlice, error) {
+	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetDataBoundary)
+	if err != nil {
+		return nil, err
+	}
+	di.Timezone, err = in.Timezone.Location()
+	if err != nil {
+		return nil, huma.Error400BadRequest(
+			"Invalid location. Please try a different IANA Timezone.")
+	}
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error while getting request log.")
+	}
+	db, err := a.DataFetcher.GetDataBoundary(di)
+	if err != nil {
+		if errors.Is(err, sensor.NoData) {
+			return nil, err
+		}
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, err
+		}
+		log.AddMetadata(logging.Metadata{
+			"source":        {"getSensorDataBoundary.dataFetcher.getDataBoundary"},
+			"error.message": {err.Error()}})
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting DataBoundary.")
+	}
+	return data.DataBoundarySlice{db}, nil
+}
+
+func (a *Api) getLocation(ctx context.Context, in sensor.DeviceIdParam) (
+	data.DeviceLocationResponseSlice, error) {
+	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetDataBoundary)
+	if err != nil {
+		return nil, err
+	}
+	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
+	if !ok {
+		return nil, huma.Error500InternalServerError(
+			"Internal error while getting request log.")
+	}
+	loc, err := a.DataFetcher.GetLocation(di)
+	if err != nil {
+		if errors.Is(err, sensor.NoConnection) {
+			return nil, err
+		}
+		if errors.Is(err, sensor.NoLocation) {
+			return nil, err
+		}
+		if errors.Is(err, sensor.NotFound) {
+			return nil, err
+		}
+		log.AddMetadata(logging.Metadata{
+			"source":        {"getLocation.dataFetcher.getLocation"},
+			"error.message": {err.Error()}})
+		return nil, huma.Error500InternalServerError(
+			"Internal error getting Location.")
+	}
+	return data.DeviceLocationResponseSlice{loc}, nil
 }

@@ -7,7 +7,8 @@ import (
 	"os"
 
 	"github.com/datafarm-software/datafarm-api/api/authstore"
-	deviceinfo "github.com/datafarm-software/datafarm-api/api/device-info"
+	"github.com/datafarm-software/datafarm-api/api/sensor"
+	"github.com/datafarm-software/datafarm-api/api/sensor/info"
 	cfy "github.com/geraud22/config-from-yaml"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
@@ -112,24 +113,24 @@ func (t *TestingRedis) PrepareAuthStore(mockDb authstore.Schema) error {
 	return nil
 }
 
-func (t *TestingRedis) PrepareDeviceInfo(schema deviceinfo.Schema) error {
+func (t *TestingRedis) PrepareDeviceInfo(schema sensor.Schema) error {
 	pfn := func(pipe redis.Pipeliner) error {
 		for _, d := range schema.DeviceCompanies {
 			pipe.SAdd(ctx, "allDevices", d.DeviceId)
 			pipe.SAdd(ctx, "companyDevices:"+d.Company, d.DeviceId)
 			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
-			pipe.HSet(ctx, "fieldUnit:"+d.DeviceId, "company", d.Company)
+			pipe.HSet(ctx, "fieldUnit:"+d.DeviceId.String(), "company", d.Company)
 		}
 		for _, d := range schema.DeviceNetworks {
 			pipe.SAdd(ctx, "allDevices", d.DeviceId)
 			pipe.SAdd(ctx, "networkIds:"+d.Network, d.DeviceId)
 			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
-			pipe.HSet(ctx, "fieldUnit:"+d.DeviceId, "network", d.Network)
+			pipe.HSet(ctx, "fieldUnit:"+d.DeviceId.String(), "network", d.Network)
 		}
 		for _, d := range schema.DeviceToQF {
 			pipe.SAdd(ctx, "allDevices", d.DeviceId)
 			pipe.SAdd(ctx, "deviceIds", d.DeviceId)
-			pipe.SAdd(ctx, "queryFields:"+d.DeviceId, d.QueryFields)
+			pipe.SAdd(ctx, "queryFields:"+d.DeviceId.String(), d.QueryFields)
 		}
 		return nil
 	}
@@ -139,8 +140,8 @@ func (t *TestingRedis) PrepareDeviceInfo(schema deviceinfo.Schema) error {
 	return nil
 }
 
-func (t *TestingRedis) GetSnapshot() *deviceinfo.Schema {
-	schema := &deviceinfo.Schema{}
+func (t *TestingRedis) GetSnapshot() *sensor.Schema {
+	schema := &sensor.Schema{}
 	deviceIds, err := t.redis.db.SMembers(ctx, "deviceIds").Result()
 	if err != nil {
 		log.Printf("getting deviceIds: %v", err)
@@ -164,13 +165,13 @@ func (t *TestingRedis) GetSnapshot() *deviceinfo.Schema {
 	for _, id := range deviceIds {
 		company = getStringCmd(cmdVec[id]["company"])
 		schema.DeviceCompanies = append(schema.DeviceCompanies,
-			deviceinfo.DeviceToCompany{DeviceId: id, Company: company})
+			sensor.DeviceToCompany{DeviceId: sensor.DeviceId(id), Company: company})
 		network = getStringCmd(cmdVec[id]["network"])
 		schema.DeviceNetworks = append(schema.DeviceNetworks,
-			deviceinfo.DeviceToNetwork{DeviceId: id, Network: network})
+			sensor.DeviceToNetwork{DeviceId: sensor.DeviceId(id), Network: network})
 		queryFields = getStringSliceCmd(cmdVec[id]["queryFields"])
 		schema.DeviceToQF = append(schema.DeviceToQF,
-			deviceinfo.DeviceToQueryFields{DeviceId: id, QueryFields: queryFields})
+			sensor.DeviceToQueryFields{DeviceId: sensor.DeviceId(id), QueryFields: queryFields})
 	}
 
 	return schema
@@ -196,15 +197,15 @@ func getStringSliceCmd(cmd any) []string {
 	return slice
 }
 
-func (t *TestingRedis) GetQueryFields(deviceId string) (deviceinfo.QueryFields, error) {
+func (t *TestingRedis) GetQueryFields(deviceId sensor.DeviceId) (info.QueryFields, error) {
 	return t.redis.GetQueryFields(deviceId)
 }
 
-func (t *TestingRedis) GetCompany(deviceId string) (string, error) {
+func (t *TestingRedis) GetCompany(deviceId sensor.DeviceId) (string, error) {
 	return t.redis.GetCompany(deviceId)
 }
 
-func (t *TestingRedis) GetNetwork(deviceId string) (string, error) {
+func (t *TestingRedis) GetNetwork(deviceId sensor.DeviceId) (string, error) {
 	return t.redis.GetNetwork(deviceId)
 }
 
@@ -239,7 +240,7 @@ func (t *TestingRedis) GetActiveTokens() []authstore.UserToken {
 	return userTokens
 }
 
-func (t *TestingRedis) GetDevices(sr deviceinfo.ScopeRestriction) ([]string, error) {
+func (t *TestingRedis) GetDevices(sr info.ScopeRestriction) ([]string, error) {
 	return t.redis.GetDevices(sr)
 }
 
