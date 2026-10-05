@@ -1,6 +1,8 @@
 package authstore
 
-import "slices"
+import (
+	"slices"
+)
 
 type Role int
 
@@ -12,6 +14,7 @@ const (
 	// Viewer      Role = 0
 	// TeamManager Role = 1
 	// Distributor Role = 2
+	Viewer      Role = 0
 	User        Role = 1
 	Distributor Role = 2
 	NetworkUser Role = 5
@@ -23,6 +26,7 @@ var RoleRank = map[Role]int{
 	// Viewer:      2,
 	// TeamManager: 3,
 	// Distributor: 4,
+	Viewer:      2,
 	User:        2,
 	Distributor: 2,
 	NetworkUser: 5,
@@ -30,13 +34,14 @@ var RoleRank = map[Role]int{
 }
 
 var RoleNames = map[Role]string{
+	Viewer:      "viewer",
 	User:        "user",
 	Distributor: "distributor",
 	NetworkUser: "network-user",
 	Admin:       "admin",
 }
 
-var AllRoles = []Role{User, Distributor, NetworkUser, Admin}
+var AllRoles = []Role{Viewer, User, Distributor, NetworkUser, Admin}
 
 type Permission string
 
@@ -49,6 +54,7 @@ const (
 )
 
 var rolePermissions = map[Role][]Permission{
+	Viewer: {},
 	User: {
 		GetSensorData,
 		GetAllQueryFields,
@@ -64,6 +70,7 @@ var rolePermissions = map[Role][]Permission{
 }
 
 func InitRoles() {
+	rolePermissions[Viewer] = append(rolePermissions[Viewer], rolePermissions[User]...)
 	rolePermissions[Distributor] = append(rolePermissions[Distributor], rolePermissions[User]...)
 	rolePermissions[NetworkUser] = append(rolePermissions[NetworkUser],
 		rolePermissions[Distributor]...)
