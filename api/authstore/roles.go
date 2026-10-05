@@ -12,7 +12,8 @@ const (
 	// Viewer      Role = 0
 	// TeamManager Role = 1
 	// Distributor Role = 2
-	User        Role = 0
+	User        Role = 1
+	Distributor Role = 2
 	NetworkUser Role = 5
 	Admin       Role = 3
 )
@@ -23,17 +24,19 @@ var RoleRank = map[Role]int{
 	// TeamManager: 3,
 	// Distributor: 4,
 	User:        2,
+	Distributor: 2,
 	NetworkUser: 5,
 	Admin:       6,
 }
 
 var RoleNames = map[Role]string{
 	User:        "user",
+	Distributor: "distributor",
 	NetworkUser: "network-user",
 	Admin:       "admin",
 }
 
-var AllRoles = []Role{User, NetworkUser, Admin}
+var AllRoles = []Role{User, Distributor, NetworkUser, Admin}
 
 type Permission string
 
@@ -51,6 +54,7 @@ var rolePermissions = map[Role][]Permission{
 		GetAllQueryFields,
 		GetDataBoundary,
 	},
+	Distributor: {},
 	NetworkUser: {
 		GetAnyCompany,
 	},
@@ -60,7 +64,9 @@ var rolePermissions = map[Role][]Permission{
 }
 
 func InitRoles() {
-	rolePermissions[NetworkUser] = append(rolePermissions[NetworkUser], rolePermissions[User]...)
+	rolePermissions[Distributor] = append(rolePermissions[Distributor], rolePermissions[User]...)
+	rolePermissions[NetworkUser] = append(rolePermissions[NetworkUser],
+		rolePermissions[Distributor]...)
 	rolePermissions[Admin] = append(rolePermissions[Admin], rolePermissions[NetworkUser]...)
 }
 
