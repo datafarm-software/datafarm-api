@@ -19,11 +19,6 @@ type SensorDataResponse struct {
 	Body   SensorDataSlice
 }
 
-type LatestSensorDataResponse struct {
-	Status int
-	Body   SensorData
-}
-
 type Timezone struct {
 	Timezone string `log:"timezone" query:"timezone-return" json:"timezone-return" required:"false" pattern:"^(|[a-zA-Z]+/[a-zA-Z]+)$" doc:"Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg"`
 }

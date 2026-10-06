@@ -42,7 +42,7 @@ func (a *Api) GetSensorData(ctx context.Context,
 
 func (a *Api) GetLatestSensorData(ctx context.Context,
 	in *data.LatestSensorDataRequest) (
-	out *data.LatestSensorDataResponse, err error) {
+	out *data.SensorDataResponse, err error) {
 	logFromTag(ctx, in)
 	sensorData, err := a.getLatestSensorData(ctx, *in)
 	if err != nil {
@@ -50,7 +50,7 @@ func (a *Api) GetLatestSensorData(ctx context.Context,
 			return nil, huma.Error404NotFound("Not Found.")
 		}
 		if errors.Is(err, sensor.NoData) {
-			return &data.LatestSensorDataResponse{
+			return &data.SensorDataResponse{
 				Status: http.StatusNoContent,
 			}, nil
 		}
@@ -60,9 +60,9 @@ func (a *Api) GetLatestSensorData(ctx context.Context,
 		return nil, huma.Error500InternalServerError(
 			"Unexpected error while getting Latest SensorData.")
 	}
-	return &data.LatestSensorDataResponse{
+	return &data.SensorDataResponse{
 		Status: http.StatusOK,
-		Body:   sensorData[0],
+		Body:   sensorData,
 	}, nil
 }
 
