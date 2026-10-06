@@ -19,6 +19,7 @@ const (
 	Distributor Role = 2
 	NetworkUser Role = 5
 	Admin       Role = 3
+	SystemAdmin Role = 6
 )
 
 var RoleRank = map[Role]int{
@@ -31,6 +32,7 @@ var RoleRank = map[Role]int{
 	Distributor: 2,
 	NetworkUser: 5,
 	Admin:       6,
+	SystemAdmin: 6,
 }
 
 var RoleNames = map[Role]string{
@@ -39,9 +41,10 @@ var RoleNames = map[Role]string{
 	Distributor: "distributor",
 	NetworkUser: "network-user",
 	Admin:       "admin",
+	SystemAdmin: "system-admin",
 }
 
-var AllRoles = []Role{Viewer, User, Distributor, NetworkUser, Admin}
+var AllRoles = []Role{Viewer, User, Distributor, NetworkUser, Admin, SystemAdmin}
 
 type Permission string
 
@@ -67,6 +70,7 @@ var rolePermissions = map[Role][]Permission{
 	Admin: {
 		GetAnyNetwork,
 	},
+	SystemAdmin: {},
 }
 
 func InitRoles() {
@@ -75,6 +79,7 @@ func InitRoles() {
 	rolePermissions[NetworkUser] = append(rolePermissions[NetworkUser],
 		rolePermissions[Distributor]...)
 	rolePermissions[Admin] = append(rolePermissions[Admin], rolePermissions[NetworkUser]...)
+	rolePermissions[SystemAdmin] = append(rolePermissions[Admin], rolePermissions[Admin]...)
 }
 
 func RoleAtLeast(userRole Role, minRequired Role) bool {
