@@ -336,11 +336,6 @@ func (a *Api) BatchGetQueryFields(ctx context.Context,
 			Errors:  batch.Errors,
 		},
 	}, nil
-	// if len(batch.Results) < 1 && batch.OnlyDataMissingErrors {
-	// 	resp.Status = http.StatusNoContent
-	// 	resp.Body = nil
-	// }
-	// return resp, nil
 }
 
 func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
@@ -362,11 +357,11 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 		huma.Error500InternalServerError("Internal error while getting request log.")
 	}
 	switch authstore.Role(user.Role) {
-	case authstore.User:
+	case authstore.DemoViewer, authstore.User, authstore.Viewer, authstore.Distributor:
 		sr.Scope = info.DevicesInCompanyInNetwork
 	case authstore.NetworkUser:
 		sr.Scope = info.DevicesInNetwork
-	case authstore.Admin:
+	case authstore.Admin, authstore.SystemAdmin:
 		sr.Scope = info.AllDevices
 	default:
 		log.AddMetadata(logging.Metadata{
