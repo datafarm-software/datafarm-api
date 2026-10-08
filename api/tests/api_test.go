@@ -1486,15 +1486,17 @@ func TestGetLatestSensorData(t *testing.T) {
 	tests := map[string]struct {
 		MockApi
 		GetSensorDataTest
-		want data.SensorData
+		want data.SensorDataSlice
 	}{
 
 		"successfully get last deviceid data": {
-			want: data.SensorData{
-				DeviceID:  RegisteredDeviceId,
-				Timestamp: AlsoInsideTimeRange,
-				SensorData: map[string]float64{
-					RegisteredQueryField: 23,
+			want: data.SensorDataSlice{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+					},
 				},
 			},
 			MockApi: MockApi{
@@ -1559,11 +1561,13 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"successfully get deviceid data in Africa/Johannesburg timezone": {
-			want: data.SensorData{
-				DeviceID:  RegisteredDeviceId,
-				Timestamp: AlsoInsideTimeRange.Local(),
-				SensorData: map[string]float64{
-					RegisteredQueryField: 23,
+			want: data.SensorDataSlice{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange.Local(),
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+					},
 				},
 			},
 			MockApi: MockApi{
@@ -1628,7 +1632,7 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"invalid timezone requested so unprocessable": {
-			want: data.SensorData{},
+			want: data.SensorDataSlice{},
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -1685,7 +1689,7 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"unprocessable because more than 20 queryFields requested": {
-			want: data.SensorData{},
+			want: data.SensorDataSlice{},
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -1806,12 +1810,14 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"admin user can get all device queryfields": {
-			want: data.SensorData{
-				DeviceID:  RegisteredDeviceId,
-				Timestamp: AlsoInsideTimeRange,
-				SensorData: map[string]float64{
-					RegisteredQueryField:        23,
-					AnotherRegisteredQueryField: 80,
+			want: data.SensorDataSlice{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField:        23,
+						AnotherRegisteredQueryField: 80,
+					},
 				},
 			},
 			MockApi: MockApi{
@@ -1879,12 +1885,14 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"network user can get all device queryfields": {
-			want: data.SensorData{
-				DeviceID:  RegisteredDeviceId,
-				Timestamp: AlsoInsideTimeRange,
-				SensorData: map[string]float64{
-					RegisteredQueryField:        23,
-					AnotherRegisteredQueryField: 80,
+			want: data.SensorDataSlice{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField:        23,
+						AnotherRegisteredQueryField: 80,
+					},
 				},
 			},
 			MockApi: MockApi{
@@ -1952,12 +1960,14 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"user can get all device queryfields": {
-			want: data.SensorData{
-				DeviceID:  RegisteredDeviceId,
-				Timestamp: AlsoInsideTimeRange,
-				SensorData: map[string]float64{
-					RegisteredQueryField:        23,
-					AnotherRegisteredQueryField: 80,
+			want: data.SensorDataSlice{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField:        23,
+						AnotherRegisteredQueryField: 80,
+					},
 				},
 			},
 			MockApi: MockApi{
@@ -2025,7 +2035,7 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"unknown token": {
-			want: data.SensorData{},
+			want: data.SensorDataSlice{},
 			GetSensorDataTest: GetSensorDataTest{
 				wantErr:    true,
 				wantStatus: http.StatusUnauthorized,
@@ -2038,7 +2048,7 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"no data": {
-			want: data.SensorData{},
+			want: data.SensorDataSlice{},
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -2085,7 +2095,7 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"device doesnt exist": {
-			want: data.SensorData{},
+			want: data.SensorDataSlice{},
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -2140,7 +2150,7 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"non admin can't request deviceid not in user company": {
-			want: data.SensorData{},
+			want: data.SensorDataSlice{},
 			MockApi: MockApi{
 				mockAuthStore: authstore.Schema{
 					UserInfo: []authstore.UserInfo{
@@ -2195,11 +2205,13 @@ func TestGetLatestSensorData(t *testing.T) {
 		},
 
 		"admin user can request deviceid not in user company": {
-			want: data.SensorData{
-				DeviceID:  RegisteredDeviceId,
-				Timestamp: AlsoInsideTimeRange,
-				SensorData: map[string]float64{
-					RegisteredQueryField: 23,
+			want: data.SensorDataSlice{
+				{
+					DeviceID:  RegisteredDeviceId,
+					Timestamp: AlsoInsideTimeRange,
+					SensorData: map[string]float64{
+						RegisteredQueryField: 23,
+					},
 				},
 			},
 			MockApi: MockApi{
@@ -2276,7 +2288,7 @@ func TestGetLatestSensorData(t *testing.T) {
 			}
 			defer resp.Result().Body.Close()
 			if !tc.wantErr {
-				var dd data.SensorData
+				var dd data.SensorDataSlice
 				body := resp.Body.Bytes()
 				err := json.Unmarshal(body, &dd)
 				require.Nil(t, err)

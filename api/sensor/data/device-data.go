@@ -19,11 +19,6 @@ type SensorDataResponse struct {
 	Body   SensorDataSlice
 }
 
-type LatestSensorDataResponse struct {
-	Status int
-	Body   SensorData
-}
-
 type Timezone struct {
 	Timezone string `log:"timezone" query:"timezone-return" json:"timezone-return" required:"false" pattern:"^(|[a-zA-Z]+/[a-zA-Z]+)$" doc:"Clients can specify a timezone for the returned SensorData. Supports IANA Timezone definitions eg. Africa/Johannesburg"`
 }
@@ -56,12 +51,12 @@ type LatestSensorDataRequest struct {
 }
 
 type BatchLatestSensorDataRequest struct {
-	Hardware []sensor.Hardware `json:"hardware" required:"true" minItems:"2" maxItems:"5"`
+	Hardware []sensor.Hardware `json:"hardware" required:"true" minItems:"1" maxItems:"10"`
 	Timezone
 }
 
 type BatchSensorDataRequest struct {
-	Hardware []sensor.Hardware `json:"hardware" required:"true" minItems:"2" maxItems:"5"`
+	Hardware []sensor.Hardware `json:"hardware" required:"true" minItems:"1" maxItems:"10"`
 	TimeFrame
 }
 

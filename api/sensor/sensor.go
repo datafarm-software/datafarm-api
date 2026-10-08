@@ -71,7 +71,7 @@ type DeviceToQueryFields struct {
 }
 
 type Batch struct {
-	DeviceIds DeviceIds `log:"deviceids" json:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$" minItems:"2" maxItems:"5"`
+	DeviceIds DeviceIds `log:"deviceids" json:"deviceIds" pattern:"^[a-zA-Z0-9]{1,30}$" minItems:"1" maxItems:"10"`
 }
 
 // NOTE: this is exactly the same as deviceinfo.QueryFieldsError struct
