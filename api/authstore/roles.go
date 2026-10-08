@@ -10,10 +10,7 @@ func (r Role) Int() int       { return int(r) }
 func (r Role) String() string { return RoleNames[r] }
 
 const (
-	// DemoViewer  Role = 4
-	// Viewer      Role = 0
-	// TeamManager Role = 1
-	// Distributor Role = 2
+	DemoViewer  Role = 4
 	Viewer      Role = 0
 	User        Role = 1
 	Distributor Role = 2
@@ -23,10 +20,7 @@ const (
 )
 
 var RoleRank = map[Role]int{
-	// DemoViewer:  1,
-	// Viewer:      2,
-	// TeamManager: 3,
-	// Distributor: 4,
+	DemoViewer:  2,
 	Viewer:      2,
 	User:        2,
 	Distributor: 2,
@@ -36,6 +30,7 @@ var RoleRank = map[Role]int{
 }
 
 var RoleNames = map[Role]string{
+	DemoViewer:  "demo-viewer",
 	Viewer:      "viewer",
 	User:        "user",
 	Distributor: "distributor",
@@ -44,7 +39,7 @@ var RoleNames = map[Role]string{
 	SystemAdmin: "system-admin",
 }
 
-var AllRoles = []Role{Viewer, User, Distributor, NetworkUser, Admin, SystemAdmin}
+var AllRoles = []Role{DemoViewer, Viewer, User, Distributor, NetworkUser, Admin, SystemAdmin}
 
 type Permission string
 
@@ -57,13 +52,11 @@ const (
 )
 
 var rolePermissions = map[Role][]Permission{
-	Viewer: {},
 	User: {
 		GetSensorData,
 		GetAllQueryFields,
 		GetDataBoundary,
 	},
-	Distributor: {},
 	NetworkUser: {
 		GetAnyCompany,
 	},
@@ -74,10 +67,11 @@ var rolePermissions = map[Role][]Permission{
 }
 
 func InitRoles() {
-	rolePermissions[Viewer] = append(rolePermissions[Viewer], rolePermissions[User]...)
-	rolePermissions[Distributor] = append(rolePermissions[Distributor], rolePermissions[User]...)
+	rolePermissions[Viewer] = rolePermissions[User]
+	rolePermissions[DemoViewer] = rolePermissions[User]
+	rolePermissions[Distributor] = rolePermissions[User]
 	rolePermissions[NetworkUser] = append(rolePermissions[NetworkUser],
-		rolePermissions[Distributor]...)
+		rolePermissions[User]...)
 	rolePermissions[Admin] = append(rolePermissions[Admin], rolePermissions[NetworkUser]...)
 	rolePermissions[SystemAdmin] = append(rolePermissions[Admin], rolePermissions[Admin]...)
 }
