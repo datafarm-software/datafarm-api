@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
-	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/datafarm-software/datafarm-api/api"
@@ -91,9 +91,12 @@ func setupHuma(t *testing.T, api *api.Api) humatest.TestAPI {
 	router := mux.NewRouter()
 	humaApi := humamux.New(router, config)
 	mwProvider, _ := middlewares.NewHumaProvider(api.Telemetry)
-	mws := mwProvider.TelemetryMiddlewares()
-	mws = append(mws, api.VerifyToken)
-	mws = slices.Insert(mws, 0, api.RateLimit)
+	mws := middlewares.Middlewares[huma.Context]{
+		api.RateLimit,
+		mwProvider.CountApiRequest,
+		mwProvider.TraceRequest, mwProvider.LogRequest, mwProvider.RecordLatency,
+		api.VerifyToken,
+	}
 	localhuma.SetupApiOperations(humaApi, api, mws)
 	return humatest.Wrap(t, humaApi)
 }
