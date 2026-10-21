@@ -19,7 +19,7 @@ import (
 )
 
 func (a *Api) httpErr(humaCtx huma.Context, w http.ResponseWriter, msg string, code int) {
-	span, _ := a.Tracer.SpanFromContext(humaCtx.Context())
+	span, _ := a.Telemetry.SpanFromContext(humaCtx.Context())
 	if span.IsValid() {
 		traceId := span.TraceId()
 		if traceId != "" {
@@ -44,13 +44,15 @@ func logFromTag(ctx context.Context, a any) error {
 	return nil
 }
 
-const MaxDays = 90
-const MaxMinutes = 129600
-const MaxSeconds = 7776000
-const MaxHours = 2160
-const MaxMonths = 3
-const LowerCaseO = 0x6f
-const Hyphen = 0x2d
+const (
+	MaxDays    = 90
+	MaxMinutes = 129600
+	MaxSeconds = 7776000
+	MaxHours   = 2160
+	MaxMonths  = 3
+	LowerCaseO = 0x6f
+	Hyphen     = 0x2d
+)
 
 func CheckOlderThanNinetyDays(start string) bool {
 	if len(start) < 1 {
@@ -136,7 +138,8 @@ func formatTimestamp(in *data.SensorDataRequest) (err error) {
 }
 
 func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, deviceId sensor.DeviceId) (
-	di sensor.Device, err error) {
+	di sensor.Device, err error,
+) {
 	di = sensor.Device{DeviceId: deviceId}
 	deviceCompany, err := a.DeviceInfo.GetCompany(deviceId)
 	if err != nil {
@@ -145,7 +148,8 @@ func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, d
 		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"checkAccess.deviceInfo.getCompany"},
-			"error.message": {err.Error()}})
+			"error.message": {err.Error()},
+		})
 		return di, huma.Error500InternalServerError(
 			"Internal error checking access to DeviceId.")
 	}
@@ -162,7 +166,8 @@ func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, d
 		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"checkAccess.deviceInfo.getNetwork"},
-			"error.message": {err.Error()}})
+			"error.message": {err.Error()},
+		})
 		return di, huma.Error500InternalServerError(
 			"Internal error checking access to DeviceId.")
 	}
@@ -178,7 +183,8 @@ func (a *Api) checkAccess(log logging.LogAccumulator, user authstore.UserInfo, d
 
 func (a *Api) getSensorData(
 	ctx context.Context, in data.SensorDataRequest) (
-	sensorData data.SensorDataSlice, err error) {
+	sensorData data.SensorDataSlice, err error,
+) {
 	if err = formatTimestamp(&in); err != nil {
 		return nil, err
 	}
@@ -209,7 +215,8 @@ func (a *Api) getSensorData(
 			}
 			log.AddMetadata(logging.Metadata{
 				"source":        {"getSensorData.deviceInfo.getQueryFields"},
-				"error.message": {err.Error()}})
+				"error.message": {err.Error()},
+			})
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting QueryFields.")
 		}
@@ -228,7 +235,8 @@ func (a *Api) getSensorData(
 		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getSensorData.dataFetcher.getData"},
-			"error.message": {err.Error()}})
+			"error.message": {err.Error()},
+		})
 
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting SensorData.")
@@ -238,7 +246,8 @@ func (a *Api) getSensorData(
 
 func (a *Api) getLatestSensorData(
 	ctx context.Context, in data.LatestSensorDataRequest) (
-	data.SensorDataSlice, error) {
+	data.SensorDataSlice, error,
+) {
 	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
 	if !ok {
 		return nil, huma.Error500InternalServerError(
@@ -264,7 +273,8 @@ func (a *Api) getLatestSensorData(
 			}
 			log.AddMetadata(logging.Metadata{
 				"source":        {"getSensorData.deviceInfo.getQueryFields"},
-				"error.message": {err.Error()}})
+				"error.message": {err.Error()},
+			})
 			return nil, huma.Error500InternalServerError(
 				"Internal error getting QueryFields.")
 		}
@@ -283,7 +293,8 @@ func (a *Api) getLatestSensorData(
 		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getLatestSensorData.dataFetcher.getLatestData"},
-			"error.message": {err.Error()}})
+			"error.message": {err.Error()},
+		})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting Latest SensorData.")
 	}
@@ -291,7 +302,8 @@ func (a *Api) getLatestSensorData(
 }
 
 func (a *Api) getQueryFields(ctx context.Context, in sensor.DeviceIdParam) (
-	info.QueryFieldSlice, error) {
+	info.QueryFieldSlice, error,
+) {
 	_, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetAllQueryFields)
 	if err != nil {
 		return nil, err
@@ -308,7 +320,8 @@ func (a *Api) getQueryFields(ctx context.Context, in sensor.DeviceIdParam) (
 		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getQueryFields.deviceInfo.getQueryFields"},
-			"error.message": {err.Error()}})
+			"error.message": {err.Error()},
+		})
 		return nil, huma.Error500InternalServerError(
 			"Internal error while getting QueryFields.")
 	}
@@ -317,7 +330,8 @@ func (a *Api) getQueryFields(ctx context.Context, in sensor.DeviceIdParam) (
 
 func (a *Api) deviceInfoIfAccessAndPermission(ctx context.Context,
 	deviceId sensor.DeviceId, permission authstore.Permission) (
-	di sensor.Device, err error) {
+	di sensor.Device, err error,
+) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
 		return di, huma.Error500InternalServerError(
@@ -348,7 +362,8 @@ func (a *Api) user(ctx context.Context) (authstore.UserInfo, error) {
 }
 
 func (a *Api) getDataBoundary(ctx context.Context, in data.DataBoundaryRequest) (
-	data.DataBoundarySlice, error) {
+	data.DataBoundarySlice, error,
+) {
 	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetDataBoundary)
 	if err != nil {
 		return nil, err
@@ -373,7 +388,8 @@ func (a *Api) getDataBoundary(ctx context.Context, in data.DataBoundaryRequest) 
 		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getSensorDataBoundary.dataFetcher.getDataBoundary"},
-			"error.message": {err.Error()}})
+			"error.message": {err.Error()},
+		})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting DataBoundary.")
 	}
@@ -381,7 +397,8 @@ func (a *Api) getDataBoundary(ctx context.Context, in data.DataBoundaryRequest) 
 }
 
 func (a *Api) getLocation(ctx context.Context, in sensor.DeviceIdParam) (
-	data.DeviceLocationResponseSlice, error) {
+	data.DeviceLocationResponseSlice, error,
+) {
 	di, err := a.deviceInfoIfAccessAndPermission(ctx, in.DeviceId, authstore.GetDataBoundary)
 	if err != nil {
 		return nil, err
@@ -404,7 +421,8 @@ func (a *Api) getLocation(ctx context.Context, in sensor.DeviceIdParam) (
 		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getLocation.dataFetcher.getLocation"},
-			"error.message": {err.Error()}})
+			"error.message": {err.Error()},
+		})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting Location.")
 	}

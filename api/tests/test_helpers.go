@@ -1,9 +1,11 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -18,8 +20,10 @@ import (
 	"github.com/datafarm-software/datafarm-api/api/sensor"
 	"github.com/datafarm-software/datafarm-api/api/sensor/data"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
+	"github.com/datafarm-software/telemetry"
 	"github.com/datafarm-software/telemetry/logging"
 	"github.com/datafarm-software/telemetry/metering"
+	"github.com/datafarm-software/telemetry/middlewares"
 	"github.com/datafarm-software/telemetry/tracing"
 	"github.com/google/go-cmp/cmp"
 	"github.com/gorilla/mux"
@@ -27,43 +31,47 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const RegisteredUsername = "user1"
-const UnregisteredUsername = "user2"
-const RegisteredPassword = "@Password1"
-const UnregisteredPassword = "@Password2"
-const RegisteredCompany = "company"
-const AnotherRegisteredCompany = "company2"
-const OtherCompanyThanDevice = "othercompany"
-const RegisteredNetwork = "RegisteredNetwork"
-const AnotherRegisteredNetwork = "RegisteredNetwork2"
-const RegisteredDeviceId = "device1"
-const AnotherRegisteredDeviceId = "device2"
-const UnregisteredDeviceId = "unregistered1"
-const InvalidDeviceId = "!+)$"
-const RegisteredQueryField = "temperature"
-const AnotherRegisteredQueryField = "humidity"
-const RegisteredSensor = "weather-sensor"
-const ValidToken = "someToken0"
-const InvalidToken = "invalidToken0"
-const RelativeStart = "-6h"
-const RelativeMoreThanNinetyDays = "-91d"
-const ValidTimezone = "Africa/Johannesburg"
-const InvalidTimezone = "$ome/Wr0ng/Timezone"
-const Latitude float64 = -25.496973
-const Longitude float64 = 31.558536
-const AnotherLatitude float64 = -26.496973
-const AnotherLongitude float64 = 32.558536
+const (
+	RegisteredUsername                  = "user1"
+	UnregisteredUsername                = "user2"
+	RegisteredPassword                  = "@Password1"
+	UnregisteredPassword                = "@Password2"
+	RegisteredCompany                   = "company"
+	AnotherRegisteredCompany            = "company2"
+	OtherCompanyThanDevice              = "othercompany"
+	RegisteredNetwork                   = "RegisteredNetwork"
+	AnotherRegisteredNetwork            = "RegisteredNetwork2"
+	RegisteredDeviceId                  = "device1"
+	AnotherRegisteredDeviceId           = "device2"
+	UnregisteredDeviceId                = "unregistered1"
+	InvalidDeviceId                     = "!+)$"
+	RegisteredQueryField                = "temperature"
+	AnotherRegisteredQueryField         = "humidity"
+	RegisteredSensor                    = "weather-sensor"
+	ValidToken                          = "someToken0"
+	InvalidToken                        = "invalidToken0"
+	RelativeStart                       = "-6h"
+	RelativeMoreThanNinetyDays          = "-91d"
+	ValidTimezone                       = "Africa/Johannesburg"
+	InvalidTimezone                     = "$ome/Wr0ng/Timezone"
+	Latitude                    float64 = -25.496973
+	Longitude                   float64 = 31.558536
+	AnotherLatitude             float64 = -26.496973
+	AnotherLongitude            float64 = 32.558536
+)
 
-var MoreThanNinetyDays = time.Now().UTC().Add(-91 * 24 * time.Hour).Format(time.RFC3339)
-var Start = time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
-var StartGreaterThanStop = time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339)
-var FutureStart = time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339)
-var Stop = time.Now().UTC().Format(time.RFC3339)
-var StopInFuture = time.Now().UTC().Add(24 * time.Hour).Format(time.RFC3339)
-var OutsideTimeRange = time.Now().UTC().Add(-25 * time.Hour)
-var InsideTimeRange = time.Now().UTC().Add(-2 * time.Hour)
-var AlsoInsideTimeRange = time.Now().UTC().Add(-1 * time.Hour)
-var RegisteredCompanyDevices = []string{RegisteredDeviceId}
+var (
+	MoreThanNinetyDays       = time.Now().UTC().Add(-91 * 24 * time.Hour).Format(time.RFC3339)
+	Start                    = time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
+	StartGreaterThanStop     = time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339)
+	FutureStart              = time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339)
+	Stop                     = time.Now().UTC().Format(time.RFC3339)
+	StopInFuture             = time.Now().UTC().Add(24 * time.Hour).Format(time.RFC3339)
+	OutsideTimeRange         = time.Now().UTC().Add(-25 * time.Hour)
+	InsideTimeRange          = time.Now().UTC().Add(-2 * time.Hour)
+	AlsoInsideTimeRange      = time.Now().UTC().Add(-1 * time.Hour)
+	RegisteredCompanyDevices = []string{RegisteredDeviceId}
+)
 
 var considerTimeZone = cmp.Comparer(func(x, y time.Time) bool {
 	return x.Equal(y) &&
@@ -82,7 +90,11 @@ func setupHuma(t *testing.T, api *api.Api) humatest.TestAPI {
 	config := localhuma.Config(localhuma.Production)
 	router := mux.NewRouter()
 	humaApi := humamux.New(router, config)
-	localhuma.SetupApiOperations(humaApi, api)
+	mwProvider, _ := middlewares.NewHumaProvider(api.Telemetry)
+	mws := mwProvider.TelemetryMiddlewares()
+	mws = append(mws, api.VerifyToken)
+	mws = slices.Insert(mws, 0, api.RateLimit)
+	localhuma.SetupApiOperations(humaApi, api, mws)
 	return humatest.Wrap(t, humaApi)
 }
 
@@ -92,9 +104,11 @@ func (m MockApi) Setup(t *testing.T) (*api.Api, CloseFunc) {
 		Tokens:    m.mockTokens,
 		Increment: len(m.mockTokens),
 	}
-	a.Logger = logging.MockLogger()
-	a.Meter = metering.MockMeter()
-	a.Tracer = tracing.MockTracer()
+	a.Telemetry = &telemetry.Telemetry{
+		Logger: logging.MockLogger(),
+		Meter:  metering.MockMeter(),
+		Tracer: tracing.MockTracer(),
+	}
 	db, err := miniredis.Run()
 	require.Nil(t, err)
 	testingRedis, err := redis.NewTestingRedis(db.Addr())
@@ -127,6 +141,12 @@ func (m MockApi) Setup(t *testing.T) (*api.Api, CloseFunc) {
 			err = a.DataFetcher.Close()
 			if err != nil {
 				t.Logf("datafetcher close: %v", err)
+			}
+		}
+		if a.Telemetry != nil {
+			err = a.Telemetry.Close(context.Background())
+			if err != nil {
+				t.Logf("telemetry close: %v", err)
 			}
 		}
 	}

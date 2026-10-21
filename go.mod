@@ -11,11 +11,9 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/gorilla/mux v1.8.1
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
+	github.com/mitchellh/reflectwalk v1.0.2
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/stretchr/testify v1.12.1
-	go.opentelemetry.io/otel v1.47.0
-	go.opentelemetry.io/otel/sdk v1.47.0
-	go.opentelemetry.io/otel/trace v1.47.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/time v0.14.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -38,7 +36,6 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/oapi-codegen/runtime v1.7.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/sagikazarmark/locafero v0.9.0 // indirect
@@ -53,14 +50,17 @@ require (
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/bridges/otelzap v0.21.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.72.0 // indirect
+	go.opentelemetry.io/otel v1.47.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.23.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.47.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.47.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.47.0 // indirect
 	go.opentelemetry.io/otel/log v1.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.47.0 // indirect
 	go.opentelemetry.io/otel/sdk/log v1.47.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.47.0 // indirect
+	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.28.0 // indirect
