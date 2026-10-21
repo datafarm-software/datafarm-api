@@ -5,9 +5,12 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
 	"github.com/datafarm-software/datafarm-api/api"
 	localhuma "github.com/datafarm-software/datafarm-api/api/huma"
+	"github.com/datafarm-software/telemetry"
+	"github.com/datafarm-software/telemetry/middlewares"
 	"github.com/gorilla/mux"
 	"gopkg.in/yaml.v3"
 )
@@ -29,13 +32,15 @@ func main() {
 	router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
 	config := localhuma.Config(localhuma.Production)
 	humaApi := humamux.New(router, config)
-	localhuma.SetupApiOperations(humaApi, &api.Api{})
+	a := &api.Api{Telemetry: &telemetry.Telemetry{}}
+	mws := middlewares.Middlewares[huma.Context]{a.VerifyToken}
+	localhuma.SetupApiOperations(humaApi, a, mws)
 	doc := humaApi.OpenAPI()
 	out, err := yaml.Marshal(doc)
 	if err != nil {
 		log.Fatalf("marshalling yaml: %v", err)
 	}
-	if err = os.WriteFile(filename, out, 0644); err != nil {
+	if err = os.WriteFile(filename, out, 0o644); err != nil {
 		log.Fatalf("writing yaml: %v", err)
 	}
 }

@@ -21,7 +21,7 @@ info:
         ### Contributing
 
         DataFarm welcomes external contribution to the API, through Open Source under the GPL-3.0 License. If you would like to contribute please visit the project's Github page to get started: www.github.com/datafarm-software/datafarm-api.
-    version: 1.5.3
+    version: 1.5.4
 servers:
     - url: /v1
 paths:
@@ -1679,7 +1679,7 @@ components:
                     description: A URL to the JSON Schema for this object.
                     format: uri
                     examples:
-                        - https://example.com/schemas/Batch.json
+                        - /v1/schemas/Batch.json
                     readOnly: true
                 deviceIds:
                     type: array
@@ -1699,7 +1699,7 @@ components:
                     description: A URL to the JSON Schema for this object.
                     format: uri
                     examples:
-                        - https://example.com/schemas/BatchDataBoundaryRequest.json
+                        - /v1/schemas/BatchDataBoundaryRequest.json
                     readOnly: true
                 deviceIds:
                     type: array
@@ -1723,7 +1723,7 @@ components:
                     description: A URL to the JSON Schema for this object.
                     format: uri
                     examples:
-                        - https://example.com/schemas/BatchDataBoundaryResponse.json
+                        - /v1/schemas/BatchDataBoundaryResponse.json
                     readOnly: true
                 errors:
                     type: array
@@ -1756,7 +1756,7 @@ components:
                     description: A URL to the JSON Schema for this object.
                     format: uri
                     examples:
-                        - https://example.com/schemas/BatchLatestSensorDataRequest.json
+                        - /v1/schemas/BatchLatestSensorDataRequest.json
                     readOnly: true
                 hardware:
                     type: array
@@ -1779,7 +1779,7 @@ components:
                     description: A URL to the JSON Schema for this object.
                     format: uri
                     examples:
-                        - https://example.com/schemas/BatchLocationRequest.json
+                        - /v1/schemas/BatchLocationRequest.json
                     readOnly: true
                 deviceIds:
                     type: array
@@ -1799,7 +1799,7 @@ components:
                     description: A URL to the JSON Schema for this object.
                     format: uri
                     examples:
-                        - https://example.com/schemas/BatchLocationResponse.json
+                        - /v1/schemas/BatchLocationResponse.json
                     readOnly: true
                 errors:
                     type: array
@@ -1821,7 +1821,7 @@ components:
                     description: A URL to the JSON Schema for this object.
                     format: uri
                     examples:
-                        - https://example.com/schemas/BatchQueryFieldsResponse.json
+                        - /v1/schemas/BatchQueryFieldsResponse.json
                     readOnly: true
                 errors:
                     type: array
@@ -1843,7 +1843,7 @@ components:
                     description: A URL to the JSON Schema for this object.
                     format: uri
                     examples:
-                        - https://example.com/schemas/BatchSensorDataRequest.json
+                        - /v1/schemas/BatchSensorDataRequest.json
                     readOnly: true
                 hardware:
                     type: array
@@ -1873,7 +1873,7 @@ components:
                     description: A URL to the JSON Schema for this object.
                     format: uri
                     examples:
-                        - https://example.com/schemas/BatchSensorDataResponse.json
+                        - /v1/schemas/BatchSensorDataResponse.json
                     readOnly: true
                 errors:
                     type: array
@@ -1895,7 +1895,7 @@ components:
                     description: A URL to the JSON Schema for this object.
                     format: uri
                     examples:
-                        - https://example.com/schemas/DataBoundary.json
+                        - /v1/schemas/DataBoundary.json
                     readOnly: true
                 deviceId:
                     type: string
@@ -1918,7 +1918,7 @@ components:
                     description: A URL to the JSON Schema for this object.
                     format: uri
                     examples:
-                        - https://example.com/schemas/DeviceIdsResponse.json
+                        - /v1/schemas/DeviceIdsResponse.json
                     readOnly: true
                 deviceIds:
                     type: array
@@ -1937,7 +1937,7 @@ components:
                     description: A URL to the JSON Schema for this object.
                     format: uri
                     examples:
-                        - https://example.com/schemas/DeviceLocationResponse.json
+                        - /v1/schemas/DeviceLocationResponse.json
                     readOnly: true
                 deviceId:
                     type: string
@@ -2033,7 +2033,7 @@ components:
                     description: A URL to the JSON Schema for this object.
                     format: uri
                     examples:
-                        - https://example.com/schemas/QueryFields.json
+                        - /v1/schemas/QueryFields.json
                     readOnly: true
                 deviceId:
                     type: string

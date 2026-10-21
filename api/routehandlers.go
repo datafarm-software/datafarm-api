@@ -19,7 +19,8 @@ import (
 )
 
 func (a *Api) GetSensorData(ctx context.Context,
-	in *data.SensorDataRequest) (out *data.SensorDataResponse, err error) {
+	in *data.SensorDataRequest,
+) (out *data.SensorDataResponse, err error) {
 	logFromTag(ctx, in)
 	sensorData, err := a.getSensorData(ctx, *in)
 	if err != nil {
@@ -42,7 +43,8 @@ func (a *Api) GetSensorData(ctx context.Context,
 
 func (a *Api) GetLatestSensorData(ctx context.Context,
 	in *data.LatestSensorDataRequest) (
-	out *data.SensorDataResponse, err error) {
+	out *data.SensorDataResponse, err error,
+) {
 	logFromTag(ctx, in)
 	sensorData, err := a.getLatestSensorData(ctx, *in)
 	if err != nil {
@@ -72,7 +74,8 @@ func (a *Api) BatchGetSensorData(ctx context.Context,
 	}) (*struct {
 	Status int
 	Body   *data.BatchSensorDataResponse
-}, error) {
+}, error,
+) {
 	logFromTag(ctx, in.Body)
 	batch, err := sensor.BatchFactory(ctx, in.Body.Hardware,
 		func(hw sensor.Hardware) data.SensorDataRequest {
@@ -119,7 +122,8 @@ func (a *Api) BatchGetLatestSensorData(ctx context.Context,
 	}) (*struct {
 	Status int
 	Body   *data.BatchSensorDataResponse
-}, error) {
+}, error,
+) {
 	logFromTag(ctx, in.Body)
 	batch, err := sensor.BatchFactory(ctx, in.Body.Hardware,
 		func(hw sensor.Hardware) data.LatestSensorDataRequest {
@@ -181,7 +185,8 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 		if err := a.AuthStore.DeleteToken(authstore.UserToken{Token: lr.Body}); err != nil {
 			log.AddMetadata(logging.Metadata{
 				"source":        {"verifyToken.authStore.DeleteToken"},
-				"error.message": {err.Error()}})
+				"error.message": {err.Error()},
+			})
 			a.httpErr(humaCtx, w,
 				`Your token is invalid. Please login again. There was an internal error while deleting the invalid token.`,
 				http.StatusInternalServerError)
@@ -194,7 +199,8 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 	if err != nil {
 		log.AddMetadata(logging.Metadata{
 			"source":        {"verifyToken.authStore.getUser"},
-			"error.message": {fmt.Sprintf("getting user: %v", err)}})
+			"error.message": {fmt.Sprintf("getting user: %v", err)},
+		})
 		a.httpErr(humaCtx, w, "Internal error while getting user information.",
 			http.StatusInternalServerError)
 		return
@@ -208,7 +214,8 @@ func (a *Api) VerifyToken(humaCtx huma.Context, next func(huma.Context)) {
 }
 
 func (a *Api) Login(ctx context.Context,
-	ar *tokenprovider.LoginRequest) (*tokenprovider.LoginResponse, error) {
+	ar *tokenprovider.LoginRequest,
+) (*tokenprovider.LoginResponse, error) {
 	parts := strings.Split(ar.Auth, " ")
 	logFromTag(ctx, ar)
 	log, ok := ctx.Value("request-log").(logging.LogAccumulator)
@@ -219,7 +226,8 @@ func (a *Api) Login(ctx context.Context,
 	if err != nil {
 		log.AddMetadata(logging.Metadata{
 			"source":        {"login.domain"},
-			"error.message": {fmt.Sprintf("base64 decode: %v", err)}})
+			"error.message": {fmt.Sprintf("base64 decode: %v", err)},
+		})
 		return nil, huma.Error500InternalServerError(
 			"Internal error decoding given base64.")
 	}
@@ -251,7 +259,8 @@ func (a *Api) Login(ctx context.Context,
 	if err = a.AuthStore.VerifyCredentials(username, password); err != nil {
 		log.AddMetadata(logging.Metadata{
 			"source":        {"login.authStore.verifyCredentials"},
-			"error.message": {err.Error()}})
+			"error.message": {err.Error()},
+		})
 		return nil, huma.Error401Unauthorized("Bad credentials.")
 	}
 	ut, err := a.AuthStore.GetToken(username)
@@ -259,7 +268,8 @@ func (a *Api) Login(ctx context.Context,
 		if !errors.Is(err, authstore.NotLoggedIn) {
 			log.AddMetadata(logging.Metadata{
 				"source":        {"login.authStore.getToken"},
-				"error.message": {err.Error()}})
+				"error.message": {err.Error()},
+			})
 			return nil, huma.Error500InternalServerError(
 				"Internal error checking if user is logged in.")
 		}
@@ -271,23 +281,26 @@ func (a *Api) Login(ctx context.Context,
 	if err != nil {
 		log.AddMetadata(logging.Metadata{
 			"source":        {"login.tokenProvider.generateToken"},
-			"error.message": {err.Error()}})
+			"error.message": {err.Error()},
+		})
 		return nil, huma.Error500InternalServerError(
 			"Internal error generating an access token.")
 	}
 	if err = a.AuthStore.StoreToken(ut); err != nil {
 		log.AddMetadata(logging.Metadata{
 			"source":        {"login.authStore.storeToken"},
-			"error.message": {err.Error()}})
+			"error.message": {err.Error()},
+		})
 		return nil, huma.Error500InternalServerError(
 			"Internal error storing the token.")
 	}
-	a.Meter.ActiveUsersCountAdd(1)
+	a.Telemetry.ActiveUsersCountAdd(1)
 	return &tokenprovider.LoginResponse{Body: ut.Token}, nil
 }
 
 func (a *Api) GetQueryFields(ctx context.Context, in *sensor.DeviceIdParam) (
-	*info.QueryFieldsResponse, error) {
+	*info.QueryFieldsResponse, error,
+) {
 	logFromTag(ctx, in)
 	queryFields, err := a.getQueryFields(ctx, *in)
 	if err != nil {
@@ -310,7 +323,8 @@ func (a *Api) GetQueryFields(ctx context.Context, in *sensor.DeviceIdParam) (
 func (a *Api) BatchGetQueryFields(ctx context.Context,
 	in *info.BatchQueryFieldsRequest) (*struct {
 	Body info.BatchQueryFieldsResponse
-}, error) {
+}, error,
+) {
 	logFromTag(ctx, in)
 	batch, err := sensor.BatchFactory(ctx, in.Body.DeviceIds,
 		func(d sensor.DeviceId) sensor.DeviceIdParam {
@@ -342,7 +356,8 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	*struct {
 		Status int
 		Body   info.DeviceIdsResponse
-	}, error) {
+	}, error,
+) {
 	user, ok := ctx.Value("user").(authstore.UserInfo)
 	if !ok {
 		return nil, huma.Error500InternalServerError(
@@ -366,7 +381,8 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 	default:
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getDeviceIds.domain"},
-			"error.message": {fmt.Sprintf("unexpected user role: %v", user.Role)}})
+			"error.message": {fmt.Sprintf("unexpected user role: %v", user.Role)},
+		})
 		return nil, huma.Error500InternalServerError(
 			"Internal error determining user role.")
 	}
@@ -378,7 +394,8 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 		}
 		log.AddMetadata(logging.Metadata{
 			"source":        {"getDeviceIds.deviceInfo.getDevices"},
-			"error.message": {err.Error()}})
+			"error.message": {err.Error()},
+		})
 		return nil, huma.Error500InternalServerError(
 			"Internal error getting DeviceIds.")
 	}
@@ -396,7 +413,8 @@ func (a *Api) GetDeviceIds(ctx context.Context, _ *struct{}) (
 }
 
 func (a *Api) GetDataBoundary(ctx context.Context, in *data.DataBoundaryRequest) (
-	*data.DataBoundaryResponse, error) {
+	*data.DataBoundaryResponse, error,
+) {
 	logFromTag(ctx, in)
 	db, err := a.getDataBoundary(ctx, *in)
 	if err != nil {
@@ -426,7 +444,8 @@ func (a *Api) BatchGetDataBoundary(ctx context.Context,
 	*struct {
 		Status int
 		Body   data.BatchDataBoundaryResponse
-	}, error) {
+	}, error,
+) {
 	logFromTag(ctx, in.Body)
 	batch, err := sensor.BatchFactory(ctx, in.Body.DeviceIds,
 		func(d sensor.DeviceId) data.DataBoundaryRequest {
@@ -469,7 +488,8 @@ func (a *Api) GetLocation(ctx context.Context, in *sensor.DeviceIdParam) (
 	*struct {
 		Status int
 		Body   data.DeviceLocationResponse
-	}, error) {
+	}, error,
+) {
 	logFromTag(ctx, in)
 	loc, err := a.getLocation(ctx, *in)
 	if err != nil {
@@ -503,7 +523,8 @@ func (a *Api) BatchGetLocation(ctx context.Context, in *struct {
 }) (*struct {
 	Status int
 	Body   data.BatchLocationResponse
-}, error) {
+}, error,
+) {
 	logFromTag(ctx, in.Body)
 	batch, err := sensor.BatchFactory(ctx, in.Body.DeviceIds,
 		func(d sensor.DeviceId) sensor.DeviceIdParam {
