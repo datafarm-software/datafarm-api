@@ -15,6 +15,7 @@ import (
 	"github.com/datafarm-software/datafarm-api/api/sensor/data"
 	"github.com/datafarm-software/datafarm-api/api/sensor/info"
 	"github.com/datafarm-software/datafarm-api/api/tokenprovider"
+	"github.com/datafarm-software/telemetry/middlewares"
 )
 
 type Mode int
@@ -28,12 +29,6 @@ const MajorApiVersionRoutePrefix = "/v1"
 
 type HumaOperator interface {
 	Mode() Mode
-	LogRequest(ctx huma.Context, next func(huma.Context))
-	TraceRequest(ctx huma.Context, next func(huma.Context))
-	CountApiRequest(ctx huma.Context, next func(huma.Context))
-	RecordLatency(ctx huma.Context, next func(huma.Context))
-	RateLimit(ctx huma.Context, next func(huma.Context))
-	VerifyToken(ctx huma.Context, next func(huma.Context))
 	GetSensorData(context.Context,
 		*data.SensorDataRequest) (*data.SensorDataResponse, error)
 	BatchGetSensorData(context.Context, *struct {
@@ -120,7 +115,9 @@ func FiveHundredResponse() *huma.Response {
 	return &huma.Response{
 		Description: "Internal Server Error",
 		Content: map[string]*huma.MediaType{
-			"application/json": FiveHundredExample().MediaType()}}
+			"application/json": FiveHundredExample().MediaType(),
+		},
+	}
 }
 
 func FourHundredExample() *HumaError {
@@ -136,7 +133,9 @@ func FourHundredResponse() *huma.Response {
 	return &huma.Response{
 		Description: "Bad Request",
 		Content: map[string]*huma.MediaType{
-			"application/json": FourHundredExample().MediaType()}}
+			"application/json": FourHundredExample().MediaType(),
+		},
+	}
 }
 
 func FourOhOneExample() *HumaError {
@@ -152,7 +151,9 @@ func FourOhOneResponse() *huma.Response {
 	return &huma.Response{
 		Description: "Unauthorized",
 		Content: map[string]*huma.MediaType{
-			"application/json": FourOhOneExample().MediaType()}}
+			"application/json": FourOhOneExample().MediaType(),
+		},
+	}
 }
 
 func FourOhFourExample() *HumaError {
@@ -168,11 +169,15 @@ func FourOhFourResponse() *huma.Response {
 	return &huma.Response{
 		Description: "Not Found",
 		Content: map[string]*huma.MediaType{
-			"application/json": FourOhFourExample().MediaType()}}
+			"application/json": FourOhFourExample().MediaType(),
+		},
+	}
 }
 
-var Basic = []map[string][]string{{"basic": {}}}
-var Bearer = []map[string][]string{{"bearer": {}}}
+var (
+	Basic  = []map[string][]string{{"basic": {}}}
+	Bearer = []map[string][]string{{"bearer": {}}}
+)
 
 func baseOperation(method string, middlewares *huma.Middlewares) huma.Operation {
 	op := huma.Operation{
@@ -205,19 +210,16 @@ func deviceIdParam() *huma.Param {
 	}
 }
 
-func RegisterHumaOperations(api huma.API, ho HumaOperator) {
-	mw := []func(ctx huma.Context, next func(huma.Context)){
-		ho.RateLimit, ho.CountApiRequest, ho.TraceRequest, ho.LogRequest, ho.RecordLatency,
-		ho.VerifyToken,
-	}
+func RegisterHumaOperations(api huma.API, ho HumaOperator,
+	mw middlewares.Middlewares[huma.Context],
+) {
 	noTokenVerification := huma.Middlewares(mw[:len(mw)-1])
 	allMw := huma.Middlewares(mw)
 	op := baseOperation("POST", &noTokenVerification)
 	op.Path = "/login"
 	op.Summary = "Login"
 	op.Security = Basic
-	op.Description =
-		"Clients can use this route to login and receive an active session token."
+	op.Description = "Clients can use this route to login and receive an active session token."
 	fh := FiveHundredExample()
 	fh.Detail = "Internal error logging in."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
@@ -229,8 +231,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Summary = "Batch Get DeviceId SensorData"
 	op.Description = "Clients can use this route to request SensorData from multiple DeviceIds."
 	fh = FiveHundredExample()
-	fh.Detail =
-		"Database disconnected."
+	fh.Detail = "Database disconnected."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	op.Responses["404"] = &huma.Response{
 		Description: "No DeviceIds Found.",
@@ -245,8 +246,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Summary = "Batch Get DeviceId Latest SensorData"
 	op.Description = "Clients can use this route to request Latest SensorData from multiple DeviceIds."
 	fh = FiveHundredExample()
-	fh.Detail =
-		"Database disconnected."
+	fh.Detail = "Database disconnected."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	op.Responses["404"] = &huma.Response{
 		Description: "No DeviceIds Found.",
@@ -259,11 +259,9 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op = baseOperation("POST", &allMw)
 	op.Path = "/batch/device/queryfields"
 	op.Summary = "Batch Get DeviceId QueryFields"
-	op.Description =
-		"Clients can use this route to request QueryFields from multiple DeviceIds."
+	op.Description = "Clients can use this route to request QueryFields from multiple DeviceIds."
 	fh = FiveHundredExample()
-	fh.Detail =
-		"Database disconnected."
+	fh.Detail = "Database disconnected."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	op.Responses["404"] = &huma.Response{
 		Description: "No DeviceIds Found.",
@@ -275,8 +273,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Summary = "Batch Get DeviceId DataBoundary"
 	op.Description = "Clients can use this route to get the DataBoundary of multiple DeviceIds."
 	fh = FiveHundredExample()
-	fh.Detail =
-		"Database disconnected."
+	fh.Detail = "Database disconnected."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	op.Responses["404"] = &huma.Response{
 		Description: "No DeviceIds Found.",
@@ -291,8 +288,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	op.Summary = "Batch Get DeviceId Location"
 	op.Description = "Clients can use this route to get the Location of multiple DeviceIds."
 	fh = FiveHundredExample()
-	fh.Detail =
-		"Database disconnected."
+	fh.Detail = "Database disconnected."
 	op.Responses["500"].Content["application/json"] = fh.MediaType()
 	op.Responses["404"] = &huma.Response{
 		Description: "No DeviceIds Found.",
@@ -308,8 +304,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	di.Description = "DeviceId to request SensorData from."
 	op.Parameters = []*huma.Param{di}
 	op.Summary = "Get DeviceId SensorData"
-	op.Description =
-		"Clients can use this route to request SensorData from a DeviceId."
+	op.Description = "Clients can use this route to request SensorData from a DeviceId."
 	op.Responses["204"] = &huma.Response{
 		Description: "No SensorData for the requested time period.",
 	}
@@ -324,8 +319,7 @@ func RegisterHumaOperations(api huma.API, ho HumaOperator) {
 	di.Description = "DeviceId to request Latest SensorData from."
 	op.Parameters = []*huma.Param{di}
 	op.Summary = "Get DeviceId Latest SensorData"
-	op.Description =
-		"Clients can use this route to request only the Latest SensorData from a DeviceId."
+	op.Description = "Clients can use this route to request only the Latest SensorData from a DeviceId."
 	op.Responses["204"] = &huma.Response{
 		Description: "No SensorData for the DeviceId.",
 	}
@@ -408,7 +402,7 @@ func Config(mode Mode) (config huma.Config) {
 		verStr = findVersion(stdOut)
 	}
 	if verStr == "" {
-		//NOTE: if all else fails, fallback to v1
+		// NOTE: if all else fails, fallback to v1
 		verStr = "1"
 	}
 	config = huma.DefaultConfig("DataFarm SensorData API", verStr)
@@ -495,7 +489,9 @@ DataFarm welcomes external contribution to the API, through Open Source under th
 	return
 }
 
-func SetupApiOperations(humaApi huma.API, a HumaOperator) {
+func SetupApiOperations(humaApi huma.API, a HumaOperator,
+	mw middlewares.Middlewares[huma.Context],
+) {
 	if a.Mode() == Production {
 		humaApi.OpenAPI().Servers = append(humaApi.OpenAPI().Servers, &huma.Server{
 			URL: MajorApiVersionRoutePrefix,
@@ -507,7 +503,7 @@ func SetupApiOperations(humaApi huma.API, a HumaOperator) {
 			Type:        "string",
 		},
 	}
-	RegisterHumaOperations(humaApi, a)
+	RegisterHumaOperations(humaApi, a, mw)
 	spec := humaApi.OpenAPI()
 	op := spec.Paths["/batch/device/sensordata"].Post
 	resp := op.Responses["200"]
