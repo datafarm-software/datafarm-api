@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"slices"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humamux"
@@ -124,9 +123,12 @@ func (a *Api) SetupHumaRouter() (http.Handler, *huma.Config) {
 	router := mux.NewRouter()
 	humaApi := humamux.New(router, config)
 	mwProvider, _ := middlewares.NewHumaProvider(a.Telemetry)
-	mws := mwProvider.TelemetryMiddlewares()
-	mws = append(mws, a.VerifyToken)
-	mws = slices.Insert(mws, 0, a.RateLimit)
+	mws := middlewares.Middlewares[huma.Context]{
+		a.RateLimit,
+		mwProvider.CountApiRequest,
+		mwProvider.TraceRequest, mwProvider.LogRequest, mwProvider.RecordLatency,
+		a.VerifyToken,
+	}
 	localhuma.SetupApiOperations(humaApi, a, mws)
 	return router, &config
 }
