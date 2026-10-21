@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/alicebob/miniredis/v2 v2.37.0
 	github.com/danielgtaylor/huma/v2 v2.39.1
-	github.com/datafarm-software/telemetry v1.2.1-0.20261021113225-5c28ec2bde83
+	github.com/datafarm-software/telemetry v1.3.0
 	github.com/geraud22/config-from-yaml v1.1.1
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/go-cmp v0.7.0
